@@ -1,0 +1,24 @@
+{
+  "name": "@bas/media-workflows-examples",
+  "version": "0.1.0",
+  "description": "Demo media & entertainment workflows for Agentic Cinema hackathon judging.",
+  "main": "dist/content-ingestion.js",
+  "scripts": {
+    "build": "tsc",
+    "start:ingestion": "ts-node src/content-ingestion.ts",
+    "start:demo": "ts-node src/insight-engine-demo.ts",
+    "test": "jest",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@bas/core": "*",
+    "@bas/infrastructure": "*",
+    "@bas/orchestration": "*"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "ts-node": "^10.9.0",
+    "typescript": "^5.3.0"
+  },
+  "license": "MIT"
+}

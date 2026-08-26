@@ -1,0 +1,36 @@
+{
+  "name": "@bas/api",
+  "version": "0.1.0",
+  "description": "REST API layer for Blockbuster Agentic Studio.",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "ts-node src/index.ts",
+    "start": "node dist/index.js",
+    "test": "jest",
+    "lint": "eslint src --ext .ts",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@bas/core": "*",
+    "@bas/infrastructure": "*",
+    "@bas/orchestration": "*",
+    "express": "^4.18.0",
+    "cors": "^2.8.5",
+    "helmet": "^7.1.0",
+    "zod": "^3.22.0"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.0",
+    "@types/cors": "^2.8.0",
+    "@types/jest": "^29.5.0",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.1.0",
+    "ts-node": "^10.9.0",
+    "typescript": "^5.3.0"
+  },
+  "keywords": ["api", "rest", "express", "hackathon"],
+  "author": "Blockbuster Agentic Studio Team",
+  "license": "MIT"
+}

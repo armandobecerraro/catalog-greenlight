@@ -1,0 +1,61 @@
+version: '3.8'
+
+services:
+  clickhouse:
+    image: clickhouse/clickhouse-server:24.3
+    ports:
+      - "8123:8123"
+      - "9000:9000"
+    environment:
+      - CLICKHOUSE_DB=media_catalog
+      - CLICKHOUSE_USER=default
+      - CLICKHOUSE_PASSWORD=
+      - CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT=1
+    volumes:
+      - clickhouse-data:/var/lib/clickhouse
+      - ./init-schema.sql:/docker-entrypoint-initdb.d/init-schema.sql
+    networks:
+      - agentic-network
+
+  mcp-clickhouse:
+    image: ghcr.io/modelcontextprotocol/servers-clickhouse:latest
+    stdin_open: true
+    tty: true
+    environment:
+      - CLICKHOUSE_HOST=clickhouse
+      - CLICKHOUSE_PORT=8123
+      - CLICKHOUSE_USER=default
+      - CLICKHOUSE_PASSWORD=
+      - CLICKHOUSE_SECURE=false
+      - CLICKHOUSE_DATABASE=default
+    depends_on:
+      - clickhouse
+    networks:
+      - agentic-network
+
+  demo:
+    build:
+      context: ..
+      dockerfile: deployment/docker/Dockerfile.demo
+    environment:
+      - NODE_ENV=development
+      - CLICKHOUSE_HOST=clickhouse
+      - CLICKHOUSE_PORT=8123
+      - CLICKHOUSE_USERNAME=default
+      - CLICKHOUSE_PASSWORD=
+      - CLICKHOUSE_DATABASE=default
+      - CLICKHOUSE_SECURE=false
+      - MCP_COMMAND=uv
+      - MCP_ARGS=["run", "--with", "mcp-clickhouse", "--python", "3.13", "mcp-clickhouse"]
+    depends_on:
+      - clickhouse
+      - mcp-clickhouse
+    networks:
+      - agentic-network
+
+networks:
+  agentic-network:
+    driver: bridge
+
+volumes:
+  clickhouse-data:

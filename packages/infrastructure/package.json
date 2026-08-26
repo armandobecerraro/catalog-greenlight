@@ -8,12 +8,12 @@
     "build": "tsc",
     "test": "jest",
     "test:integration": "jest --config jest.integration.config.js",
+    "smoke:mcp": "ts-node scripts/mcp-smoke.ts",
     "lint": "eslint src --ext .ts",
     "clean": "rm -rf dist"
   },
   "dependencies": {
     "@bas/core": "*",
-    "@clickhouse/client": "^1.0.0",
     "@google/generative-ai": "^0.7.0",
     "@modelcontextprotocol/sdk": "^1.0.0"
   },

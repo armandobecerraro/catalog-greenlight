@@ -1,5 +1,4 @@
 import {
-  IConnector,
   ConnectionConfig,
   QueryRequest,
   QueryResult,
@@ -74,15 +73,31 @@ export class McpClickHouseConnector implements IMcpConnector {
   }
 
   async listDatabases(): Promise<string[]> {
-    const result = await this.callToolRaw('list_databases', {});
-    const rows = this.parseMcpResult(result);
-    return rows.map(r => String(r.name ?? r.database ?? Object.values(r)[0]));
+    const content = await this.callToolRaw('list_databases', {});
+    const text = this.extractFirstText(content);
+    const parsed = JSON.parse(text) as unknown;
+    if (Array.isArray(parsed)) {
+      return parsed.map(String);
+    }
+    return [];
   }
 
   async listTables(database: string): Promise<string[]> {
-    const result = await this.callToolRaw('list_tables', { database });
-    const rows = this.parseMcpResult(result);
-    return rows.map(r => String(r.name ?? r.table ?? Object.values(r)[0]));
+    const content = await this.callToolRaw('list_tables', { database });
+    const text = this.extractFirstText(content);
+    const parsed = JSON.parse(text) as { tables?: Array<{ name: string }> };
+    return (parsed.tables ?? []).map(t => t.name);
+  }
+
+  private extractFirstText(content: unknown): string {
+    const blocks: unknown[] = Array.isArray(content) ? content : [content];
+    for (const block of blocks) {
+      if (block && typeof block === 'object' && 'text' in block) {
+        const text = (block as { text: unknown }).text;
+        if (typeof text === 'string') return text;
+      }
+    }
+    throw new Error('MCP response missing text content');
   }
 
   async *stream(request: StreamRequest): AsyncIterable<StreamChunk> {
@@ -150,7 +165,11 @@ export class McpClickHouseConnector implements IMcpConnector {
           return obj;
         });
       }
-      if (Array.isArray(parsed)) return parsed as Record<string, unknown>[];
+      if (Array.isArray(parsed)) {
+        return parsed.map(item =>
+          typeof item === 'string' ? ({ name: item } as Record<string, unknown>) : (item as Record<string, unknown>)
+        );
+      }
       if (parsed && typeof parsed === 'object') return [parsed as Record<string, unknown>];
       return [{ text: textContent }];
     } catch {

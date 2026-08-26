@@ -1,0 +1,60 @@
+# Deployment — Catalog Greenlight
+
+Judges need a **live URL** through at least judging (~23 Sep – 7 Oct 2026).
+
+## Option A: Render (recommended, free tier)
+
+**Prerequisites:** ClickHouse Cloud service (HTTP 8123/8443) + `GEMINI_API_KEY`
+
+1. Push repo to public GitHub (see `VERIFICATION.md`).
+2. Create [Render](https://render.com) account → **New Blueprint** → connect repo (`render.yaml` included).
+3. Set secrets in Render dashboard:
+   - `GEMINI_API_KEY`
+   - `CLICKHOUSE_HOST` (ClickHouse Cloud hostname)
+   - `CLICKHOUSE_PASSWORD`
+   - `CLICKHOUSE_SECURE=true` if using TLS port 8443
+4. Deploy. Health check: `GET /api/v1/health`
+5. Seed ClickHouse Cloud once (from your laptop):
+
+```bash
+CLICKHOUSE_HOST=<cloud-host> CLICKHOUSE_PASSWORD=<pwd> \
+  bash deployment/scripts/seed-remote.sh
+```
+
+(Create `seed-remote.sh` using `clickhouse-client` pointed at cloud, or run `seed-catalog.sql` in ClickHouse Cloud SQL console.)
+
+## Option B: Google Cloud Run + ClickHouse Cloud
+
+```bash
+gcloud builds submit --tag gcr.io/$PROJECT_ID/catalog-greenlight
+gcloud run deploy catalog-greenlight \
+  --image gcr.io/$PROJECT_ID/catalog-greenlight \
+  --platform managed \
+  --region us-central1 \
+  --allow-unauthenticated \
+  --set-env-vars GEMINI_MODEL=gemini-2.0-flash,CLICKHOUSE_PORT=8123,... \
+  --set-secrets GEMINI_API_KEY=gemini-key:latest
+```
+
+## Option C: Docker Compose (demo / private LAN)
+
+```bash
+export GEMINI_API_KEY=...
+docker compose -f deployment/docker/docker-compose.prod.yml up --build
+```
+
+Open http://localhost:8080
+
+## Post-deploy smoke
+
+```bash
+curl -s https://<YOUR_URL>/api/v1/health | jq .
+curl -s https://<YOUR_URL>/api/v1/catalog/stats | jq .
+```
+
+## Keep-alive checklist
+
+- [ ] Render/Cloud Run service not sleeping (upgrade plan if free tier sleeps)
+- [ ] ClickHouse Cloud credits active through Oct 7
+- [ ] `GEMINI_API_KEY` quota sufficient
+- [ ] Re-run seed if catalog empty after redeploy

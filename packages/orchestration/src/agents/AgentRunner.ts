@@ -5,7 +5,9 @@ import {
   AgentStepName,
   IMcpConnector,
   IGeminiReasoningPort,
-  AgentIntent
+  AgentIntent,
+  validateGeneratedSql,
+  validateAuditSql
 } from '@bas/core';
 
 export interface AgentRunnerOptions {
@@ -42,10 +44,13 @@ export class AgentRunner {
     });
 
     const sql = await this.runStep(steps, 'PLAN_SQL', async () => {
-      return this.reasoning.generateSql(intent, userPrompt, schemaParts.join('\n'));
+      const generated = await this.reasoning.generateSql(intent, userPrompt, schemaParts.join('\n'));
+      validateGeneratedSql(generated, intent);
+      return generated;
     });
 
     const queryResult = await this.runStep(steps, 'EXECUTE', async () => {
+      validateGeneratedSql(sql, intent);
       const result = await this.mcp.runQuery(sql);
       return { rows: result.rows, latencyMs: result.metadata.latencyMs };
     });
@@ -69,6 +74,7 @@ export class AgentRunner {
             '${this.escapeSql(synthesis.answer.slice(0, 500))}'
           )
         `;
+        validateAuditSql(auditSql.trim());
         await this.mcp.runQuery(auditSql);
         return { auditId: runId };
       });

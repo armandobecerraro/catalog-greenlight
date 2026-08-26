@@ -16,7 +16,7 @@ Catalog Greenlight (Agentic Cinema — ClickHouse track) must query ClickHouse a
 - Tools used: `run_query`, `list_databases`, `list_tables`
 - Result format: JSON `{"columns":[...],"rows":[[...]]}` parsed to row objects
 - HTTP port **8123** (never 9000 for MCP)
-- `@clickhouse/client` reserved for Docker seed/init scripts only
+- Seed/init uses Docker `clickhouse-client` only (no Node ClickHouse client in the repo)
 
 ### Gemini
 

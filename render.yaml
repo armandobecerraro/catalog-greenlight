@@ -1,0 +1,29 @@
+services:
+  - type: web
+    name: catalog-greenlight
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    plan: free
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-2.0-flash
+      - key: CLICKHOUSE_HOST
+        sync: false
+      - key: CLICKHOUSE_PORT
+        value: "8123"
+      - key: CLICKHOUSE_USER
+        value: default
+      - key: CLICKHOUSE_PASSWORD
+        sync: false
+      - key: CLICKHOUSE_DATABASE
+        value: media_catalog
+      - key: CLICKHOUSE_SECURE
+        value: "false"
+      - key: CLICKHOUSE_ALLOW_WRITE_ACCESS
+        value: "true"
+      - key: NODE_ENV
+        value: production

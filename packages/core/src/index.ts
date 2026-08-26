@@ -15,6 +15,11 @@ export {
   ReasoningSynthesis
 } from './ports/outbound/IGeminiReasoningPort';
 export { AgentRunResult, AgentStep, AgentStepName, AgentStepStatus } from './types/agent';
+export {
+  validateGeneratedSql,
+  validateAuditSql,
+  SqlValidationError
+} from './utils/sqlValidation';
 export { IMediaIngestionService, IngestionResult, MediaIngestionService } from './services/MediaIngestionService';
 export { InsightEngineService, InsightRequest, InsightResult, CatalogEntry, CatalogStats } from './services/InsightEngineService';
 export { IContentIngestionUseCase, ContentIngestionUseCase, ContentData } from './ports/inbound/IContentIngestionUseCase';

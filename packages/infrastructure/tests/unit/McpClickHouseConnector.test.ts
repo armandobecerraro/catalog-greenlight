@@ -37,7 +37,10 @@ describe('McpClickHouseConnector', () => {
     ]);
   });
 
-  it('returns empty array for null content', () => {
-    expect(connector.parseMcpResult(null)).toEqual([]);
+  it('parses MCP database list JSON array', () => {
+    const rows = connector.parseMcpResult([
+      { type: 'text', text: '["default", "media_catalog", "system"]' }
+    ]);
+    expect(rows).toEqual([{ name: 'default' }, { name: 'media_catalog' }, { name: 'system' }]);
   });
 });

@@ -5,8 +5,18 @@ set -e
 COMPOSE_FILE="${COMPOSE_FILE:-deployment/docker/docker-compose.clickhouse.yml}"
 SERVICE="${CLICKHOUSE_SERVICE:-clickhouse}"
 
-echo "Seeding media_catalog (50 titles + revenue)..."
+echo "Applying schema (idempotent)..."
+docker compose -f "$COMPOSE_FILE" exec -T "$SERVICE" clickhouse-client --multiquery < deployment/docker/init-schema.sql 2>/dev/null || \
+  docker-compose -f "$COMPOSE_FILE" exec -T "$SERVICE" clickhouse-client --multiquery < deployment/docker/init-schema.sql
 
-docker-compose -f "$COMPOSE_FILE" exec -T "$SERVICE" clickhouse-client --multiquery < deployment/docker/seed-catalog.sql
+echo "Migrating existing tables if needed..."
+docker compose -f "$COMPOSE_FILE" exec -T "$SERVICE" clickhouse-client --query \
+  "ALTER TABLE media_catalog.media_content ADD COLUMN IF NOT EXISTS language String DEFAULT 'en'" 2>/dev/null || \
+  docker-compose -f "$COMPOSE_FILE" exec -T "$SERVICE" clickhouse-client --query \
+  "ALTER TABLE media_catalog.media_content ADD COLUMN IF NOT EXISTS language String DEFAULT 'en'" || true
+
+echo "Seeding media_catalog (50 titles + revenue)..."
+docker compose -f "$COMPOSE_FILE" exec -T "$SERVICE" clickhouse-client --multiquery < deployment/docker/seed-catalog.sql 2>/dev/null || \
+  docker-compose -f "$COMPOSE_FILE" exec -T "$SERVICE" clickhouse-client --multiquery < deployment/docker/seed-catalog.sql
 
 echo "Seed complete."

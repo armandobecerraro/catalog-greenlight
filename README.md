@@ -72,7 +72,7 @@ Model default: `gemini-2.0-flash` (override with `GEMINI_MODEL`).
 | `packages/infrastructure/src/partners/clickhouse/McpClickHouseConnector.ts` | Spawns MCP via `uv run --with mcp-clickhouse`; calls `run_query`, `list_databases`, `list_tables` through `@modelcontextprotocol/sdk` `Client.callTool` |
 | `packages/orchestration/src/agents/AgentRunner.ts` | 6-step deterministic agent: INTENT → DISCOVER → PLAN_SQL → EXECUTE → SYNTHESIZE → AUDIT |
 
-`@clickhouse/client` is used **only** for Docker seed/init scripts — never by the agent or product API.
+Seed data is loaded via Docker `clickhouse-client` only (`deployment/scripts/seed.sh`) — never by the agent or product API.
 
 Default ClickHouse HTTP port: **8123**.
 

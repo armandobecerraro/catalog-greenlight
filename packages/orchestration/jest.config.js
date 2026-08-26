@@ -3,9 +3,7 @@ module.exports = {
   testEnvironment: 'node',
   roots: ['<rootDir>/src', '<rootDir>/tests'],
   testMatch: ['**/tests/**/*.test.ts'],
-  transformIgnorePatterns: [
-    'node_modules/(?!(langchain|@langchain)/)'
-  ],
+  transformIgnorePatterns: ['node_modules/'],
   moduleNameMapper: {
     '^@bas/core$': '<rootDir>/../core/src',
     '^@bas/infrastructure$': '<rootDir>/../infrastructure/src',

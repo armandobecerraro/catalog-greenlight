@@ -1,6 +1,6 @@
-import { GoogleGenerativeAI, Part } from '@google/generative-ai';
 import { IGeminiEnrichmentPort } from '@bas/core';
 import { MediaEnrichment } from '@bas/core';
+import { generateGeminiText } from './generateContent';
 
 type EnrichmentContent = {
   title: string;
@@ -11,14 +11,7 @@ type EnrichmentContent = {
 };
 
 export class GeminiEnrichmentAdapter implements IGeminiEnrichmentPort {
-  private model: ReturnType<GoogleGenerativeAI['getGenerativeModel']>;
-
-  constructor(apiKey: string) {
-    const genAI = new GoogleGenerativeAI(apiKey);
-    this.model = genAI.getGenerativeModel({
-      model: process.env.GEMINI_MODEL || 'gemini-2.0-flash'
-    });
-  }
+  constructor(private readonly apiKey: string) {}
 
   async enrich(content: EnrichmentContent): Promise<MediaEnrichment> {
     const prompt = `You are a media content enrichment assistant for a Latin/US streaming catalog. Analyze the content and provide:
@@ -35,12 +28,7 @@ Genre: ${content.genre}
 Release Date: ${content.releaseDate}
 Cast: ${content.cast.join(', ')}`;
 
-    const result = await this.model.generateContent({
-      contents: [{ role: 'user', parts: [{ text: prompt }] as Part[] }]
-    });
-
-    const response = result.response;
-    const text = response.text();
+    const text = await generateGeminiText(this.apiKey, prompt);
 
     let parsed: { summary: string; tags: string[] };
     try {

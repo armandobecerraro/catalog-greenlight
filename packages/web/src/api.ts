@@ -54,15 +54,24 @@ async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, init);
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
-    throw new Error(body.error || res.statusText);
+    throw new Error((body as { error?: string }).error || res.statusText);
   }
   return res.json();
 }
 
+const greenlightFetch = (url: string) =>
+  fetch(url).then(async res => {
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error((body as { error?: string }).error || res.statusText);
+    }
+    return res.json() as Promise<AgentRunResult>;
+  });
+
 export const api = {
   getStats: () => fetchJson<CatalogStats>(`${base}/catalog/stats`),
   getCatalog: () => fetchJson<{ entries: CatalogEntry[]; count: number }>(`${base}/catalog`),
-  getGreenlight: () => fetchJson<AgentRunResult>(`${base}/greenlight`),
+  getGreenlight: () => greenlightFetch(`${base}/greenlight`),
   ask: (question: string) =>
     fetchJson<AgentRunResult>(`${base}/agent/ask`, {
       method: 'POST',

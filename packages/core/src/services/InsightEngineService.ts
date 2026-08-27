@@ -167,7 +167,7 @@ export class InsightEngineService {
             sum(revenue_usd) AS total_revenue,
             argMax(title, revenue_usd) AS top_title
           FROM media_catalog.title_revenue
-          WHERE week_start >= today() - 7
+          WHERE week_start >= (SELECT max(week_start) - 7 FROM media_catalog.title_revenue)
         `
       });
       if (revenueResult.rows[0]) {

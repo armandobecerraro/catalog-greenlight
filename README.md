@@ -4,7 +4,7 @@
 
 > The agent that tells programming what to push — with ClickHouse evidence.
 
-Catalog Greenlight is a web product for a **programming chief** at a small Latin/US streaming studio. The agent investigates your ClickHouse catalog via the official **mcp-clickhouse** MCP server, reasons with **Gemini** (`@google/generative-ai`), and returns actionable greenlight recommendations backed by SQL and row data.
+Catalog Greenlight is a web product for a **programming chief** at a small Latin/US streaming studio. The agent investigates your ClickHouse catalog via the official **mcp-clickhouse** MCP server, reasons with **Gemini** (`@google/genai`), and returns actionable greenlight recommendations backed by SQL and row data.
 
 ## Prerequisites
 
@@ -35,16 +35,21 @@ npm run demo
 3. Ingest one new title with **real Gemini**
 4. Print catalog stats, an NL question, greenlight picks, and agent step latencies
 
-### Web UI + API
+### Web UI + API (ClickHouse Cloud via `.env`)
+
+Create `.env` at repo root (see `.env.example`). **Do not** use `npm run demo` if you target ClickHouse Cloud — that script starts local Docker.
 
 ```bash
-export GEMINI_API_KEY=your_key_here
+npm install
 npm run dev
+# or: bash scripts/dev.sh
 ```
 
-- Web: http://localhost:5173 (proxies `/api` → API)
+- Web: http://localhost:5173 (Vite proxies `/api` → API)
 - API: http://localhost:8080
 - Health: `GET /api/v1/health`
+
+`npm run dev` loads `.env` automatically via `packages/api/src/loadEnv.ts` (dotenv). Ensure `uv` is on PATH (`$HOME/.local/bin`).
 
 | Route | Description |
 |---|---|
@@ -55,15 +60,16 @@ npm run dev
 
 ## Runtime evidence (for judges)
 
-### Gemini — `@google/generative-ai`
+### Gemini — `@google/genai`
 
 | File | Role |
 |---|---|
-| `packages/infrastructure/src/gemini/GeminiEnrichmentAdapter.ts` | `GoogleGenerativeAI`, `generateContent` for ingest enrichment |
-| `packages/infrastructure/src/gemini/GeminiReasoningAdapter.ts` | `generateContent` for intent, SQL planning, synthesis |
+| `packages/infrastructure/src/gemini/generateContent.ts` | `GoogleGenAI` + `models.generateContent` (AI Studio / AQ. API keys) |
+| `packages/infrastructure/src/gemini/GeminiEnrichmentAdapter.ts` | Ingest enrichment |
+| `packages/infrastructure/src/gemini/GeminiReasoningAdapter.ts` | Intent, SQL planning, synthesis |
 | `packages/infrastructure/src/gemini/resolveGeminiApiKey.ts` | Fails fast if `GEMINI_API_KEY` missing |
 
-Model default: `gemini-2.0-flash` (override with `GEMINI_MODEL`).
+Model default: `gemini-flash-latest` (override with `GEMINI_MODEL`).
 
 ### ClickHouse — official `mcp-clickhouse` only (runtime)
 
@@ -137,7 +143,7 @@ docker compose -f deployment/docker/docker-compose.prod.yml up --build
 |---|---|
 | Web platform | ✅ React UI (`packages/web`) |
 | ClickHouse at runtime via official mcp-clickhouse | ✅ `McpClickHouseConnector` |
-| Google Cloud AI SDK imported & called | ✅ `@google/generative-ai` |
+| Google Cloud AI SDK imported & called | ✅ `@google/genai` |
 | No LangChain / OpenAI / Anthropic | ✅ Removed from all package.json |
 | Multi-step agent (not 2-call pipeline) | ✅ `AgentRunner` 6 steps + UI timeline |
 | Gemini real in demo/API (no silent fake) | ✅ `resolveGeminiApiKey()` throws |

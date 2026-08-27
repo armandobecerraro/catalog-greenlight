@@ -19,7 +19,7 @@ export class AgentRunner {
   constructor(
     private readonly mcp: IMcpConnector,
     private readonly reasoning: IGeminiReasoningPort,
-    private readonly modelName: string = process.env.GEMINI_MODEL || 'gemini-2.0-flash'
+    private readonly modelName: string = process.env.GEMINI_MODEL || 'gemini-flash-latest'
   ) {}
 
   async run(userPrompt: string, options: AgentRunnerOptions = {}): Promise<AgentRunResult> {

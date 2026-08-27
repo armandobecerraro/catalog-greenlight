@@ -32,4 +32,12 @@ describe('sqlValidation', () => {
       validateAuditSql('INSERT INTO media_catalog.agent_runs (id) VALUES (\'x\')')
     ).not.toThrow();
   });
+
+  it('audit allows Gemini prose containing system keyword in quoted values', () => {
+    expect(() =>
+      validateAuditSql(
+        "INSERT INTO media_catalog.agent_runs (response_summary) VALUES ('database system error reported')"
+      )
+    ).not.toThrow();
+  });
 });

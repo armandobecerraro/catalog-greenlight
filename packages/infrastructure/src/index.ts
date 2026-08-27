@@ -3,3 +3,4 @@ export { ConnectorFactory, buildClickHouseConfig } from './partners/ConnectorFac
 export { GeminiEnrichmentAdapter } from './gemini/GeminiEnrichmentAdapter';
 export { GeminiReasoningAdapter } from './gemini/GeminiReasoningAdapter';
 export { resolveGeminiApiKey } from './gemini/resolveGeminiApiKey';
+export { generateGeminiText } from './gemini/generateContent';

@@ -5,25 +5,26 @@ import { PageHeader, Card, Loading, ErrorBanner, AgentTimeline, Link } from '../
 export default function Dashboard() {
   const [stats, setStats] = useState<CatalogStats | null>(null);
   const [greenlight, setGreenlight] = useState<AgentRunResult | null>(null);
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(true);
+  const [statsError, setStatsError] = useState('');
+  const [greenlightError, setGreenlightError] = useState('');
+  const [statsLoading, setStatsLoading] = useState(true);
+  const [greenlightLoading, setGreenlightLoading] = useState(true);
 
   useEffect(() => {
-    (async () => {
-      try {
-        const [s, g] = await Promise.all([api.getStats(), api.getGreenlight()]);
-        setStats(s);
-        setGreenlight(g);
-      } catch (e) {
-        setError(e instanceof Error ? e.message : 'Failed to load dashboard');
-      } finally {
-        setLoading(false);
-      }
-    })();
+    api
+      .getStats()
+      .then(setStats)
+      .catch(e => setStatsError(e instanceof Error ? e.message : 'Failed to load stats'))
+      .finally(() => setStatsLoading(false));
+
+    api
+      .getGreenlight()
+      .then(setGreenlight)
+      .catch(e => setGreenlightError(e instanceof Error ? e.message : 'Greenlight agent failed'))
+      .finally(() => setGreenlightLoading(false));
   }, []);
 
-  if (loading) return <Loading />;
-  if (error) return <ErrorBanner message={error} />;
+  if (statsLoading) return <Loading />;
 
   return (
     <>
@@ -31,6 +32,8 @@ export default function Dashboard() {
         title="Programming Dashboard"
         subtitle="Live catalog stats from ClickHouse via MCP · Weekly greenlight picks from the agent"
       />
+
+      {statsError && <ErrorBanner message={statsError} />}
 
       <div className="grid-3">
         <Card>
@@ -68,9 +71,11 @@ export default function Dashboard() {
       <Card className="greenlight-panel">
         <div className="panel-head">
           <h3>Greenlight this week</h3>
-          <span className="badge">{greenlight?.model}</span>
+          {greenlight?.model && <span className="badge">{greenlight.model}</span>}
         </div>
-        {greenlight?.recommendations && greenlight.recommendations.length > 0 ? (
+        {greenlightLoading && <p className="muted">Running greenlight agent (Gemini + MCP, may take 1–2 min)…</p>}
+        {greenlightError && <ErrorBanner message={greenlightError} />}
+        {!greenlightLoading && greenlight?.recommendations && greenlight.recommendations.length > 0 ? (
           <div className="rec-grid">
             {greenlight.recommendations.map((r, i) => (
               <article key={i} className="rec-card">
@@ -82,13 +87,17 @@ export default function Dashboard() {
             ))}
           </div>
         ) : (
-          <p>{greenlight?.answer}</p>
+          !greenlightLoading && greenlight?.answer && <p>{greenlight.answer}</p>
         )}
-        <p className="muted">
-          Agent run {greenlight?.totalLatencyMs}ms ·{' '}
-          <Link to="/ask">Ask follow-up questions →</Link>
-        </p>
-        {greenlight?.steps && <AgentTimeline steps={greenlight.steps} />}
+        {greenlight && (
+          <>
+            <p className="muted">
+              Agent run {greenlight.totalLatencyMs}ms ·{' '}
+              <Link to="/ask">Ask follow-up questions →</Link>
+            </p>
+            {greenlight.steps && <AgentTimeline steps={greenlight.steps} />}
+          </>
+        )}
       </Card>
     </>
   );

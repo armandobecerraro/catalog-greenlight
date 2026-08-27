@@ -1,3 +1,4 @@
+import './loadEnv';
 import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -20,10 +21,37 @@ app.use(helmet({ contentSecurityPolicy: false }));
 app.use(cors());
 app.use(express.json());
 
-let ingestionUseCase: ContentIngestionUseCase;
-let insightEngineService: InsightEngineService;
-let agentRunner: AgentRunner;
-let mcpConnector: IMcpConnector;
+let ingestionUseCase: ContentIngestionUseCase | null = null;
+let insightEngineService: InsightEngineService | null = null;
+let agentRunner: AgentRunner | null = null;
+let mcpConnector: IMcpConnector | null = null;
+let initError: string | null = null;
+
+const GREENLIGHT_CACHE_TTL_MS = 60_000;
+let greenlightCache: { result: Awaited<ReturnType<AgentRunner['run']>>; expiresAt: number } | null = null;
+let greenlightInFlight: Promise<Awaited<ReturnType<AgentRunner['run']>>> | null = null;
+
+async function runGreenlightAgent(): Promise<Awaited<ReturnType<AgentRunner['run']>>> {
+  const now = Date.now();
+  if (greenlightCache && now < greenlightCache.expiresAt) {
+    return greenlightCache.result;
+  }
+  if (greenlightInFlight) {
+    return greenlightInFlight;
+  }
+  greenlightInFlight = agentRunner!.run(
+    'Recommend exactly 3 titles to greenlight and push this week. Consider genre gaps, recent revenue, and cannibalization risk. Cite data.',
+    { defaultIntent: 'greenlight' }
+  ).then(result => {
+    greenlightCache = { result, expiresAt: Date.now() + GREENLIGHT_CACHE_TTL_MS };
+    greenlightInFlight = null;
+    return result;
+  }).catch(err => {
+    greenlightInFlight = null;
+    throw err;
+  });
+  return greenlightInFlight;
+}
 
 async function init() {
   const connectorFactory = new ConnectorFactory();
@@ -37,6 +65,17 @@ async function init() {
   ingestionUseCase = new ContentIngestionUseCase(ingestionService);
   insightEngineService = new InsightEngineService(mcpConnector, geminiEnrichment);
   agentRunner = new AgentRunner(mcpConnector, geminiReasoning, geminiReasoning.modelName);
+  initError = null;
+}
+
+function requireReady(_req: Request, res: Response, next: NextFunction) {
+  if (!ingestionUseCase || !insightEngineService || !agentRunner) {
+    res.status(503).json({
+      error: initError || 'API is still initializing. Retry in a few seconds.'
+    });
+    return;
+  }
+  next();
 }
 
 interface IngestRequest {
@@ -47,53 +86,55 @@ interface IngestRequest {
   cast: string[];
 }
 
-app.post('/api/v1/media/ingest', async (req: Request<{}, {}, IngestRequest>, res: Response, next: NextFunction) => {
+app.post('/api/v1/media/ingest', requireReady, async (req: Request<{}, {}, IngestRequest>, res: Response, next: NextFunction) => {
   try {
-    const result = await ingestionUseCase.execute(req.body);
+    const result = await ingestionUseCase!.execute(req.body);
     res.status(201).json(result);
   } catch (error) {
     next(error);
   }
 });
 
-app.post('/api/v1/agent/ask', async (req: Request, res: Response, next: NextFunction) => {
+app.post('/api/v1/agent/ask', requireReady, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { question } = req.body as { question?: string };
     if (!question?.trim()) {
       res.status(400).json({ error: 'question is required' });
       return;
     }
-    const result = await agentRunner.run(question.trim());
+    const result = await agentRunner!.run(question.trim());
     res.json(result);
   } catch (error) {
     next(error);
   }
 });
 
-app.get('/api/v1/greenlight', async (_req: Request, res: Response, next: NextFunction) => {
+app.get('/api/v1/greenlight', requireReady, async (_req: Request, res: Response, next: NextFunction) => {
   try {
-    const result = await agentRunner.run(
-      'Recommend exactly 3 titles to greenlight and push this week. Consider genre gaps, recent revenue, and cannibalization risk. Cite data.',
-      { defaultIntent: 'greenlight' }
-    );
-    res.json(result);
+    const now = Date.now();
+    if (greenlightCache && now < greenlightCache.expiresAt) {
+      res.json({ ...greenlightCache.result, cached: true });
+      return;
+    }
+    const result = await runGreenlightAgent();
+    res.json({ ...result, cached: greenlightCache && now < greenlightCache.expiresAt });
   } catch (error) {
     next(error);
   }
 });
 
-app.get('/api/v1/catalog', async (_req: Request, res: Response, next: NextFunction) => {
+app.get('/api/v1/catalog', requireReady, async (_req: Request, res: Response, next: NextFunction) => {
   try {
-    const catalog = await insightEngineService.getCatalog();
+    const catalog = await insightEngineService!.getCatalog();
     res.json({ entries: catalog, count: catalog.length });
   } catch (error) {
     next(error);
   }
 });
 
-app.get('/api/v1/catalog/stats', async (_req: Request, res: Response, next: NextFunction) => {
+app.get('/api/v1/catalog/stats', requireReady, async (_req: Request, res: Response, next: NextFunction) => {
   try {
-    const stats = await insightEngineService.getCatalogStats();
+    const stats = await insightEngineService!.getCatalogStats();
     res.json(stats);
   } catch (error) {
     next(error);
@@ -102,8 +143,10 @@ app.get('/api/v1/catalog/stats', async (_req: Request, res: Response, next: Next
 
 app.get('/api/v1/health', (_req: Request, res: Response) => {
   res.json({
-    status: 'ok',
+    status: initError ? 'degraded' : ingestionUseCase ? 'ok' : 'starting',
     product: 'Catalog Greenlight',
+    ready: Boolean(ingestionUseCase && !initError),
+    error: initError,
     timestamp: new Date().toISOString()
   });
 });
@@ -125,15 +168,22 @@ app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
 const PORT = process.env.PORT || 8080;
 
 async function startup(): Promise<void> {
-  await init();
   app.listen(PORT, () => {
-    console.log(`Catalog Greenlight API running on port ${PORT}`);
+    console.log(`Catalog Greenlight API listening on port ${PORT} (initializing MCP + Gemini...)`);
   });
+
+  try {
+    await init();
+    console.log('Catalog Greenlight API ready — ClickHouse MCP + Gemini connected');
+    void runGreenlightAgent().then(() => console.log('Greenlight cache pre-warmed')).catch(e =>
+      console.warn('Greenlight pre-warm skipped:', e instanceof Error ? e.message : e)
+    );
+  } catch (error) {
+    initError = error instanceof Error ? error.message : String(error);
+    console.error('Failed to initialize API (health still up):', initError);
+  }
 }
 
-startup().catch(error => {
-  console.error('Failed to initialize API:', error);
-  process.exit(1);
-});
+startup();
 
 export { app };

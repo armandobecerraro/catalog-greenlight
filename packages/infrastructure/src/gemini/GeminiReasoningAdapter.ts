@@ -1,21 +1,17 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
 import {
   AgentIntent,
   GreenlightRecommendation,
   IGeminiReasoningPort,
   ReasoningSynthesis
 } from '@bas/core';
+import { generateGeminiText } from './generateContent';
 
-const MODEL = process.env.GEMINI_MODEL || 'gemini-2.0-flash';
+const MODEL = process.env.GEMINI_MODEL || 'gemini-flash-latest';
 
 export class GeminiReasoningAdapter implements IGeminiReasoningPort {
   readonly modelName = MODEL;
-  private readonly model: ReturnType<GoogleGenerativeAI['getGenerativeModel']>;
 
-  constructor(apiKey: string) {
-    const genAI = new GoogleGenerativeAI(apiKey);
-    this.model = genAI.getGenerativeModel({ model: MODEL });
-  }
+  constructor(private readonly apiKey: string) {}
 
   async classifyIntent(userPrompt: string): Promise<AgentIntent> {
     const prompt = `Classify this programming-catalog request into exactly one intent.
@@ -24,8 +20,7 @@ Respond with ONLY the intent word, nothing else.
 
 Request: ${userPrompt}`;
 
-    const result = await this.model.generateContent(prompt);
-    const text = result.response.text().trim().toLowerCase();
+    const text = (await generateGeminiText(this.apiKey, prompt, this.modelName)).trim().toLowerCase();
 
     if (text.includes('greenlight')) return 'greenlight';
     if (text.includes('stats')) return 'stats';
@@ -56,8 +51,7 @@ Rules:
 
 Generate the best ClickHouse SQL to answer the request.`;
 
-    const result = await this.model.generateContent(prompt);
-    return this.stripMarkdown(result.response.text());
+    return this.stripMarkdown(await generateGeminiText(this.apiKey, prompt, this.modelName));
   }
 
   async synthesize(
@@ -85,8 +79,7 @@ For catalog_qa: recommendations can be empty array.
 For greenlight or weekly picks: provide exactly 3 recommendations with data-backed evidence.
 Use English. Be specific — reference counts, genres, revenue from the result rows.`;
 
-    const result = await this.model.generateContent(prompt);
-    const text = result.response.text();
+    const text = await generateGeminiText(this.apiKey, prompt, this.modelName);
     return this.parseSynthesis(text);
   }
 

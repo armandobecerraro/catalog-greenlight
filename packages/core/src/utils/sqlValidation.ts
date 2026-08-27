@@ -37,15 +37,19 @@ function firstStatementKeyword(sql: string): string {
   return match?.[1] ?? '';
 }
 
+function stripQuotedStrings(sql: string): string {
+  return sql.replace(/'(?:''|[^'])*'/g, "'");
+}
+
 export function validateGeneratedSql(sql: string, intent: AgentIntent): void {
   const trimmed = sql.trim();
   if (!trimmed) {
     throw new SqlValidationError('Empty SQL is not allowed');
   }
 
-  const normalized = normalizeSql(sql);
+  const normalized = normalizeSql(stripQuotedStrings(sql));
   for (const keyword of FORBIDDEN_KEYWORDS) {
-    if (new RegExp(`\\b${keyword}\\b`).test(normalized)) {
+    if (new RegExp(`\\b${keyword.replace(/ /g, '\\s+')}\\b`).test(normalized)) {
       throw new SqlValidationError(`Forbidden SQL keyword: ${keyword}`);
     }
   }
@@ -73,5 +77,14 @@ export function validateAuditSql(sql: string): void {
   if (keyword !== 'INSERT') {
     throw new SqlValidationError(`Audit log must use INSERT; got ${keyword || 'unknown'}`);
   }
-  validateGeneratedSql(sql, 'ingest');
+  const stripped = stripQuotedStrings(sql);
+  if (!/\bINSERT\s+INTO\s+media_catalog\.agent_runs\b/i.test(stripped)) {
+    throw new SqlValidationError('Audit INSERT must target media_catalog.agent_runs');
+  }
+  const normalized = normalizeSql(stripped);
+  for (const keyword of ['DROP', 'ALTER', 'TRUNCATE', 'DELETE']) {
+    if (new RegExp(`\\b${keyword}\\b`).test(normalized)) {
+      throw new SqlValidationError(`Forbidden SQL keyword in audit: ${keyword}`);
+    }
+  }
 }

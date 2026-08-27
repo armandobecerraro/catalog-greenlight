@@ -6,57 +6,65 @@
 
 Catalog Greenlight is a web product for a **programming chief** at a small Latin/US streaming studio. The agent investigates your ClickHouse catalog via the official **mcp-clickhouse** MCP server, reasons with **Gemini** (`@google/genai`), and returns actionable greenlight recommendations backed by SQL and row data.
 
+**Repository:** https://github.com/armandobecerraro/catalog-greenlight
+
 ## Prerequisites
 
 | Requirement | Version / notes |
 |---|---|
 | Node.js | 20+ |
-| Docker | ClickHouse local cluster |
-| [uv](https://docs.astral.sh/uv/) | Spawns `mcp-clickhouse` via stdio |
-| `GEMINI_API_KEY` | **Required** for demo, API, and UI (no silent fake fallback) |
+| [uv](https://docs.astral.sh/uv/) | Spawns `mcp-clickhouse` via stdio (`$HOME/.local/bin`) |
+| `GEMINI_API_KEY` | **Required** for API and UI (no silent fake fallback) |
+| ClickHouse | ClickHouse Cloud (production path) **or** local Docker (demo path) |
 
-## Quick start (< 10 minutes)
+## Path A — ClickHouse Cloud + web UI (recommended for judges)
 
-```bash
-git clone <your-repo-url>
-cd blockbuster-agentic-studio
-cp .env.example .env   # add GEMINI_API_KEY
-export $(grep -v '^#' .env | xargs)
-
-npm install
-export GEMINI_API_KEY=your_key_here
-npm run demo
-```
-
-`npm run demo` will:
-
-1. Start ClickHouse (`deployment/docker/docker-compose.clickhouse.yml`)
-2. Apply schema + seed **50 titles** (`deployment/docker/seed-catalog.sql`)
-3. Ingest one new title with **real Gemini**
-4. Print catalog stats, an NL question, greenlight picks, and agent step latencies
-
-### Web UI + API (ClickHouse Cloud via `.env`)
-
-Create `.env` at repo root (see `.env.example`). **Do not** use `npm run demo` if you target ClickHouse Cloud — that script starts local Docker.
+This is the production configuration: HTTPS to ClickHouse Cloud, Gemini via `@google/genai`, UI at `:5173`.
 
 ```bash
+git clone https://github.com/armandobecerraro/catalog-greenlight
+cd catalog-greenlight
+cp .env.example .env
+# Edit .env: GEMINI_API_KEY, CLICKHOUSE_HOST, CLICKHOUSE_PORT=8443, CLICKHOUSE_SECURE=true
+
 npm install
 npm run dev
-# or: bash scripts/dev.sh
+# or: PATH="$HOME/.local/bin:$PATH" bash scripts/dev.sh
 ```
 
-- Web: http://localhost:5173 (Vite proxies `/api` → API)
-- API: http://localhost:8080
-- Health: `GET /api/v1/health`
+| URL | Role |
+|---|---|
+| http://localhost:5173 | React UI (Vite proxies `/api` → API) |
+| http://localhost:8080/api/v1/health | API health (`ready: true` when MCP connected) |
 
-`npm run dev` loads `.env` automatically via `packages/api/src/loadEnv.ts` (dotenv). Ensure `uv` is on PATH (`$HOME/.local/bin`).
+`npm run dev` loads repo-root `.env` automatically (`loadRepoEnv` in `@bas/infrastructure`).
 
 | Route | Description |
 |---|---|
-| `/` | Dashboard — MCP stats + Greenlight this week |
+| `/` | Dashboard — MCP stats + Greenlight this week (may take 1–2 min first load) |
 | `/catalog` | Full catalog table |
 | `/ingest` | Ingest form → Gemini enrich → MCP INSERT |
 | `/ask` | NL questions with 6-step agent timeline + SQL evidence |
+
+**Do not** run `npm run demo` on this path — that script starts local Docker ClickHouse and is for Path B.
+
+## Path B — Local Docker ClickHouse + CLI demo (secondary)
+
+```bash
+git clone https://github.com/armandobecerraro/catalog-greenlight
+cd catalog-greenlight
+cp .env.example .env   # GEMINI_API_KEY required; CLICKHOUSE_HOST=localhost, PORT=8123
+npm install
+npm run demo
+```
+
+`npm run demo` starts ClickHouse Docker, seeds **50 titles**, runs CLI ingest + stats + NL question + greenlight via the same agent stack.
+
+Optional web UI against local ClickHouse:
+
+```bash
+npm run dev
+```
 
 ## Runtime evidence (for judges)
 
@@ -64,7 +72,7 @@ npm run dev
 
 | File | Role |
 |---|---|
-| `packages/infrastructure/src/gemini/generateContent.ts` | `GoogleGenAI` + `models.generateContent` (AI Studio / AQ. API keys) |
+| `packages/infrastructure/src/gemini/generateContent.ts` | `GoogleGenAI` + `models.generateContent` |
 | `packages/infrastructure/src/gemini/GeminiEnrichmentAdapter.ts` | Ingest enrichment |
 | `packages/infrastructure/src/gemini/GeminiReasoningAdapter.ts` | Intent, SQL planning, synthesis |
 | `packages/infrastructure/src/gemini/resolveGeminiApiKey.ts` | Fails fast if `GEMINI_API_KEY` missing |
@@ -75,12 +83,10 @@ Model default: `gemini-flash-latest` (override with `GEMINI_MODEL`).
 
 | File | Role |
 |---|---|
-| `packages/infrastructure/src/partners/clickhouse/McpClickHouseConnector.ts` | Spawns MCP via `uv run --with mcp-clickhouse`; calls `run_query`, `list_databases`, `list_tables` through `@modelcontextprotocol/sdk` `Client.callTool` |
-| `packages/orchestration/src/agents/AgentRunner.ts` | 6-step deterministic agent: INTENT → DISCOVER → PLAN_SQL → EXECUTE → SYNTHESIZE → AUDIT |
+| `packages/infrastructure/src/partners/clickhouse/McpClickHouseConnector.ts` | Spawns MCP via `uv run --with mcp-clickhouse`; `Client.callTool` → `run_query`, `list_databases`, `list_tables` |
+| `packages/orchestration/src/agents/AgentRunner.ts` | 6-step agent: INTENT → DISCOVER → PLAN_SQL → EXECUTE → SYNTHESIZE → AUDIT |
 
 Seed data is loaded via Docker `clickhouse-client` only (`deployment/scripts/seed.sh`) — never by the agent or product API.
-
-Default ClickHouse HTTP port: **8123**.
 
 ## Agent architecture
 
@@ -98,17 +104,27 @@ The UI `/ask` page renders this timeline for judges.
 
 ## Environment variables
 
-See `.env.example`. Key vars:
+See `.env.example`.
+
+**ClickHouse Cloud:**
 
 ```bash
-GEMINI_API_KEY=              # required
-CLICKHOUSE_HOST=localhost
-CLICKHOUSE_PORT=8123
+GEMINI_API_KEY=
+CLICKHOUSE_HOST=<your-cloud-host>
+CLICKHOUSE_PORT=8443
+CLICKHOUSE_SECURE=true
 CLICKHOUSE_USER=default
 CLICKHOUSE_PASSWORD=
 CLICKHOUSE_DATABASE=media_catalog
-CLICKHOUSE_SECURE=false
 CLICKHOUSE_ALLOW_WRITE_ACCESS=true
+```
+
+**Local Docker (Path B):**
+
+```bash
+CLICKHOUSE_HOST=localhost
+CLICKHOUSE_PORT=8123
+CLICKHOUSE_SECURE=false
 ```
 
 ## Testing & build
@@ -116,26 +132,28 @@ CLICKHOUSE_ALLOW_WRITE_ACCESS=true
 ```bash
 npm run build
 npm test
+npm run test:e2e   # requires npm run dev + .env with Cloud or local CH
 ```
 
-- Unit tests use **injected** `FakeGeminiEnrichmentClient` — never in API/demo/web.
-- `AgentRunner` tests mock MCP + reasoning and assert all 6 steps.
-- Optional integration test (requires Docker + API key): documented in `packages/infrastructure/tests/`.
+- Unit tests use injected `FakeGeminiEnrichmentClient` — never in API/demo/web.
+- E2E: `packages/web/e2e/hackathon.spec.ts` (Playwright against `:5173`).
 
 ## Deployment
 
-### Docker (app + ClickHouse)
+### Docker (app image includes uv + mcp-clickhouse smoke)
+
+```bash
+docker build -t catalog-greenlight .
+# Cloud Run: set env from .env.example; CLICKHOUSE_SECURE=true for Cloud
+```
+
+### Local full stack (app + ClickHouse)
 
 ```bash
 docker compose -f deployment/docker/docker-compose.prod.yml up --build
 ```
 
-### Cloud Run + ClickHouse Cloud
-
-1. Provision ClickHouse Cloud service (HTTP port 8443 or 8123).
-2. Build & push image from root `Dockerfile`.
-3. Deploy to Cloud Run with env vars from `.env.example`.
-4. Set `CLICKHOUSE_SECURE=true` for ClickHouse Cloud TLS.
+Hosted deploy: see `docs/submission/DEPLOY.md` (not deployed in this submission — GCP credits / manual step).
 
 ## Hackathon compliance (Stage One)
 
@@ -144,7 +162,7 @@ docker compose -f deployment/docker/docker-compose.prod.yml up --build
 | Web platform | ✅ React UI (`packages/web`) |
 | ClickHouse at runtime via official mcp-clickhouse | ✅ `McpClickHouseConnector` |
 | Google Cloud AI SDK imported & called | ✅ `@google/genai` |
-| No LangChain / OpenAI / Anthropic | ✅ Removed from all package.json |
+| No LangChain / OpenAI / Anthropic | ✅ |
 | Multi-step agent (not 2-call pipeline) | ✅ `AgentRunner` 6 steps + UI timeline |
 | Gemini real in demo/API (no silent fake) | ✅ `resolveGeminiApiKey()` throws |
 
@@ -153,31 +171,22 @@ docker compose -f deployment/docker/docker-compose.prod.yml up --build
 ```
 packages/
   core/            Domain, ports, InsightEngineService
-  infrastructure/  McpClickHouseConnector, Gemini adapters
+  infrastructure/  McpClickHouseConnector, Gemini adapters, loadRepoEnv
   orchestration/   AgentRunner, MediaIngestionAgent
   api/             Express API + static web
   web/             React + Vite UI
-examples/media-workflows/  CLI demo (same agent as UI)
+examples/media-workflows/  CLI demo (same agent as UI; loads repo .env)
 deployment/docker/         ClickHouse, seed SQL, prod compose
 ```
 
 ## 3-minute demo video script (English)
 
 1. **0:00–0:20** — Problem: programming chief needs data-backed picks, not generic AI summaries.
-2. **0:20–0:45** — Dashboard: live stats from ClickHouse (genre counts, 7-day revenue via MCP).
-3. **0:45–1:15** — Ingest: add a title → show Gemini enrichment → confirm row in catalog.
-4. **1:15–2:00** — Ask: “Which genre is under-represented?” → expand agent timeline → show SQL + result rows + answer.
-5. **2:00–2:30** — Greenlight panel: 3 titles with justifications tied to query evidence.
-6. **2:30–3:00** — Architecture: mcp-clickhouse + Gemini SDK, `npm run demo`, GitHub repo.
-
-## Git remote (after clone)
-
-This repo ships with an initial local commit. To push:
-
-```bash
-git remote add origin <your-github-url>
-git push -u origin main
-```
+2. **0:20–0:45** — Open **http://localhost:5173** — Dashboard: live stats from ClickHouse (genre counts, 7-day revenue via MCP).
+3. **0:45–1:15** — **Ingest** page: add a title → show Gemini enrichment success → **Catalog** confirms the row.
+4. **1:15–2:00** — **Ask**: “Which genre is under-represented?” → expand agent timeline → show SQL + result rows + answer with numbers.
+5. **2:00–2:30** — Dashboard Greenlight panel: 3 titles with justifications tied to query evidence.
+6. **2:30–3:00** — Architecture slide: mcp-clickhouse + `@google/genai`, GitHub repo, `npm run dev`.
 
 ## License
 

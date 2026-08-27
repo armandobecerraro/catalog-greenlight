@@ -1,5 +1,7 @@
 import { ContentIngestionUseCase, MediaIngestionService } from '@bas/core';
-import { ConnectorFactory, buildClickHouseConfig } from '@bas/infrastructure';
+import { ConnectorFactory, buildClickHouseConfig, loadRepoEnv } from '@bas/infrastructure';
+
+loadRepoEnv();
 
 async function main() {
   console.log('🎬 Catalog Greenlight — Media Ingestion Demo\n');

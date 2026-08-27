@@ -1,0 +1,14 @@
+npm warn Unknown env config "devdir". This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.
+
+Running 6 tests using 1 worker
+
+(node:19802) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  1 e2e/hackathon.spec.ts:8:7 › Catalog Greenlight hackathon UI (1280) › catalog: dozens of rows (1.2s)
+  ✓  2 e2e/hackathon.spec.ts:17:7 › Catalog Greenlight hackathon UI (1280) › ingest: unique title appears in catalog (14.8s)
+  ✓  3 e2e/hackathon.spec.ts:32:7 › Catalog Greenlight hackathon UI (1280) › ask: 6 completed steps, SQL, and numeric answer (1.2m)
+  ✓  4 e2e/hackathon.spec.ts:48:7 › Catalog Greenlight hackathon UI (1280) › dashboard: stats load immediately (3.8s)
+  ✓  5 e2e/hackathon.spec.ts:56:7 › Catalog Greenlight hackathon UI (1280) › dashboard: greenlight panel resolves (may take 1–2 min) (33.2s)
+  ✓  6 e2e/hackathon.spec.ts:70:7 › Catalog Greenlight hackathon UI (390 mobile) › all four routes load without connection errors (3.6s)
+
+  6 passed (2.2m)

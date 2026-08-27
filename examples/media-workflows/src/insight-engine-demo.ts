@@ -4,7 +4,9 @@ import {
   InsightEngineService,
   IMcpConnector
 } from '@bas/core';
-import { ConnectorFactory, buildClickHouseConfig } from '@bas/infrastructure';
+import { ConnectorFactory, buildClickHouseConfig, loadRepoEnv } from '@bas/infrastructure';
+
+loadRepoEnv();
 import { AgentRunner } from '@bas/orchestration';
 
 async function main() {

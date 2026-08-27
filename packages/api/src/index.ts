@@ -28,8 +28,35 @@ let mcpConnector: IMcpConnector | null = null;
 let initError: string | null = null;
 
 const GREENLIGHT_CACHE_TTL_MS = 60_000;
+const GREENLIGHT_TIMEOUT_MS = 240_000;
 let greenlightCache: { result: Awaited<ReturnType<AgentRunner['run']>>; expiresAt: number } | null = null;
 let greenlightInFlight: Promise<Awaited<ReturnType<AgentRunner['run']>>> | null = null;
+/** Bumped on timeout so stale in-flight runs never update cache. */
+let greenlightRunGeneration = 0;
+
+function withGreenlightTimeout<T>(promise: Promise<T>, generation: number, onTimeout: () => void): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      onTimeout();
+      reject(
+        new Error(
+          `Greenlight agent timed out after ${GREENLIGHT_TIMEOUT_MS / 1000}s. Retry — Gemini + ClickHouse Cloud can take 1–2 minutes.`
+        )
+      );
+    }, GREENLIGHT_TIMEOUT_MS);
+
+    promise.then(
+      value => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      err => {
+        clearTimeout(timer);
+        reject(err);
+      }
+    );
+  });
+}
 
 async function runGreenlightAgent(): Promise<Awaited<ReturnType<AgentRunner['run']>>> {
   const now = Date.now();
@@ -39,17 +66,28 @@ async function runGreenlightAgent(): Promise<Awaited<ReturnType<AgentRunner['run
   if (greenlightInFlight) {
     return greenlightInFlight;
   }
-  greenlightInFlight = agentRunner!.run(
+
+  const generation = ++greenlightRunGeneration;
+
+  const agentPromise = agentRunner!.run(
     'Recommend exactly 3 titles to greenlight and push this week. Consider genre gaps, recent revenue, and cannibalization risk. Cite data.',
     { defaultIntent: 'greenlight' }
   ).then(result => {
+    if (generation !== greenlightRunGeneration) {
+      throw new Error('Greenlight run superseded (timeout or newer request)');
+    }
     greenlightCache = { result, expiresAt: Date.now() + GREENLIGHT_CACHE_TTL_MS };
-    greenlightInFlight = null;
     return result;
-  }).catch(err => {
-    greenlightInFlight = null;
-    throw err;
   });
+
+  greenlightInFlight = withGreenlightTimeout(agentPromise, generation, () => {
+    if (generation === greenlightRunGeneration) {
+      greenlightRunGeneration++;
+    }
+  }).finally(() => {
+    greenlightInFlight = null;
+  });
+
   return greenlightInFlight;
 }
 
@@ -175,9 +213,6 @@ async function startup(): Promise<void> {
   try {
     await init();
     console.log('Catalog Greenlight API ready — ClickHouse MCP + Gemini connected');
-    void runGreenlightAgent().then(() => console.log('Greenlight cache pre-warmed')).catch(e =>
-      console.warn('Greenlight pre-warm skipped:', e instanceof Error ? e.message : e)
-    );
   } catch (error) {
     initError = error instanceof Error ? error.message : String(error);
     console.error('Failed to initialize API (health still up):', initError);

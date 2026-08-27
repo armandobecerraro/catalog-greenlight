@@ -1,7 +1,12 @@
 import { GoogleGenAI, HarmBlockThreshold, HarmCategory } from '@google/genai';
 
 const DEFAULT_MODEL = process.env.GEMINI_MODEL || 'gemini-flash-latest';
-const FALLBACK_MODELS = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-2.5-flash-lite'];
+const FALLBACK_MODELS = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-3.5-flash-lite'];
+
+function isModelUnavailable(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return /NOT_FOUND|no longer available|models\/gemini/i.test(message);
+}
 
 const SAFETY = [
   { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
@@ -42,6 +47,9 @@ export async function generateGeminiText(apiKey: string, prompt: string, model =
         throw new Error('Gemini returned an empty response');
       } catch (error) {
         lastError = error;
+        if (isModelUnavailable(error)) {
+          break;
+        }
         if (!isRetryable(error) && attempt === 0) {
           break;
         }

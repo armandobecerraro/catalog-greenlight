@@ -15,7 +15,8 @@
   "dependencies": {
     "@bas/core": "*",
     "@google/genai": "^2.19.0",
-    "@modelcontextprotocol/sdk": "^1.0.0"
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "dotenv": "^16.6.1"
   },
   "devDependencies": {
     "@types/jest": "^29.5.0",

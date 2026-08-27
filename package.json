@@ -20,6 +20,7 @@
     "start:demo": "npm run start:demo --workspace=@bas/media-workflows-examples",
     "start:ingestion": "npm run start:ingestion --workspace=@bas/media-workflows-examples",
     "demo": "bash deployment/scripts/demo.sh",
+    "test:e2e": "npm run test:e2e --workspace=@bas/web",
     "deploy:infra": "bash scripts/deploy.sh",
     "setup": "bash scripts/setup.sh"
   },

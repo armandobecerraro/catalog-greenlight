@@ -10,34 +10,32 @@ Paste these fields into https://agentic-cinema.devpost.com/
 
 ## Tagline
 
-The agent that tells programming what to title to push — with ClickHouse evidence.
+The agent that tells programming what to push — with ClickHouse evidence.
 
 ## Elevator pitch (short description)
 
-Catalog Greenlight is a web app for a streaming programming chief. It connects Gemini (`@google/generative-ai`) to a real ClickHouse catalog through the official **mcp-clickhouse** MCP server. The agent runs a 6-step pipeline (INTENT → DISCOVER → PLAN_SQL → EXECUTE → SYNTHESIZE → AUDIT), shows SQL + row evidence in the UI, and recommends weekly greenlight picks backed by catalog and revenue data — not generic movie trivia.
+Catalog Greenlight is a web app for a streaming programming chief. It connects Gemini (`@google/genai`) to a real ClickHouse catalog through the official **mcp-clickhouse** MCP server. The agent runs a 6-step pipeline (INTENT → DISCOVER → PLAN_SQL → EXECUTE → SYNTHESIZE → AUDIT), shows SQL + row evidence in the UI, and recommends weekly greenlight picks backed by catalog and revenue data — not generic movie trivia.
 
 ## Built with
 
 - **ClickHouse** — catalog + revenue + agent audit tables; runtime access only via [mcp-clickhouse](https://github.com/ClickHouse/mcp-clickhouse)
-- **Google Gemini** — `@google/generative-ai` (`gemini-2.0-flash`) for enrichment, SQL planning, and synthesis
+- **Google Gemini** — `@google/genai` (`gemini-flash-latest` via `generateContent.ts`) for enrichment, SQL planning, and synthesis
 - **MCP** — `@modelcontextprotocol/sdk` stdio client (`run_query`, `list_databases`, `list_tables`)
 - **TypeScript monorepo** — Clean Architecture (core / infrastructure / orchestration / api / web)
 - **React + Vite** — dashboard, catalog, ingest, ask-with-timeline
-- **Docker** — local ClickHouse + production Dockerfile
+- **Docker** — production image with uv + Python 3.13 for mcp-clickhouse
 
 ## Link to demo (hosted app)
 
-`https://<YOUR_RENDER_OR_CLOUD_RUN_URL>` — see `docs/submission/DEPLOY.md`
+`TODO_HOSTED_URL` — not deployed in this submission (see `docs/submission/VERIFICATION.md`). Judges can run locally: `npm run dev` → http://localhost:5173
 
 ## Link to GitHub repo
 
-`https://github.com/<YOUR_ORG>/catalog-greenlight` — see `docs/submission/VERIFICATION.md` § Repository
+https://github.com/armandobecerraro/catalog-greenlight
 
 ## Video demo (3 min, English)
 
-`https://<YOUR_YOUTUBE_OR_LOOM_URL>`
-
-Script: README.md § “3-minute demo video script”
+`TODO_YOUTUBE` — script in README.md § “3-minute demo video script”
 
 ## What it does
 
@@ -50,28 +48,30 @@ Script: README.md § “3-minute demo video script”
 
 - Official MCP server at runtime — no direct Node ClickHouse client in product code
 - Agent generates SELECT for Q&A/greenlight; SQL guard blocks DROP/ALTER/TRUNCATE
-- 50-title seed catalog with revenue table for meaningful recommendations
+- 50+ title seed catalog with revenue table for meaningful recommendations
 
 ## How we use Google Cloud AI (required)
 
-- `GeminiEnrichmentAdapter.ts` — `GoogleGenerativeAI` + `generateContent` on ingest
+- `packages/infrastructure/src/gemini/generateContent.ts` — `GoogleGenAI` + `models.generateContent`
+- `GeminiEnrichmentAdapter.ts` — enrichment on ingest
 - `GeminiReasoningAdapter.ts` — intent classification, SQL generation, answer synthesis
 - Fails fast if `GEMINI_API_KEY` is missing (no silent fake in API/demo/web)
 
 ## Try it yourself
 
 ```bash
-git clone https://github.com/<YOUR_ORG>/catalog-greenlight
+git clone https://github.com/armandobecerraro/catalog-greenlight
 cd catalog-greenlight
-cp .env.example .env   # add GEMINI_API_KEY
-export $(grep -v '^#' .env | xargs)
-npm install && npm run demo
+cp .env.example .env   # GEMINI_API_KEY + ClickHouse Cloud host (8443, SECURE=true)
+npm install
 npm run dev   # http://localhost:5173
 ```
 
+For local Docker ClickHouse instead: `npm run demo` (see README Path B).
+
 ## Team / attribution
 
-[Your name(s)]
+Armando Becerra Rodríguez
 
 ## License
 

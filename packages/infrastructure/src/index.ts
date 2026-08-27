@@ -1,3 +1,4 @@
+export { loadRepoEnv, findRepoEnvPath } from './loadEnv';
 export { McpClickHouseConnector } from './partners/clickhouse/McpClickHouseConnector';
 export { ConnectorFactory, buildClickHouseConfig } from './partners/ConnectorFactory';
 export { GeminiEnrichmentAdapter } from './gemini/GeminiEnrichmentAdapter';

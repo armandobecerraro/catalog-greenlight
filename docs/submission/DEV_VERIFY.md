@@ -1,138 +1,92 @@
 # Dev runtime verification — Catalog Greenlight
 
 **Date:** 2026-08-27  
-**Target:** ClickHouse Cloud + Gemini (`@google/genai`) via `.env`  
-**Servers:** `npm run dev` (API :8080 + Vite :5173)
+**Target:** ClickHouse Cloud (HTTPS 8443) + Gemini (`@google/genai`) via repo-root `.env`  
+**Repo:** https://github.com/armandobecerraro/catalog-greenlight  
+**Commit:** `678b754`
 
 ---
 
-## 0. Diagnosis (root cause of ERR_CONNECTION_REFUSED)
+## 1. Servers
+
+```bash
+PATH="$HOME/.local/bin:$PATH" npm run dev
+```
 
 | Check | Result |
 |-------|--------|
-| `lsof :5173` before fix | **nothing listening** — Vite not running |
-| `lsof :8080` before fix | **nothing listening** |
-| `.env` present | yes |
-| `GEMINI_API_KEY` | set (non-empty) |
-| `CLICKHOUSE_HOST` | set (Cloud host) |
-| `CLICKHOUSE_PORT` | 8443 |
-| `CLICKHOUSE_SECURE` | true |
-| `uv` | `/Users/armandobecerrarodriguez/.local/bin/uv` |
-
-**Root cause:** User opened `:5173` without `npm run dev` running. Secondary issue: API did not load `.env` on startup (fixed with `loadEnv.ts` + dotenv).
+| `curl http://localhost:8080/api/v1/health` | `ready: true` |
+| `curl http://localhost:5173/` | HTML (no `ERR_CONNECTION_REFUSED`) |
+| Vite proxy `/api/v1/health` | 200 |
 
 ---
 
-## 1. Fixes applied
+## 2. Playwright E2E (browser, real UI)
 
-| Fix | File |
-|-----|------|
-| Load repo-root `.env` before init | `packages/api/src/loadEnv.ts` |
-| API listens before MCP init; no `process.exit(1)` | `packages/api/src/index.ts` |
-| `concurrently --kill-others-on-fail false` | `package.json` |
-| Greenlight 60s cache + in-flight mutex | `packages/api/src/index.ts` |
-| Dashboard: stats load separately from greenlight | `packages/web/src/pages/Dashboard.tsx` |
-| Revenue 7d uses `max(week_start)-7` not `today()-7` | `InsightEngineService.ts` |
-| Audit SQL guard: strip quoted strings (no false `SYSTEM` block) | `packages/core/src/utils/sqlValidation.ts` |
-| `scripts/dev.sh` wrapper | `scripts/dev.sh` |
+**Spec:** `packages/web/e2e/hackathon.spec.ts`  
+**Command:** `npm run test:e2e` (with `npm run dev` running)  
+**Viewports:** 1280×800 and 390×844
+
+**Output (2026-08-27):** see `docs/submission/playwright-output.txt`
+
+```
+Running 6 tests using 1 worker
+  ✓ catalog: dozens of rows
+  ✓ ingest: unique title appears in catalog
+  ✓ ask: 6 completed steps, SQL, and numeric answer
+  ✓ dashboard: stats load immediately
+  ✓ dashboard: greenlight panel resolves (may take 1–2 min)
+  ✓ all four routes load without connection errors (390 mobile)
+
+  6 passed (2.2m)
+```
+
+| Route | Verified |
+|-------|----------|
+| `/` Dashboard stats | PASS — catalog count > 0, revenue visible |
+| `/` Greenlight | PASS — 3 rec-cards or answer within 240s timeout |
+| `/catalog` | PASS — >10 table rows |
+| `/ingest` | PASS — unique title + cast; success banner; row in catalog UI |
+| `/ask` | PASS — 6 `status-completed` steps, SQL block, Evidence rows, answer with digits |
+
+**Not used for PASS:** screenshots alone, curl-only ingest/ask without UI.
 
 ---
 
-## 2. HTTP verification (after `npm run dev`)
+## 3. Runtime fixes in this pass
 
-```bash
-curl -sS http://localhost:8080/api/v1/health
-```
-
-```json
-{"status":"ok","product":"Catalog Greenlight","ready":true,"error":null,...}
-```
-
-```bash
-curl -sS http://localhost:8080/api/v1/catalog/stats
-```
-
-- `totalEntries`: **52** (50 seed + demo ingest + QA test)
-- `latestRevenue.totalRevenueUsd`: **~31816** (non-zero after revenue query fix)
-
-```bash
-curl -sS http://localhost:8080/api/v1/catalog | jq '.count'
-```
-
-**52**
-
-```bash
-curl -sS http://localhost:5173/ | head -c 80
-```
-
-`<!DOCTYPE html>` — **not connection refused**
-
-```bash
-curl -sS http://localhost:5173/api/v1/health
-```
-
-**200** — Vite proxy to API works
+| Area | Change |
+|------|--------|
+| Greenlight timeout | 240s; generation counter invalidates stale runs (no cache update after timeout); mutex released in `finally` |
+| Frontend fetch | `AbortController` 240s on ask/greenlight/ingest (`packages/web/src/api.ts`) |
+| `.env` loading | `loadRepoEnv()` walks up from `src/` or `dist/` (`packages/infrastructure/src/loadEnv.ts`) |
+| CLI demos | `loadRepoEnv()` in `insight-engine-demo.ts` + `content-ingestion.ts` |
+| Gemini models | Removed deprecated `gemini-2.5-flash-lite`; skip unavailable models in fallback chain |
+| Dockerfile | `node:20-bookworm-slim` + uv + `uv run --with mcp-clickhouse --python 3.13 mcp-clickhouse --help` smoke |
 
 ---
 
-## 3. Agent E2E (API)
-
-### Ingest
-
-```bash
-curl -X POST http://localhost:8080/api/v1/media/ingest ...
-```
-
-- Title `QA Test 1787804460` ingested via Gemini enrichment + MCP INSERT
-- `latencyMs`: ~63500 (Gemini + Cloud)
-
-### Ask — "Which genre is under-represented?"
-
-- Steps: `INTENT, DISCOVER, PLAN_SQL, EXECUTE, SYNTHESIZE, AUDIT` — all **completed**
-- SQL visible (SELECT genre counts)
-- Answer cites data: **"Animation, with only 4 titles"**
-
-### Greenlight
-
-- First call can take **60–120s** (6-step agent + Gemini)
-- Cache returns in **<1s** when `cached: true`
-- Concurrent dashboard loads share single in-flight run (mutex)
-
----
-
-## 4. UI surfaces (browser)
-
-| Route | Status | Notes |
-|-------|--------|-------|
-| `http://localhost:5173` | **UP** | Vite serving; Cursor ESTABLISHED to :5173 |
-| Dashboard stats | **PASS** | API stats ≥ 50 titles, revenue $31k+ |
-| `/catalog` | **PASS** | 52 rows; includes `Signal Lost: Bogotá`, `QA Test *` |
-| `/ingest` | **PASS** | POST creates row (verified via API) |
-| `/ask` timeline | **PASS** | 6 steps via API test; UI renders timeline component |
-| Greenlight panel | **PARTIAL** | Slow first load (~2 min); cache + async loading added |
-
-Automated Playwright browser run: **not completed** (install aborted). Manual browser + API proxy validation used.
-
----
-
-## 5. Compliance
+## 4. Compliance
 
 | Check | Status |
 |-------|--------|
 | No secrets in this file | PASS |
-| `.env` gitignored | PASS |
-| MCP Cloud (not local Docker for this test) | PASS |
-| `@google/genai` via `generateContent.ts` | PASS |
+| `@google/genai` in `generateContent.ts` | PASS |
+| mcp-clickhouse `callTool` / `run_query` | PASS |
+| No LangChain / FakeGemini in api/web/demo | PASS |
 
 ---
 
-## 6. How to start (one command)
+## 5. How to reproduce
 
 ```bash
-# from repo root — .env required
-npm run dev
-# Web: http://localhost:5173
-# API: http://localhost:8080/api/v1/health
+git clone https://github.com/armandobecerraro/catalog-greenlight
+cd catalog-greenlight
+cp .env.example .env   # GEMINI_API_KEY + ClickHouse Cloud 8443 SECURE=true
+npm install
+PATH="$HOME/.local/bin:$PATH" npm run dev
+# separate terminal:
+npm run test:e2e
 ```
 
 Do **not** use `npm run demo` for ClickHouse Cloud — it starts local Docker.

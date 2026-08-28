@@ -23,7 +23,8 @@ clickhouse-client \
   --password "$CLICKHOUSE_PASSWORD" \
   --query "ALTER TABLE media_catalog.media_content ADD COLUMN IF NOT EXISTS language String DEFAULT 'en'" || true
 
-echo "Seeding 50 titles..."
+echo "Seeding ~200 titles (run generator if needed)..."
+node deployment/scripts/generate-seed-catalog.mjs 2>/dev/null || true
 clickhouse-client \
   --host "$CLICKHOUSE_HOST" \
   --port "$CLICKHOUSE_PORT" \

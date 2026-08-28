@@ -10,24 +10,24 @@ Paste these fields into https://agentic-cinema.devpost.com/
 
 ## Tagline
 
-The agent that tells programming what to push — with ClickHouse evidence.
+ClickHouse measures. TypeScript scores. Gemini explains.
 
 ## Elevator pitch (short description)
 
-Catalog Greenlight is a web app for a streaming programming chief. It connects Gemini (`@google/genai`) to a real ClickHouse catalog through the official **mcp-clickhouse** MCP server. The agent runs a 6-step pipeline (INTENT → DISCOVER → PLAN_SQL → EXECUTE → SYNTHESIZE → AUDIT), shows SQL + row evidence in the UI, and recommends weekly greenlight picks backed by catalog and revenue data — not generic movie trivia.
+Catalog Greenlight is a web app for a streaming programming chief. Each week it greenlights three titles because **ClickHouse measured** genre gaps, week-over-week revenue momentum, and cannibalization — not because Gemini improvised. Four fixed MCP analytics queries run in parallel; a deterministic TypeScript scorer ranks candidates (`opportunity = 0.4×genre_gap + 0.4×wow − 0.2×cannibalization`) and enforces genre diversity. Gemini (`@google/genai`) writes the narrative only. If synthesis fails or hangs, the dashboard still shows three scorer picks with measured `opportunity_score`, `wow_pct`, and `genre_gap`.
 
 ## Built with
 
-- **ClickHouse** — catalog + revenue + agent audit tables; runtime access only via [mcp-clickhouse](https://github.com/ClickHouse/mcp-clickhouse)
-- **Google Gemini** — `@google/genai` (`gemini-flash-latest` via `generateContent.ts`) for enrichment, SQL planning, and synthesis
+- **ClickHouse** — catalog + weekly revenue + agent audit tables; runtime access only via official [mcp-clickhouse](https://github.com/ClickHouse/mcp-clickhouse)
+- **Google Gemini** — `@google/genai` (`gemini-flash-latest`) for ingest enrichment, catalog Q&A (intent + NL→SQL + synthesis), and greenlight narrative only
 - **MCP** — `@modelcontextprotocol/sdk` stdio client (`run_query`, `list_databases`, `list_tables`)
-- **TypeScript monorepo** — Clean Architecture (core / infrastructure / orchestration / api / web)
-- **React + Vite** — dashboard, catalog, ingest, ask-with-timeline
-- **Docker** — production image with uv + Python 3.13 for mcp-clickhouse
+- **TypeScript monorepo** — hexagonal architecture (core / infrastructure / orchestration / api / web)
+- **React + Vite** — dashboard with greenlight metrics, catalog, ingest, ask-with-timeline
+- **Docker** — local ClickHouse + seed (~200 titles with judge-visible demo story)
 
 ## Link to demo (hosted app)
 
-`TODO_HOSTED_URL` — not deployed in this submission (see `docs/submission/VERIFICATION.md`). Judges can run locally: `npm run dev` → http://localhost:5173
+`TODO_HOSTED_URL` — not deployed in this submission. Judges can run locally: `npm run dev` → http://localhost:5173
 
 ## Link to GitHub repo
 
@@ -39,23 +39,29 @@ https://github.com/armandobecerraro/catalog-greenlight
 
 ## What it does
 
-1. **Dashboard** — live catalog stats and 7-day revenue from ClickHouse via MCP
-2. **Ingest** — add a title; Gemini enriches summary/tags/positioning; MCP INSERT persists it
-3. **Ask the catalog** — natural language → agent timeline → SQL executed → result rows → recommendation
-4. **Greenlight this week** — 3 data-backed picks for programming
+1. **Dashboard** — live catalog stats from ClickHouse via MCP, plus **Greenlight this week**: three titles with measured scores (opportunity, WoW %, genre gap) and Gemini narrative
+2. **Ingest** — add a title; Gemini enriches summary/tags; MCP INSERT persists it
+3. **Ask the catalog** — natural language → 6-step agent timeline → Gemini-planned SQL → result rows → grounded recommendations
+4. **Greenlight pipeline** — four parallel MCP SELECTs → TypeScript scorer → Gemini synthesis (bounded timeout; scorer fallback if Gemini fails)
+
+Gemini does **not** plan SQL for the greenlight path.
 
 ## How we use ClickHouse (required)
 
-- Official MCP server at runtime — no direct Node ClickHouse client in product code
-- Agent generates SELECT for Q&A/greenlight; SQL guard blocks DROP/ALTER/TRUNCATE
-- 50+ title seed catalog with revenue table for meaningful recommendations
+- Official **mcp-clickhouse** at runtime — no direct Node ClickHouse client in product code
+- Greenlight: four fixed analytics queries (genre inventory, title momentum, cannibalization pairs, slate holes) executed in parallel via MCP `run_query`
+- Catalog Q&A: Gemini-generated SELECT with SQL guard (blocks DROP/ALTER/TRUNCATE); schema discovered live from `system.columns`
+- ~200-title seed catalog with 10 weeks of revenue; demo story surfaces LATAM breakout *Crimen sin Fronteras: Bogotá*, Thriller gap, and cannibal-pair penalty on *True Crime: Highway 101*
+- Agent runs audited via MCP INSERT into `agent_runs`
 
 ## How we use Google Cloud AI (required)
 
 - `packages/infrastructure/src/gemini/generateContent.ts` — `GoogleGenAI` + `models.generateContent`
-- `GeminiEnrichmentAdapter.ts` — enrichment on ingest
-- `GeminiReasoningAdapter.ts` — intent classification, SQL generation, answer synthesis
+- **Ingest** — `GeminiEnrichmentAdapter.ts` enriches title metadata
+- **Catalog Q&A** — `GeminiReasoningAdapter.ts` classifies intent, generates SQL, synthesizes answers
+- **Greenlight** — same adapter's `synthesizeGreenlight` writes executive narrative from scorer candidate rows only; scoring is TypeScript, not Gemini
 - Fails fast if `GEMINI_API_KEY` is missing (no silent fake in API/demo/web)
+- Synthesis bounded to 10s; timeout or error → three scorer recommendations still returned (SYNTHESIZE step marked error)
 
 ## Try it yourself
 
@@ -66,6 +72,8 @@ cp .env.example .env   # GEMINI_API_KEY + ClickHouse Cloud host (8443, SECURE=tr
 npm install
 npm run dev   # http://localhost:5173
 ```
+
+Force a fresh greenlight run (bypass 10-min cache): `GET /api/v1/greenlight?refresh=1`
 
 For local Docker ClickHouse instead: `npm run demo` (see README Path B).
 

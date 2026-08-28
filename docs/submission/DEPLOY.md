@@ -21,7 +21,22 @@ CLICKHOUSE_HOST=<cloud-host> CLICKHOUSE_PASSWORD=<pwd> \
   bash deployment/scripts/seed-remote.sh
 ```
 
-(Create `seed-remote.sh` using `clickhouse-client` pointed at cloud, or run `seed-catalog.sql` in ClickHouse Cloud SQL console.)
+## ClickHouse Cloud seed
+
+```bash
+export CLICKHOUSE_HOST=your-host.clickhouse.cloud
+export CLICKHOUSE_USER=default
+export CLICKHOUSE_PASSWORD=your-password
+./deployment/scripts/seed-remote.sh
+```
+
+Regenerate demo SQL before seeding:
+
+```bash
+node deployment/scripts/generate-seed-catalog.mjs
+```
+
+Then apply via `seed-remote.sh` or paste `deployment/docker/seed-catalog.sql` into the ClickHouse Cloud SQL console.
 
 ## Option B: Google Cloud Run + ClickHouse Cloud
 

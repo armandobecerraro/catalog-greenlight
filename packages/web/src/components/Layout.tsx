@@ -1,28 +1,37 @@
 import { Link, NavLink, Outlet } from 'react-router-dom';
+import { LanguageToggle, useLocale } from '../i18n/LocaleContext';
+import type { AgentStep } from '../api';
 
 export function Layout() {
+  const { t } = useLocale();
+
   return (
     <div className="app-shell">
       <header className="topbar">
-        <div className="brand">
+        <Link to="/" className="brand brand-link">
           <span className="brand-mark">CG</span>
           <div>
             <h1>Catalog Greenlight</h1>
-            <p>The agent that tells programming what to push — with ClickHouse evidence.</p>
+            <p>{t('brand.tagline')}</p>
           </div>
+        </Link>
+        <div className="topbar-actions">
+          <nav className="nav">
+            <NavLink to="/" end>
+              {t('nav.dashboard')}
+            </NavLink>
+            <NavLink to="/catalog">{t('nav.catalog')}</NavLink>
+            <NavLink to="/ingest">{t('nav.ingest')}</NavLink>
+            <NavLink to="/ask">{t('nav.ask')}</NavLink>
+          </nav>
+          <LanguageToggle />
         </div>
-        <nav className="nav">
-          <NavLink to="/" end>Dashboard</NavLink>
-          <NavLink to="/catalog">Catalog</NavLink>
-          <NavLink to="/ingest">Ingest</NavLink>
-          <NavLink to="/ask">Ask the Catalog</NavLink>
-        </nav>
       </header>
       <main className="content">
         <Outlet />
       </main>
       <footer className="footer">
-        Agentic Cinema · ClickHouse track · Gemini + mcp-clickhouse
+        {t('footer')} · <Link to="/guia">{t('footerGuide')}</Link>
       </footer>
     </div>
   );
@@ -46,16 +55,19 @@ export function ErrorBanner({ message }: { message: string }) {
 }
 
 export function Loading() {
-  return <div className="loading">Loading…</div>;
+  const { t } = useLocale();
+  return <div className="loading">{t('common.loading')}</div>;
 }
 
-export function AgentTimeline({ steps }: { steps: import('../api').AgentStep[] }) {
+export function AgentTimeline({ steps }: { steps: AgentStep[] }) {
+  const { t } = useLocale();
+
   return (
     <ol className="timeline">
       {steps.map((s, i) => (
         <li key={i} className={`timeline-step status-${s.status}`}>
           <div className="timeline-head">
-            <strong>{s.step}</strong>
+            <strong>{t(`steps.${s.step}`)}</strong>
             <span>{s.latencyMs != null ? `${s.latencyMs}ms` : s.status}</span>
           </div>
           {s.error && <p className="timeline-error">{s.error}</p>}

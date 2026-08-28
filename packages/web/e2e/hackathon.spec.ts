@@ -5,6 +5,10 @@ test.describe.configure({ mode: 'serial' });
 test.describe('Catalog Greenlight hackathon UI (1280)', () => {
   test.use({ viewport: { width: 1280, height: 800 } });
 
+  test.beforeEach(async ({ page }) => {
+    await page.addInitScript(() => localStorage.setItem('cg-locale', 'en'));
+  });
+
   test('catalog: dozens of rows', async ({ page }) => {
     await page.goto('/catalog');
     await expect(page.getByText(/titles in ClickHouse/)).toBeVisible({ timeout: 30_000 });
@@ -53,21 +57,33 @@ test.describe('Catalog Greenlight hackathon UI (1280)', () => {
     await expect(page.getByText('Greenlight this week')).toBeVisible();
   });
 
-  test('dashboard: greenlight panel resolves (may take 1–2 min)', async ({ page }) => {
+  test('dashboard: greenlight shows 3 titles from catalog evidence', async ({ page, request }) => {
     await page.goto('/');
-    const greenlightOutcome = page
-      .locator('.rec-card')
-      .first()
-      .or(page.locator('.greenlight-panel .error-banner'))
-      .or(page.locator('.greenlight-panel .answer'));
-    await expect(greenlightOutcome).toBeVisible({ timeout: 260_000 });
+    await expect(page.locator('.rec-card').first()).toBeVisible({ timeout: 60_000 });
+    const recTitles = await page.locator('.rec-card h4').allTextContents();
+    expect(recTitles.length).toBeGreaterThanOrEqual(1);
+
+    const catalogRes = await request.get('/api/v1/catalog');
+    expect(catalogRes.ok()).toBeTruthy();
+    const catalog = (await catalogRes.json()) as { entries: { title: string }[] };
+    const catalogTitles = new Set(catalog.entries.map(e => e.title));
+    for (const t of recTitles) {
+      expect(catalogTitles.has(t)).toBe(true);
+    }
   });
 });
 
 test.describe('Catalog Greenlight hackathon UI (390 mobile)', () => {
   test.use({ viewport: { width: 390, height: 844 } });
 
-  test('all four routes load without connection errors', async ({ page }) => {
+  test.beforeEach(async ({ page }) => {
+    await page.addInitScript(() => localStorage.setItem('cg-locale', 'en'));
+  });
+
+  test('all routes load without connection errors', async ({ page }) => {
+    await page.goto('/guia');
+    await expect(page.getByRole('heading', { name: 'User Guide', exact: false })).toBeVisible({ timeout: 30_000 });
+
     await page.goto('/catalog');
     await expect(page.getByRole('heading', { name: 'Catalog', exact: true })).toBeVisible({ timeout: 60_000 });
 

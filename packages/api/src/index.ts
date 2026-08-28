@@ -27,64 +27,32 @@ let agentRunner: AgentRunner | null = null;
 let mcpConnector: IMcpConnector | null = null;
 let initError: string | null = null;
 
-const GREENLIGHT_CACHE_TTL_MS = 60_000;
-const GREENLIGHT_TIMEOUT_MS = 240_000;
+const GREENLIGHT_CACHE_TTL_MS = 10 * 60_000;
 let greenlightCache: { result: Awaited<ReturnType<AgentRunner['run']>>; expiresAt: number } | null = null;
 let greenlightInFlight: Promise<Awaited<ReturnType<AgentRunner['run']>>> | null = null;
-/** Bumped on timeout so stale in-flight runs never update cache. */
-let greenlightRunGeneration = 0;
 
-function withGreenlightTimeout<T>(promise: Promise<T>, generation: number, onTimeout: () => void): Promise<T> {
-  return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => {
-      onTimeout();
-      reject(
-        new Error(
-          `Greenlight agent timed out after ${GREENLIGHT_TIMEOUT_MS / 1000}s. Retry — Gemini + ClickHouse Cloud can take 1–2 minutes.`
-        )
-      );
-    }, GREENLIGHT_TIMEOUT_MS);
-
-    promise.then(
-      value => {
-        clearTimeout(timer);
-        resolve(value);
-      },
-      err => {
-        clearTimeout(timer);
-        reject(err);
-      }
-    );
-  });
+function shouldBypassGreenlightCache(req: Request): boolean {
+  const refresh = req.query.refresh;
+  if (refresh === '1' || refresh === 'true') return true;
+  const cacheControl = req.get('Cache-Control');
+  return cacheControl === 'no-cache' || cacheControl === 'no-store';
 }
 
-async function runGreenlightAgent(): Promise<Awaited<ReturnType<AgentRunner['run']>>> {
+async function runGreenlightAgent(bypassCache = false): Promise<Awaited<ReturnType<AgentRunner['run']>>> {
   const now = Date.now();
-  if (greenlightCache && now < greenlightCache.expiresAt) {
+  if (!bypassCache && greenlightCache && now < greenlightCache.expiresAt) {
     return greenlightCache.result;
   }
   if (greenlightInFlight) {
     return greenlightInFlight;
   }
 
-  const generation = ++greenlightRunGeneration;
-
-  const agentPromise = agentRunner!.run(
-    'Recommend exactly 3 titles to greenlight and push this week. Consider genre gaps, recent revenue, and cannibalization risk. Cite data.',
-    { defaultIntent: 'greenlight' }
-  ).then(result => {
-    if (generation !== greenlightRunGeneration) {
-      throw new Error('Greenlight run superseded (timeout or newer request)');
-    }
+  const agentPromise = agentRunner!.runGreenlight().then(result => {
     greenlightCache = { result, expiresAt: Date.now() + GREENLIGHT_CACHE_TTL_MS };
     return result;
   });
 
-  greenlightInFlight = withGreenlightTimeout(agentPromise, generation, () => {
-    if (generation === greenlightRunGeneration) {
-      greenlightRunGeneration++;
-    }
-  }).finally(() => {
+  greenlightInFlight = agentPromise.finally(() => {
     greenlightInFlight = null;
   });
 
@@ -147,15 +115,17 @@ app.post('/api/v1/agent/ask', requireReady, async (req: Request, res: Response, 
   }
 });
 
-app.get('/api/v1/greenlight', requireReady, async (_req: Request, res: Response, next: NextFunction) => {
+app.get('/api/v1/greenlight', requireReady, async (req: Request, res: Response, next: NextFunction) => {
   try {
+    const bypass = shouldBypassGreenlightCache(req);
     const now = Date.now();
-    if (greenlightCache && now < greenlightCache.expiresAt) {
+    if (!bypass && greenlightCache && now < greenlightCache.expiresAt) {
       res.json({ ...greenlightCache.result, cached: true });
       return;
     }
-    const result = await runGreenlightAgent();
-    res.json({ ...result, cached: greenlightCache && now < greenlightCache.expiresAt });
+    const result = await runGreenlightAgent(bypass);
+    const servedFromCache = !bypass && greenlightCache !== null && now < greenlightCache.expiresAt;
+    res.json({ ...result, cached: servedFromCache });
   } catch (error) {
     next(error);
   }

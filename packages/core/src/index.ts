@@ -12,7 +12,8 @@ export {
   IGeminiReasoningPort,
   AgentIntent,
   GreenlightRecommendation,
-  ReasoningSynthesis
+  ReasoningSynthesis,
+  SqlRetryContext
 } from './ports/outbound/IGeminiReasoningPort';
 export { AgentRunResult, AgentStep, AgentStepName, AgentStepStatus } from './types/agent';
 export {

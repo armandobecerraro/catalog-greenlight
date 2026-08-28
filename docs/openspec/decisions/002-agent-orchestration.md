@@ -1,66 +1,51 @@
-# ADR-002: Agent Orchestration with LangGraph
+# ADR-002: Agent Orchestration with AgentRunner
 
 **Status:** Accepted  
-**Date:** 2026-08-21  
+**Date:** 2026-08-28  
 **Authors:** Architecture Team  
 
 ## Context
 
-We need to build deterministic, multi-step agent workflows that:
-1. Integrate with Gemini Enterprise Agent Platform
-2. Connect to partner data sources via MCP
-3. Maintain state across long-running media workflows
-4. Support human-in-the-loop for production safety
+We need deterministic, multi-step agent workflows that:
+
+1. Use **@google/genai** for reasoning (no Agent Builder / ADK)
+2. Query ClickHouse **only** via official `mcp-clickhouse`
+3. Expose a **6-step timeline** judges can verify (INTENT → DISCOVER → PLAN_SQL → EXECUTE → SYNTHESIZE → AUDIT)
+4. Separate **measurement** from **narration** for weekly greenlight picks
 
 ## Decision
 
-Use **LangGraph** for agent orchestration with a custom state management layer.
+Use a custom **`AgentRunner`** in `packages/orchestration` — explicit step functions, no LangGraph or LangChain.
 
-### Architecture Pattern
+### Greenlight path (deterministic analyst)
 
-```
-┌─────────────────────────────────────────────┐
-│            Orchestration Layer              │
-│  ┌───────────────────────────────────────┐  │
-│  │  AgentGraph (LangGraph State Machine) │  │
-│  │  ┌─────┐  ┌─────┐  ┌─────────────┐  │  │
-│  │  │Node │→│Node │→│Human-in-loop │  │  │
-│  │  └─────┘  └─────┘  └─────────────┘  │  │
-│  └───────────────────────────────────────┘  │
-│              ↕ Ports (interfaces)            │
-├─────────────────────────────────────────────┤
-│            Domain Layer (core)               │
-│  MediaWorkflow, AgentTask, ConnectorResult  │
-└─────────────────────────────────────────────┘
-```
+- Four fixed `SELECT` queries run in parallel during DISCOVER
+- `GreenlightScorer` in TypeScript scores titles and picks top 3 with genre diversity
+- Gemini is called **once** in SYNTHESIZE to write copy grounded to candidate rows
 
-### State Schema
+### Catalog Q&A / stats path (NL→SQL)
 
-```typescript
-interface AgentState {
-  workflowId: string;
-  currentStep: number;
-  context: Record<string, unknown>;
-  artifacts: MediaArtifact[];
-  errors: AgentError[];
-  partnerData: PartnerResponse[];
-}
-```
+- DISCOVER loads live schema from `system.columns` (5-minute cache)
+- Gemini generates SQL from that schema; one retry on execute failure or empty result
+- INTENT skipped when `defaultIntent` is provided (`greenlight`, `stats`, `ingest`)
 
-### Node Responsibilities
+### Step responsibilities
 
-| Node Type | Purpose | Example |
-|-----------|---------|---------|
-| **Agent Node** | LLM reasoning | Gemini content analysis |
-| **Tool Node** | External API call | ClickHouse query |
-| **Conditional** | Branching logic | Approval gate |
-| **Human Node** | Review/prompt | Content moderator approval |
+| Step | Greenlight | catalog_qa / stats |
+|------|------------|-------------------|
+| INTENT | Skipped (default) | Gemini classify (optional skip) |
+| DISCOVER | 4 analytics SELECTs | Live schema |
+| PLAN_SQL | TypeScript scorer | Gemini SQL |
+| EXECUTE | Candidate rows | MCP runQuery (+ retry) |
+| SYNTHESIZE | Gemini writer | Gemini answer (grounded) |
+| AUDIT | agent_runs INSERT | agent_runs INSERT |
 
 ## Consequences
 
-- **Positive:** Visualizable workflows; deterministic replay; production safety
-- **Negative:** Learning curve for LangGraph; state serialization overhead
+- **Positive:** Judges see SQL + row evidence; greenlight picks are reproducible from seed data
+- **Positive:** No disqualifying frameworks; single Gemini partner for runtime AI
+- **Negative:** Two code paths to maintain (greenlight vs NL→SQL)
 
 ## Rationale
 
-Hackathon requires "deterministic, multi-step agent that solves enterprise friction." LangGraph provides explicit state machines and human-in-the-loop, directly satisfying this requirement.
+Hackathon requires a multi-step agent that solves enterprise friction. A TypeScript analyst with Gemini as writer demonstrates **measured** programming decisions — the product pitch for Catalog Greenlight.

@@ -2,95 +2,106 @@
 
 ## System Overview
 
-Blockbuster Agentic Studio is a **production-ready agentic platform** built for the Agentic Cinema hackathon. It demonstrates enterprise-grade integration of Gemini Enterprise Agent Platform with multiple partner ecosystems.
+**Catalog Greenlight** is an agentic programming dashboard for the Agentic Cinema hackathon (ClickHouse track). A programming chief receives a weekly slate of three titles because the agent **measured** genre gaps, week-over-week revenue momentum, and cannibalization — not because Gemini improvised after a single `SELECT`.
+
+Runtime AI is **`@google/genai` only**. ClickHouse access is **only** via official `mcp-clickhouse` (`McpClickHouseConnector`). No OpenAI, Anthropic, LangChain, or Agent Builder.
 
 ## High-Level Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
 │                         Client Layer                                │
-│                    (Web UI / Mobile / CLI)                          │
+│              packages/web (React — Dashboard, Ask, Catalog)         │
 └──────────────────────────────┬──────────────────────────────────────┘
-                               │ HTTPS
+                               │ HTTPS / REST
 ┌──────────────────────────────▼──────────────────────────────────────┐
-│                       API Gateway Layer                              │
+│                       API Layer                                      │
 │   packages/api (Express)                                            │
-│   • REST endpoints                                                   │
-│   • JWT Authentication                                               │
-│   • Rate limiting                                                    │
+│   • GET /api/v1/greenlight — deterministic analyst + Gemini writer │
+│   • POST /api/v1/agent/ask — NL→SQL for catalog_qa / stats         │
+│   • POST /api/v1/media/ingest                                      │
 └──────────────────────────────┬──────────────────────────────────────┘
                                │
 ┌──────────────────────────────▼──────────────────────────────────────┐
 │                   Application / Use Case Layer                       │
-│   packages/core/src/ports/inbound                                   │
-│   • IContentIngestionUseCase                                        │
-│   • IRecommendationUseCase                                          │
-│   • IAnalyticsUseCase                                               │
-└──────────────────────────────┬──────────────────────────────────────┘
-                               │
-┌──────────────────────────────▼──────────────────────────────────────┐
-│                     Domain Layer (Pure)                              │
-│   packages/core/src/domain                                          │
-│   • MediaContent (Entity)                                            │
-│   • WorkflowId (Value Object)                                        │
-│   • Domain Events                                                    │
-│   • Business Rules (Zero external deps)                              │
+│   packages/core — ports, domain entities, InsightEngineService      │
 └──────────────────────────────┬──────────────────────────────────────┘
                                │
 ┌──────────────────────────────▼──────────────────────────────────────┐
 │                 Orchestration Layer                                  │
 │   packages/orchestration                                             │
-│   • LangGraph State Machines                                         │
-│   • Agent Nodes (Gemini, Tools, Human)                               │
-│   • Workflow Definitions                                             │
+│   • AgentRunner — 6-step timeline (INTENT→DISCOVER→PLAN→EXECUTE→   │
+│     SYNTHESIZE→AUDIT) for catalog_qa / stats                        │
+│   • GreenlightAnalyst — 4 parallel MCP SELECTs + TypeScript scorer  │
+│   • SchemaCache — live system.columns (5 min TTL)                   │
 └──────────────────────────────┬──────────────────────────────────────┘
-                               │ Ports (Interfaces)
+                               │ Ports (interfaces)
 ┌──────────────────────────────▼──────────────────────────────────────┐
 │                  Infrastructure Layer                                │
 │   packages/infrastructure                                            │
-│   • Google Cloud (Secret Manager, Cloud Run, Cloud SQL)              │
-│   • Partner Adapters (ClickHouse, IBM, Grafana, Parallel, Replit)    │
-│   • MCP Server Gateway                                               │
-└──────────────────────────────────────────────────────────────────────┘
+│   • McpClickHouseConnector (official mcp-clickhouse)                │
+│   • GeminiReasoningAdapter (@google/genai)                          │
+└─────────────────────────────────────────────────────────────────────┘
+                               │
+┌──────────────────────────────▼──────────────────────────────────────┐
+│                     ClickHouse (media_catalog)                       │
+│   media_content · title_revenue · agent_runs                        │
+└─────────────────────────────────────────────────────────────────────┘
 ```
 
-## Data Flow: Media Content Ingestion
+## Greenlight Data Flow (Deterministic Analyst)
 
 ```
-1. Client POST /api/v1/media/ingest
-   └── { title, description, genre, releaseDate, cast }
+1. GET /api/v1/greenlight (or intent=greenlight via /ask)
+   └── Skip Gemini INTENT — defaultIntent is greenlight
 
-2. API Layer validates request (Zod schema)
-   └── Passes to ContentIngestionUseCase
+2. DISCOVER — 4 parallel MCP SELECT queries (no Gemini SQL):
+   A. Genre inventory (title count vs 4-week revenue share)
+   B. Title momentum (WoW revenue + views per title)
+   C. Cannibalization (same-genre pairs in top revenue quartile)
+   D. Slate holes (genre/language underserved vs revenue)
 
-3. Use Case creates MediaContent entity
-   └── Validates invariants (title not empty, cast not empty)
+3. PLAN_SQL — TypeScript scorer (not Gemini):
+   opportunity = 0.4*genre_gap + 0.4*wow_momentum - 0.2*cannibalization_penalty
+   Pick top 3 with max 1 title per genre
 
-4. Use Case calls MediaIngestionService.enrichWithGemini()
-   └── Gemini generates summary, tags, sentiment
+4. EXECUTE — candidate rows passed to synthesis
 
-5. Use Case calls MediaIngestionService.ingest()
-   └── ClickHouseConnector executes INSERT
-   └── Returns latency, row count
+5. SYNTHESIZE — single Gemini call writes narrative; titles grounded to candidates
 
-6. Response returned to client
-   └── { success, contentId, storedRows, partner, latencyMs }
+6. AUDIT — INSERT into agent_runs via MCP
 ```
 
-## Technology Stack Rationale
+## Catalog Q&A Data Flow (NL→SQL)
 
-| Technology | Purpose | Hackathon Alignment |
-|------------|---------|---------------------|
-| **TypeScript** | Type safety, enterprise patterns | Code quality judges |
-| **LangGraph** | Deterministic agent workflows | Multi-step agent requirement |
-| **Gemini Enterprise** | LLM reasoning | Primary platform requirement |
-| **ClickHouse** | Analytics data warehouse | Partner track requirement |
-| **Docker + Cloud Run** | Containerized deployment | Google Cloud requirement |
-| **OpenSpec** | Technical documentation | Professional engineering |
+```
+1. POST /api/v1/agent/ask { question }
+2. INTENT — Gemini classifies (skipped when defaultIntent provided)
+3. DISCOVER — list_tables + system.columns per table (cached 5 min)
+4. PLAN_SQL — Gemini generates SQL from live schema
+5. EXECUTE — MCP runQuery; retry PLAN_SQL once on error or 0 rows
+6. SYNTHESIZE — Gemini answer; recommendations grounded to query rows
+7. AUDIT — agent_runs INSERT
+```
 
-## Scalability Strategy
+## Technology Stack
 
-- **Horizontal:** Cloud Run auto-scaling (0→N instances)
-- **Data:** ClickHouse distributed clusters, connection pooling
-- **State:** Cloud SQL with read replicas
-- **Observability:** OpenTelemetry → Cloud Trace/Monitoring
+| Technology | Purpose |
+|------------|---------|
+| **TypeScript** | Monorepo, hexagonal ports |
+| **@google/genai** | Intent, NL→SQL, synthesis only |
+| **mcp-clickhouse** | All ClickHouse reads/writes |
+| **ClickHouse** | Catalog + weekly revenue analytics |
+| **React + Vite** | Dashboard, 6-step agent timeline |
+| **Docker Compose** | Local ClickHouse + seed |
+
+## Demo Seed Narrative
+
+After `deployment/scripts/seed.sh` (or `seed-remote.sh` for ClickHouse Cloud):
+
+- **Comedy** oversupplied with flat/negative WoW
+- **Thriller** under-indexed on title count vs revenue share
+- **True Crime: Highway 101** + **Redux** — cannibal pair (both penalized)
+- **Crimen sin Fronteras: Bogotá** — LATAM breakout with rising WoW (should greenlight)
+
+Regenerate SQL: `node deployment/scripts/generate-seed-catalog.mjs`

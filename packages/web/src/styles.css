@@ -48,6 +48,14 @@ h1, h2, h3, h4 {
 }
 
 .brand { display: flex; gap: 1rem; align-items: center; }
+.brand-link {
+  text-decoration: none;
+  color: inherit;
+}
+.brand-link:hover h1 {
+  text-decoration: underline;
+  text-decoration-color: var(--accent-dim);
+}
 .brand h1 { font-size: 1.75rem; color: var(--accent); }
 .brand p { margin: 0; color: var(--muted); font-size: 0.85rem; max-width: 28rem; }
 
@@ -62,6 +70,38 @@ h1, h2, h3, h4 {
 }
 
 .nav { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.topbar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+}
+.lang-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+  padding: 0.4rem 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--muted);
+  font: inherit;
+  font-weight: 700;
+  font-size: 0.8rem;
+  cursor: pointer;
+  letter-spacing: 0.04em;
+}
+.lang-toggle:hover {
+  border-color: var(--accent-dim);
+  color: var(--text);
+}
+.lang-active {
+  color: var(--accent);
+}
+.lang-sep {
+  opacity: 0.45;
+  font-weight: 400;
+}
 .nav a {
   color: var(--muted);
   text-decoration: none;
@@ -75,6 +115,83 @@ h1, h2, h3, h4 {
   color: var(--text);
   border-color: var(--border);
   background: var(--surface);
+}
+
+.user-guide {
+  margin-bottom: 2rem;
+}
+
+.user-guide-hero {
+  margin-bottom: 1.25rem;
+  padding: 1.25rem 1.5rem;
+  border: 1px solid var(--accent-dim);
+  border-radius: 8px;
+  background: linear-gradient(135deg, rgba(232, 197, 71, 0.14), rgba(22, 26, 33, 0.9));
+}
+
+.user-guide-badge {
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 0.5rem;
+}
+
+.user-guide-hero h2 {
+  font-size: 2.1rem;
+  color: var(--accent);
+  margin: 0 0 0.35rem;
+}
+
+.user-guide-hero p {
+  margin: 0;
+  color: var(--muted);
+  max-width: 52rem;
+  line-height: 1.55;
+}
+
+.user-guide-card h3,
+.user-guide-card h4 {
+  color: var(--accent);
+}
+
+.user-guide-lead {
+  font-size: 1.05rem;
+  line-height: 1.6;
+  margin: 0.5rem 0;
+}
+
+.user-guide-more {
+  margin: 0.5rem 0 0;
+  text-align: center;
+  font-size: 1rem;
+}
+
+.purpose-table-wrap {
+  overflow-x: auto;
+  margin-top: 0.75rem;
+}
+
+.purpose-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.purpose-table th {
+  color: var(--accent);
+  font-family: 'Bebas Neue', sans-serif;
+  letter-spacing: 0.06em;
+}
+
+.purpose-table th,
+.purpose-table td {
+  text-align: left;
+  padding: 0.65rem;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
 }
 
 .content {
@@ -227,6 +344,33 @@ th { color: var(--accent); font-family: 'Bebas Neue', sans-serif; letter-spacing
   padding: 1rem;
 }
 .rec-card h4 { font-size: 1.25rem; color: var(--accent); }
+
+.rec-metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem 1rem;
+  margin: 0.75rem 0;
+  padding: 0.65rem 0.75rem;
+  background: #0a0c10;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 0.8rem;
+}
+
+.rec-metrics dt {
+  color: var(--muted);
+  font-weight: 600;
+  margin: 0;
+}
+
+.rec-metrics dd {
+  margin: 0.15rem 0 0;
+  color: var(--accent);
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 1.1rem;
+  letter-spacing: 0.04em;
+}
+
 .evidence { font-size: 0.85rem; color: var(--muted); font-style: italic; }
 
 .answer { font-size: 1.05rem; line-height: 1.6; }
@@ -267,6 +411,98 @@ th { color: var(--accent); font-family: 'Bebas Neue', sans-serif; letter-spacing
 .timeline-error { color: var(--danger); font-size: 0.85rem; }
 
 a { color: var(--accent); }
+
+.about-section-heading {
+  font-size: 1.5rem;
+  margin: 0.5rem 0 1rem;
+  color: var(--accent);
+}
+
+.about-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.about-grid-2 {
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+}
+
+.about-screen-card h4,
+.about-intro h3,
+.about-greenlight h3 {
+  color: var(--accent);
+  font-size: 1.35rem;
+}
+
+.about-link {
+  display: inline-block;
+  margin-top: 0.75rem;
+  font-weight: 600;
+  font-size: 0.9rem;
+  text-decoration: none;
+}
+
+.about-link:hover {
+  text-decoration: underline;
+}
+
+.about-steps,
+.about-list {
+  margin: 0.75rem 0 0;
+  padding-left: 1.25rem;
+  color: var(--muted);
+}
+
+.about-steps li,
+.about-list li {
+  margin-bottom: 0.5rem;
+  line-height: 1.55;
+}
+
+.about-formula {
+  margin: 1rem 0 0;
+  padding: 0.75rem 1rem;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 0.9rem;
+  color: var(--text);
+}
+
+.about-intro p {
+  margin: 0.5rem 0 0;
+  line-height: 1.6;
+}
+
+.guide-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+  border-color: var(--accent-dim);
+  background: linear-gradient(135deg, rgba(232, 197, 71, 0.08), var(--surface));
+}
+
+.guide-banner h3 {
+  color: var(--accent);
+  font-size: 1.35rem;
+  margin-bottom: 0.35rem;
+}
+
+.guide-banner-btn {
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.about-repo-doc {
+  margin-top: 0.5rem;
+  font-size: 0.9rem;
+  text-align: center;
+}
 
 @media (max-width: 390px) {
   .topbar { padding: 0.75rem; }

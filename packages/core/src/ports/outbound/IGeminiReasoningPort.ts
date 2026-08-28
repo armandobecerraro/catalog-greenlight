@@ -5,6 +5,10 @@ export interface GreenlightRecommendation {
   genre: string;
   justification: string;
   evidence: string;
+  opportunity_score?: number;
+  wow_pct?: number;
+  genre_gap?: number;
+  in_cannibal_pair?: boolean;
 }
 
 export interface ReasoningSynthesis {
@@ -12,17 +16,28 @@ export interface ReasoningSynthesis {
   recommendations?: GreenlightRecommendation[];
 }
 
+export interface SqlRetryContext {
+  previousSql: string;
+  errorOrEmpty: string;
+}
+
 export interface IGeminiReasoningPort {
   classifyIntent(userPrompt: string): Promise<AgentIntent>;
   generateSql(
     intent: AgentIntent,
     userPrompt: string,
-    schemaContext: string
+    schemaContext: string,
+    retry?: SqlRetryContext
   ): Promise<string>;
   synthesize(
     intent: AgentIntent,
     userPrompt: string,
     sql: string,
     rows: Record<string, unknown>[]
+  ): Promise<ReasoningSynthesis>;
+  synthesizeGreenlight(
+    userPrompt: string,
+    sql: string,
+    candidateRows: Record<string, unknown>[]
   ): Promise<ReasoningSynthesis>;
 }

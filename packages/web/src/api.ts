@@ -31,6 +31,10 @@ export interface Recommendation {
   genre: string;
   justification: string;
   evidence: string;
+  opportunity_score?: number;
+  wow_pct?: number;
+  genre_gap?: number;
+  in_cannibal_pair?: boolean;
 }
 
 export interface AgentRunResult {

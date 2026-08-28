@@ -2,7 +2,8 @@ import {
   AgentIntent,
   GreenlightRecommendation,
   IGeminiReasoningPort,
-  ReasoningSynthesis
+  ReasoningSynthesis,
+  SqlRetryContext
 } from '@bas/core';
 import { generateGeminiText } from './generateContent';
 
@@ -31,22 +32,32 @@ Request: ${userPrompt}`;
   async generateSql(
     intent: AgentIntent,
     userPrompt: string,
-    schemaContext: string
+    schemaContext: string,
+    retry?: SqlRetryContext
   ): Promise<string> {
     const writeAllowed = intent === 'ingest';
+    const retryBlock = retry
+      ? `
+Previous SQL failed or returned no rows:
+${retry.previousSql}
+
+Error / result: ${retry.errorOrEmpty}
+
+Generate a corrected SELECT that will return data.`
+      : '';
+
     const prompt = `You are a ClickHouse SQL expert for a streaming catalog database.
 
-Schema context:
+Live schema (from system.columns — use only these tables/columns):
 ${schemaContext}
 
 User request: ${userPrompt}
 Intent: ${intent}
+${retryBlock}
 
 Rules:
 - Database: media_catalog
-- Main table: media_catalog.media_content (id, title, description, genre, release_date, cast, enrichment, created_at)
-- Revenue table: media_catalog.title_revenue (title_id, title, week_start, views, revenue_usd)
-- ${writeAllowed ? 'INSERT is allowed for ingest only.' : 'ONLY SELECT queries. No INSERT/UPDATE/DELETE/DROP.'}
+- ${writeAllowed ? 'INSERT is allowed for ingest only.' : 'ONLY SELECT or WITH queries. No INSERT/UPDATE/DELETE/DROP.'}
 - Return ONLY the SQL statement, no markdown fences.
 
 Generate the best ClickHouse SQL to answer the request.`;
@@ -76,8 +87,39 @@ Respond in JSON with:
 }
 
 For catalog_qa: recommendations can be empty array.
-For greenlight or weekly picks: provide exactly 3 recommendations with data-backed evidence.
+If recommending titles, ONLY use titles that appear in the query results JSON.
 Use English. Be specific — reference counts, genres, revenue from the result rows.`;
+
+    const text = await generateGeminiText(this.apiKey, prompt, this.modelName);
+    return this.parseSynthesis(text);
+  }
+
+  async synthesizeGreenlight(
+    userPrompt: string,
+    sql: string,
+    candidateRows: Record<string, unknown>[]
+  ): Promise<ReasoningSynthesis> {
+    const prompt = `You are Catalog Greenlight writing weekly programming picks for a streaming chief.
+The analyst team already scored titles in ClickHouse — you are the writer, not the analyst.
+
+User brief: ${userPrompt}
+
+Analytical SQL executed (deterministic, not your invention):
+${sql.slice(0, 6000)}
+
+Scored candidate rows (ONLY these titles may appear in recommendations):
+${JSON.stringify(candidateRows)}
+
+Respond in JSON:
+{
+  "answer": "2-3 sentence executive summary citing opportunity_score, wow_pct, and genre_gap from the rows",
+  "recommendations": [
+    {"title": "exact title from candidates", "genre": "...", "justification": "...", "evidence": "must cite numeric fields from that row"}
+  ]
+}
+
+Provide exactly 3 recommendations — one per candidate row when 3 candidates exist.
+Do NOT invent titles. Do NOT recommend cannibalized pairs unless opportunity_score still wins.`;
 
     const text = await generateGeminiText(this.apiKey, prompt, this.modelName);
     return this.parseSynthesis(text);
@@ -96,7 +138,7 @@ Use English. Be specific — reference counts, genres, revenue from the result r
       const parsed = JSON.parse(cleaned) as ReasoningSynthesis;
       return {
         answer: parsed.answer || text,
-        recommendations: parsed.recommendations || []
+        recommendations: parseRecommendations(parsed.recommendations)
       };
     } catch {
       return { answer: text.trim(), recommendations: [] };

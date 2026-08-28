@@ -1,18 +1,22 @@
-import { FormEvent, useState } from 'react';
+import { FormEvent, useEffect, useState } from 'react';
 import { api, AgentRunResult } from '../api';
 import { PageHeader, Card, ErrorBanner, AgentTimeline } from '../components/Layout';
-
-const SUGGESTIONS = [
-  'Which genre is under-represented in our catalog?',
-  'Recommend 3 titles for a late-night sci-fi slot',
-  'What titles had the highest revenue last week?'
-];
+import { useLocale } from '../i18n/LocaleContext';
+import { translations } from '../i18n/translations';
 
 export default function Ask() {
-  const [question, setQuestion] = useState(SUGGESTIONS[0]);
+  const { locale, t } = useLocale();
+  const suggestions = translations[locale].ask.suggestions;
+  const [question, setQuestion] = useState<string>(suggestions[0]);
   const [result, setResult] = useState<AgentRunResult | null>(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    setQuestion(translations[locale].ask.suggestions[0]);
+    setResult(null);
+    setError('');
+  }, [locale]);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -22,7 +26,7 @@ export default function Ask() {
       const r = await api.ask(question);
       setResult(r);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Agent failed');
+      setError(err instanceof Error ? err.message : t('ask.error'));
     } finally {
       setLoading(false);
     }
@@ -30,25 +34,22 @@ export default function Ask() {
 
   return (
     <>
-      <PageHeader
-        title="Ask the catalog"
-        subtitle="Natural language → INTENT → DISCOVER → PLAN_SQL → EXECUTE → SYNTHESIZE → AUDIT"
-      />
+      <PageHeader title={t('ask.title')} subtitle={t('ask.subtitle')} />
       <Card>
         <form className="form" onSubmit={onSubmit}>
           <label>
-            Your question
+            {t('ask.labelQuestion')}
             <textarea className="input" rows={3} value={question} onChange={e => setQuestion(e.target.value)} />
           </label>
           <div className="chips">
-            {SUGGESTIONS.map(s => (
+            {suggestions.map(s => (
               <button key={s} type="button" className="chip" onClick={() => setQuestion(s)}>
                 {s}
               </button>
             ))}
           </div>
           <button className="btn primary" type="submit" disabled={loading}>
-            {loading ? 'Agent running…' : 'Run agent'}
+            {loading ? t('ask.running') : t('ask.submit')}
           </button>
         </form>
       </Card>
@@ -58,10 +59,10 @@ export default function Ask() {
       {result && (
         <>
           <Card>
-            <h3>Answer</h3>
+            <h3>{t('ask.answer')}</h3>
             <p className="answer">{result.answer}</p>
             <p className="muted">
-              Intent: {result.intent} · {result.totalLatencyMs}ms · model {result.model}
+              {t('ask.intent')}: {result.intent} · {result.totalLatencyMs}ms · model {result.model}
             </p>
             {result.recommendations && result.recommendations.length > 0 && (
               <div className="rec-grid">
@@ -79,20 +80,20 @@ export default function Ask() {
 
           {result.sql && (
             <Card>
-              <h3>SQL executed (MCP run_query)</h3>
+              <h3>{t('ask.sqlTitle')}</h3>
               <pre className="sql-block">{result.sql}</pre>
             </Card>
           )}
 
           {result.queryRows && result.queryRows.length > 0 && (
             <Card>
-              <h3>Evidence ({result.queryRows.length} rows)</h3>
+              <h3>{t('ask.evidenceTitle', { count: result.queryRows.length })}</h3>
               <pre className="sql-block">{JSON.stringify(result.queryRows.slice(0, 20), null, 2)}</pre>
             </Card>
           )}
 
           <Card>
-            <h3>Agent timeline</h3>
+            <h3>{t('ask.timelineTitle')}</h3>
             <AgentTimeline steps={result.steps} />
           </Card>
         </>

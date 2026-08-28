@@ -4,9 +4,17 @@
 
 > The agent that tells programming what to push — with ClickHouse evidence.
 
-Catalog Greenlight is a web product for a **programming chief** at a small Latin/US streaming studio. The agent investigates your ClickHouse catalog via the official **mcp-clickhouse** MCP server, reasons with **Gemini** (`@google/genai`), and returns actionable greenlight recommendations backed by SQL and row data.
+Catalog Greenlight is a web product for a **programming chief** at a small Latin/US streaming studio. For weekly greenlight, **ClickHouse measures** (four fixed MCP analytics queries), a **TypeScript scorer** ranks titles with a transparent formula and genre diversity, and **Gemini** (`@google/genai`) writes the narrative only — it does not plan greenlight SQL. Catalog Q&A on `/ask` still uses Gemini for intent and NL→SQL.
 
 **Repository:** https://github.com/armandobecerraro/catalog-greenlight
+
+## User documentation
+
+| Document | Language | Description |
+|----------|----------|-------------|
+| **[docs/GUIA_DE_USO.md](./docs/GUIA_DE_USO.md)** | Español | Guía completa: qué es, para qué sirve, pantallas paso a paso |
+| **[docs/USER_GUIDE.md](./docs/USER_GUIDE.md)** | English | Short user guide + link to Spanish doc |
+| **http://localhost:5173/guia** | EN / ES | Guía de uso completa en la app (también `/about` redirige aquí) |
 
 ## Prerequisites
 
@@ -41,10 +49,12 @@ npm run dev
 
 | Route | Description |
 |---|---|
-| `/` | Dashboard — MCP stats + Greenlight this week (may take 1–2 min first load) |
+| `/` | Dashboard — MCP stats + Greenlight this week |
 | `/catalog` | Full catalog table |
 | `/ingest` | Ingest form → Gemini enrich → MCP INSERT |
 | `/ask` | NL questions with 6-step agent timeline + SQL evidence |
+| `/about` | Redirects to `/guia` |
+| `/guia` | **User guide** — what the app does and how to use it (EN/ES) |
 
 **Do not** run `npm run demo` on this path — that script starts local Docker ClickHouse and is for Path B.
 
@@ -58,7 +68,7 @@ npm install
 npm run demo
 ```
 
-`npm run demo` starts ClickHouse Docker, seeds **50 titles**, runs CLI ingest + stats + NL question + greenlight via the same agent stack.
+`npm run demo` starts ClickHouse Docker, seeds **~200 titles** (demo story), runs CLI ingest + stats + NL question + greenlight via the same agent stack.
 
 Optional web UI against local ClickHouse:
 
@@ -90,17 +100,30 @@ Seed data is loaded via Docker `clickhouse-client` only (`deployment/scripts/see
 
 ## Agent architecture
 
+**Greenlight** (`GET /api/v1/greenlight`):
+
+```
+INTENT (skipped — default greenlight)
+  → DISCOVER   (4 parallel MCP SELECTs: genre inventory, WoW momentum, cannibalization, slate holes)
+  → PLAN_SQL   (TypeScript scorer — not Gemini)
+  → EXECUTE    (top 3 candidate rows)
+  → SYNTHESIZE (Gemini narrative only; 10s timeout → scorer fallback, HTTP 200)
+  → AUDIT      (MCP INSERT into agent_runs; failure logged, recs still returned)
+```
+
+**Catalog Q&A** (`POST /api/v1/agent/ask`):
+
 ```
 User question
     → INTENT      (Gemini classifies: ingest | catalog_qa | greenlight | stats)
-    → DISCOVER    (MCP list_databases / list_tables)
+    → DISCOVER    (MCP list_databases / list_tables + live schema)
     → PLAN_SQL    (Gemini generates ClickHouse SQL)
     → EXECUTE     (MCP run_query)
     → SYNTHESIZE  (Gemini answer + recommendations citing row data)
     → AUDIT       (MCP INSERT into agent_runs)
 ```
 
-The UI `/ask` page renders this timeline for judges.
+The UI `/ask` page renders the 6-step timeline for judges. Greenlight responses are cached 10 minutes; bypass with `GET /api/v1/greenlight?refresh=1` for live demos.
 
 ## Environment variables
 

@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
 import { api, CatalogEntry } from '../api';
 import { PageHeader, Card, Loading, ErrorBanner } from '../components/Layout';
+import { useLocale } from '../i18n/LocaleContext';
 
 export default function Catalog() {
+  const { t } = useLocale();
   const [entries, setEntries] = useState<CatalogEntry[]>([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
@@ -12,8 +14,9 @@ export default function Catalog() {
     api
       .getCatalog()
       .then(r => setEntries(r.entries))
-      .catch(e => setError(e instanceof Error ? e.message : 'Failed'))
+      .catch(e => setError(e instanceof Error ? e.message : t('catalog.loadError')))
       .finally(() => setLoading(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fetch once on mount
   }, []);
 
   const filtered = entries.filter(
@@ -28,11 +31,11 @@ export default function Catalog() {
 
   return (
     <>
-      <PageHeader title="Catalog" subtitle={`${entries.length} titles in ClickHouse`} />
+      <PageHeader title={t('catalog.title')} subtitle={t('catalog.subtitle', { count: entries.length })} />
       <Card>
         <input
           className="input"
-          placeholder="Filter by title or genre…"
+          placeholder={t('catalog.filterPlaceholder')}
           value={filter}
           onChange={e => setFilter(e.target.value)}
         />
@@ -40,10 +43,10 @@ export default function Catalog() {
           <table>
             <thead>
               <tr>
-                <th>Title</th>
-                <th>Genre</th>
-                <th>Release</th>
-                <th>Cast</th>
+                <th>{t('catalog.colTitle')}</th>
+                <th>{t('catalog.colGenre')}</th>
+                <th>{t('catalog.colRelease')}</th>
+                <th>{t('catalog.colCast')}</th>
               </tr>
             </thead>
             <tbody>
@@ -54,7 +57,9 @@ export default function Catalog() {
                     <br />
                     <span className="muted small">{e.description.slice(0, 80)}…</span>
                   </td>
-                  <td><span className="genre-pill">{e.genre}</span></td>
+                  <td>
+                    <span className="genre-pill">{e.genre}</span>
+                  </td>
                   <td>{e.releaseDate}</td>
                   <td className="small">{e.cast.slice(0, 3).join(', ')}</td>
                 </tr>

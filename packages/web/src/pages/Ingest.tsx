@@ -1,8 +1,10 @@
 import { FormEvent, useState } from 'react';
 import { api } from '../api';
 import { PageHeader, Card, ErrorBanner } from '../components/Layout';
+import { useLocale } from '../i18n/LocaleContext';
 
 export default function Ingest() {
+  const { t } = useLocale();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [genre, setGenre] = useState('Sci-Fi');
@@ -23,11 +25,14 @@ export default function Ingest() {
         description,
         genre,
         releaseDate,
-        cast: cast.split(',').map(c => c.trim()).filter(Boolean)
+        cast: cast
+          .split(',')
+          .map(c => c.trim())
+          .filter(Boolean)
       });
       setResult({ contentId: r.contentId, latencyMs: r.latencyMs });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Ingest failed');
+      setError(err instanceof Error ? err.message : t('ingest.error'));
     } finally {
       setSubmitting(false);
     }
@@ -35,44 +40,60 @@ export default function Ingest() {
 
   return (
     <>
-      <PageHeader
-        title="Ingest a title"
-        subtitle="Gemini enriches summary + tags + positioning, then persists via mcp-clickhouse"
-      />
+      <PageHeader title={t('ingest.title')} subtitle={t('ingest.subtitle')} />
       <Card>
         <form className="form" onSubmit={onSubmit}>
           <label>
-            Title
+            {t('ingest.labelTitle')}
             <input className="input" value={title} onChange={e => setTitle(e.target.value)} required />
           </label>
           <label>
-            Description
-            <textarea className="input" rows={4} value={description} onChange={e => setDescription(e.target.value)} required />
+            {t('ingest.labelDescription')}
+            <textarea
+              className="input"
+              rows={4}
+              value={description}
+              onChange={e => setDescription(e.target.value)}
+              required
+            />
           </label>
           <label>
-            Genre
+            {t('ingest.labelGenre')}
             <select className="input" value={genre} onChange={e => setGenre(e.target.value)}>
-              {['Sci-Fi', 'Drama', 'Comedy', 'Horror', 'Romance', 'Action', 'Thriller', 'Documentary', 'Animation'].map(g => (
-                <option key={g}>{g}</option>
-              ))}
+              {['Sci-Fi', 'Drama', 'Comedy', 'Horror', 'Romance', 'Action', 'Thriller', 'Documentary', 'Animation'].map(
+                g => (
+                  <option key={g}>{g}</option>
+                )
+              )}
             </select>
           </label>
           <label>
-            Release date
-            <input className="input" type="date" value={releaseDate} onChange={e => setReleaseDate(e.target.value)} required />
+            {t('ingest.labelRelease')}
+            <input
+              className="input"
+              type="date"
+              value={releaseDate}
+              onChange={e => setReleaseDate(e.target.value)}
+              required
+            />
           </label>
           <label>
-            Cast (comma-separated)
-            <input className="input" value={cast} onChange={e => setCast(e.target.value)} placeholder="Actor One, Actor Two" />
+            {t('ingest.labelCast')}
+            <input
+              className="input"
+              value={cast}
+              onChange={e => setCast(e.target.value)}
+              placeholder={t('ingest.castPlaceholder')}
+            />
           </label>
           <button className="btn primary" type="submit" disabled={submitting}>
-            {submitting ? 'Enriching & storing…' : 'Ingest via agent pipeline'}
+            {submitting ? t('ingest.submitting') : t('ingest.submit')}
           </button>
         </form>
         {error && <ErrorBanner message={error} />}
         {result && (
           <div className="success">
-            Stored <code>{result.contentId}</code> in {result.latencyMs}ms via MCP INSERT
+            {t('ingest.success', { id: result.contentId, ms: result.latencyMs })}
           </div>
         )}
       </Card>

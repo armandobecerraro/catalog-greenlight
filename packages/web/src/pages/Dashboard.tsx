@@ -52,7 +52,6 @@ export default function Dashboard() {
       .then(setStats)
       .catch(e => setStatsError(e instanceof Error ? e.message : t('dashboard.statsError')))
       .finally(() => setStatsLoading(false));
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- fetch once on mount
   }, []);
 
   useEffect(() => {
@@ -61,7 +60,6 @@ export default function Dashboard() {
       .then(setGreenlight)
       .catch(e => setGreenlightError(e instanceof Error ? e.message : t('dashboard.greenlightError')))
       .finally(() => setGreenlightLoading(false));
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- fetch once on mount
   }, []);
 
   const queryRows = (greenlight?.queryRows ?? []) as Record<string, unknown>[];

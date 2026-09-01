@@ -204,12 +204,14 @@ deployment/docker/         ClickHouse, seed SQL, prod compose
 
 ## 3-minute demo video script (English)
 
-1. **0:00–0:20** — Problem: programming chief needs data-backed picks, not generic AI summaries.
-2. **0:20–0:45** — Open **http://localhost:5173** — Dashboard: live stats from ClickHouse (genre counts, 7-day revenue via MCP).
-3. **0:45–1:15** — **Ingest** page: add a title → show Gemini enrichment success → **Catalog** confirms the row.
-4. **1:15–2:00** — **Ask**: “Which genre is under-represented?” → expand agent timeline → show SQL + result rows + answer with numbers.
-5. **2:00–2:30** — Dashboard Greenlight panel: 3 titles with justifications tied to query evidence.
-6. **2:30–3:00** — Architecture slide: mcp-clickhouse + `@google/genai`, GitHub repo, `npm run dev`.
+Record against the **public hosted app** (`https://YOUR_HOSTED_URL` — replace with the live URL from Devpost once deployed; use `npm run dev` locally only while preparing). Paste the same URL into `docs/submission/DEVPOST.md` as `TODO_HOSTED_URL`.
+
+1. **0:00–0:20** — Problem: a programming chief needs data-backed picks, not generic AI summaries.
+2. **0:20–0:45** — Open **`https://YOUR_HOSTED_URL`** — Dashboard: live stats from ClickHouse (genre counts, 7-day revenue via MCP).
+3. **0:45–1:15** — **Ingest**: add a title → Gemini enrichment success → **Catalog** confirms the row.
+4. **1:15–2:00** — **Ask**: “Which genre is under-represented?” → expand the 6-step agent timeline → SQL + result rows + answer with numbers.
+5. **2:00–2:30** — Dashboard **Greenlight** panel: three titles with numeric metrics on each card (`opportunity_score`, `wow_pct`, `genre_gap`) and Gemini narrative tied to query evidence. **Say aloud:** “ClickHouse measures, TypeScript scores, Gemini explains.”
+6. **2:30–3:00** — Architecture slide: mcp-clickhouse + `@google/genai`, GitHub repo, hosted URL on screen.
 
 ## License
 

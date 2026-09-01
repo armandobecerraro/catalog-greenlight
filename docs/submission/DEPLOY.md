@@ -8,11 +8,10 @@ Judges need a **live URL** through at least judging (~23 Sep – 7 Oct 2026).
 
 1. Push repo to public GitHub (see `VERIFICATION.md`).
 2. Create [Render](https://render.com) account → **New Blueprint** → connect repo (`render.yaml` included).
-3. Set secrets in Render dashboard:
+3. Set secrets in Render dashboard (Blueprint defaults: `CLICKHOUSE_PORT=8443`, `CLICKHOUSE_SECURE=true` in `render.yaml`):
    - `GEMINI_API_KEY`
    - `CLICKHOUSE_HOST` (ClickHouse Cloud hostname)
    - `CLICKHOUSE_PASSWORD`
-   - `CLICKHOUSE_SECURE=true` if using TLS port 8443
 4. Deploy. Health check: `GET /api/v1/health`
 5. Seed ClickHouse Cloud once (from your laptop):
 
@@ -51,7 +50,7 @@ gcloud run deploy catalog-greenlight \
   --platform managed \
   --region us-central1 \
   --allow-unauthenticated \
-  --set-env-vars GEMINI_MODEL=gemini-2.0-flash,CLICKHOUSE_PORT=8123,... \
+  --set-env-vars GEMINI_MODEL=gemini-2.0-flash,CLICKHOUSE_PORT=8443,CLICKHOUSE_SECURE=true,... \
   --set-secrets GEMINI_API_KEY=gemini-key:latest
 ```
 

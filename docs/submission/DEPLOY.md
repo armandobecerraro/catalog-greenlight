@@ -66,8 +66,9 @@ Open http://localhost:8080
 ## Post-deploy smoke
 
 ```bash
-curl -s https://<YOUR_URL>/api/v1/health | jq .
-curl -s https://<YOUR_URL>/api/v1/catalog/stats | jq .
+curl -s https://catalog-greenlight.onrender.com/api/v1/health | jq .
+curl -s https://catalog-greenlight.onrender.com/api/v1/catalog/stats | jq .
+curl -s 'https://catalog-greenlight.onrender.com/api/v1/greenlight?refresh=1' | jq .
 ```
 
 ## Keep-alive checklist

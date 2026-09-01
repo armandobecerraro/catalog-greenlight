@@ -8,22 +8,24 @@ Catalog Greenlight is a web product for a **programming chief** at a small Latin
 
 **Repository:** https://github.com/armandobecerraro/catalog-greenlight
 
+**Live demo:** https://catalog-greenlight.onrender.com
+
 ## User documentation
 
-| Document | Language | Description |
-|----------|----------|-------------|
-| **[docs/GUIA_DE_USO.md](./docs/GUIA_DE_USO.md)** | Español | Guía completa: qué es, para qué sirve, pantallas paso a paso |
-| **[docs/USER_GUIDE.md](./docs/USER_GUIDE.md)** | English | Short user guide + link to Spanish doc |
-| **http://localhost:5173/guia** | EN / ES | Guía de uso completa en la app (también `/about` redirige aquí) |
+| Document                                         | Language | Description                                                     |
+| ------------------------------------------------ | -------- | --------------------------------------------------------------- |
+| **[docs/GUIA_DE_USO.md](./docs/GUIA_DE_USO.md)** | Español  | Guía completa: qué es, para qué sirve, pantallas paso a paso    |
+| **[docs/USER_GUIDE.md](./docs/USER_GUIDE.md)**   | English  | Short user guide + link to Spanish doc                          |
+| **http://localhost:5173/guia**                   | EN / ES  | Guía de uso completa en la app (también `/about` redirige aquí) |
 
 ## Prerequisites
 
-| Requirement | Version / notes |
-|---|---|
-| Node.js | 20+ |
-| [uv](https://docs.astral.sh/uv/) | Spawns `mcp-clickhouse` via stdio (`$HOME/.local/bin`) |
-| `GEMINI_API_KEY` | **Required** for API and UI (no silent fake fallback) |
-| ClickHouse | ClickHouse Cloud (production path) **or** local Docker (demo path) |
+| Requirement                      | Version / notes                                                    |
+| -------------------------------- | ------------------------------------------------------------------ |
+| Node.js                          | 20+                                                                |
+| [uv](https://docs.astral.sh/uv/) | Spawns `mcp-clickhouse` via stdio (`$HOME/.local/bin`)             |
+| `GEMINI_API_KEY`                 | **Required** for API and UI (no silent fake fallback)              |
+| ClickHouse                       | ClickHouse Cloud (production path) **or** local Docker (demo path) |
 
 ## Path A — ClickHouse Cloud + web UI (recommended for judges)
 
@@ -40,21 +42,21 @@ npm run dev
 # or: PATH="$HOME/.local/bin:$PATH" bash scripts/dev.sh
 ```
 
-| URL | Role |
-|---|---|
-| http://localhost:5173 | React UI (Vite proxies `/api` → API) |
+| URL                                 | Role                                          |
+| ----------------------------------- | --------------------------------------------- |
+| http://localhost:5173               | React UI (Vite proxies `/api` → API)          |
 | http://localhost:8080/api/v1/health | API health (`ready: true` when MCP connected) |
 
 `npm run dev` loads repo-root `.env` automatically (`loadRepoEnv` in `@bas/infrastructure`).
 
-| Route | Description |
-|---|---|
-| `/` | Dashboard — MCP stats + Greenlight this week |
-| `/catalog` | Full catalog table |
-| `/ingest` | Ingest form → Gemini enrich → MCP INSERT |
-| `/ask` | NL questions with 6-step agent timeline + SQL evidence |
-| `/about` | Redirects to `/guia` |
-| `/guia` | **User guide** — what the app does and how to use it (EN/ES) |
+| Route      | Description                                                  |
+| ---------- | ------------------------------------------------------------ |
+| `/`        | Dashboard — MCP stats + Greenlight this week                 |
+| `/catalog` | Full catalog table                                           |
+| `/ingest`  | Ingest form → Gemini enrich → MCP INSERT                     |
+| `/ask`     | NL questions with 6-step agent timeline + SQL evidence       |
+| `/about`   | Redirects to `/guia`                                         |
+| `/guia`    | **User guide** — what the app does and how to use it (EN/ES) |
 
 **Do not** run `npm run demo` on this path — that script starts local Docker ClickHouse and is for Path B.
 
@@ -80,21 +82,21 @@ npm run dev
 
 ### Gemini — `@google/genai`
 
-| File | Role |
-|---|---|
-| `packages/infrastructure/src/gemini/generateContent.ts` | `GoogleGenAI` + `models.generateContent` |
-| `packages/infrastructure/src/gemini/GeminiEnrichmentAdapter.ts` | Ingest enrichment |
-| `packages/infrastructure/src/gemini/GeminiReasoningAdapter.ts` | Intent, SQL planning, synthesis |
-| `packages/infrastructure/src/gemini/resolveGeminiApiKey.ts` | Fails fast if `GEMINI_API_KEY` missing |
+| File                                                            | Role                                     |
+| --------------------------------------------------------------- | ---------------------------------------- |
+| `packages/infrastructure/src/gemini/generateContent.ts`         | `GoogleGenAI` + `models.generateContent` |
+| `packages/infrastructure/src/gemini/GeminiEnrichmentAdapter.ts` | Ingest enrichment                        |
+| `packages/infrastructure/src/gemini/GeminiReasoningAdapter.ts`  | Intent, SQL planning, synthesis          |
+| `packages/infrastructure/src/gemini/resolveGeminiApiKey.ts`     | Fails fast if `GEMINI_API_KEY` missing   |
 
 Model default: `gemini-flash-latest` (override with `GEMINI_MODEL`).
 
 ### ClickHouse — official `mcp-clickhouse` only (runtime)
 
-| File | Role |
-|---|---|
+| File                                                                        | Role                                                                                                            |
+| --------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
 | `packages/infrastructure/src/partners/clickhouse/McpClickHouseConnector.ts` | Spawns MCP via `uv run --with mcp-clickhouse`; `Client.callTool` → `run_query`, `list_databases`, `list_tables` |
-| `packages/orchestration/src/agents/AgentRunner.ts` | 6-step agent: INTENT → DISCOVER → PLAN_SQL → EXECUTE → SYNTHESIZE → AUDIT |
+| `packages/orchestration/src/agents/AgentRunner.ts`                          | 6-step agent: INTENT → DISCOVER → PLAN_SQL → EXECUTE → SYNTHESIZE → AUDIT                                       |
 
 Seed data is loaded via Docker `clickhouse-client` only (`deployment/scripts/seed.sh`) — never by the agent or product API.
 
@@ -176,18 +178,18 @@ docker build -t catalog-greenlight .
 docker compose -f deployment/docker/docker-compose.prod.yml up --build
 ```
 
-Hosted deploy: see `docs/submission/DEPLOY.md` (not deployed in this submission — GCP credits / manual step).
+Hosted deploy: **https://catalog-greenlight.onrender.com** on Render (see `docs/submission/DEPLOY.md`). Local dev: `npm run dev` → http://localhost:5173.
 
 ## Hackathon compliance (Stage One)
 
-| Requirement | Status |
-|---|---|
-| Web platform | ✅ React UI (`packages/web`) |
-| ClickHouse at runtime via official mcp-clickhouse | ✅ `McpClickHouseConnector` |
-| Google Cloud AI SDK imported & called | ✅ `@google/genai` |
-| No LangChain / OpenAI / Anthropic | ✅ |
-| Multi-step agent (not 2-call pipeline) | ✅ `AgentRunner` 6 steps + UI timeline |
-| Gemini real in demo/API (no silent fake) | ✅ `resolveGeminiApiKey()` throws |
+| Requirement                                       | Status                                 |
+| ------------------------------------------------- | -------------------------------------- |
+| Web platform                                      | ✅ React UI (`packages/web`)           |
+| ClickHouse at runtime via official mcp-clickhouse | ✅ `McpClickHouseConnector`            |
+| Google Cloud AI SDK imported & called             | ✅ `@google/genai`                     |
+| No LangChain / OpenAI / Anthropic                 | ✅                                     |
+| Multi-step agent (not 2-call pipeline)            | ✅ `AgentRunner` 6 steps + UI timeline |
+| Gemini real in demo/API (no silent fake)          | ✅ `resolveGeminiApiKey()` throws      |
 
 ## Monorepo layout
 
@@ -204,10 +206,10 @@ deployment/docker/         ClickHouse, seed SQL, prod compose
 
 ## 3-minute demo video script (English)
 
-Record against the **public hosted app** (`https://YOUR_HOSTED_URL` — replace with the live URL from Devpost once deployed; use `npm run dev` locally only while preparing). Paste the same URL into `docs/submission/DEVPOST.md` as `TODO_HOSTED_URL`.
+Record against the **public hosted app**: **https://catalog-greenlight.onrender.com** (use `npm run dev` locally only while preparing).
 
 1. **0:00–0:20** — Problem: a programming chief needs data-backed picks, not generic AI summaries.
-2. **0:20–0:45** — Open **`https://YOUR_HOSTED_URL`** — Dashboard: live stats from ClickHouse (genre counts, 7-day revenue via MCP).
+2. **0:20–0:45** — Open **https://catalog-greenlight.onrender.com** — Dashboard: live stats from ClickHouse (genre counts, 7-day revenue via MCP).
 3. **0:45–1:15** — **Ingest**: add a title → Gemini enrichment success → **Catalog** confirms the row.
 4. **1:15–2:00** — **Ask**: “Which genre is under-represented?” → expand the 6-step agent timeline → SQL + result rows + answer with numbers.
 5. **2:00–2:30** — Dashboard **Greenlight** panel: three titles with numeric metrics on each card (`opportunity_score`, `wow_pct`, `genre_gap`) and Gemini narrative tied to query evidence. **Say aloud:** “ClickHouse measures, TypeScript scores, Gemini explains.”

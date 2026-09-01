@@ -14,7 +14,7 @@ services:
       - key: CLICKHOUSE_HOST
         sync: false
       - key: CLICKHOUSE_PORT
-        value: "8123"
+        value: "8443"
       - key: CLICKHOUSE_USER
         value: default
       - key: CLICKHOUSE_PASSWORD
@@ -22,7 +22,7 @@ services:
       - key: CLICKHOUSE_DATABASE
         value: media_catalog
       - key: CLICKHOUSE_SECURE
-        value: "false"
+        value: "true"
       - key: CLICKHOUSE_ALLOW_WRITE_ACCESS
         value: "true"
       - key: NODE_ENV

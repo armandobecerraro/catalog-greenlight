@@ -27,8 +27,12 @@ CLICKHOUSE_HOST=<cloud-host> CLICKHOUSE_PASSWORD=<pwd> \
 export CLICKHOUSE_HOST=your-host.clickhouse.cloud
 export CLICKHOUSE_USER=default
 export CLICKHOUSE_PASSWORD=your-password
+export CLICKHOUSE_PORT=8443
+export CLICKHOUSE_SECURE=true
 ./deployment/scripts/seed-remote.sh
 ```
+
+`seed-remote.sh` uses native TLS on port **9440** when `CLICKHOUSE_PORT=8443` (HTTP). The app/MCP uses **8443** + `CLICKHOUSE_SECURE=true`.
 
 Regenerate demo SQL before seeding:
 

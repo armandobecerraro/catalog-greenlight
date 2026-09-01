@@ -27,7 +27,7 @@ Catalog Greenlight is a web app for a streaming programming chief. Each week it 
 
 ## Link to demo (hosted app)
 
-`TODO_HOSTED_URL` — deploy via `render.yaml` (ClickHouse Cloud **8443** + `CLICKHOUSE_SECURE=true`; see `docs/submission/DEPLOY.md`). Until live, judges can run locally: `npm run dev` → http://localhost:5173. Record the demo video against the hosted URL once available (README § “3-minute demo video script”).
+https://catalog-greenlight.onrender.com
 
 ## Link to GitHub repo
 
@@ -51,7 +51,7 @@ Gemini does **not** plan SQL for the greenlight path.
 - Official **mcp-clickhouse** at runtime — no direct Node ClickHouse client in product code
 - Greenlight: four fixed analytics queries (genre inventory, title momentum, cannibalization pairs, slate holes) executed in parallel via MCP `run_query`
 - Catalog Q&A: Gemini-generated SELECT with SQL guard (blocks DROP/ALTER/TRUNCATE); schema discovered live from `system.columns`
-- ~200-title seed catalog with 10 weeks of revenue; demo story surfaces LATAM breakout *Crimen sin Fronteras: Bogotá*, Thriller gap, and cannibal-pair penalty on *True Crime: Highway 101*
+- ~200-title seed catalog with 10 weeks of revenue; demo story surfaces LATAM breakout _Crimen sin Fronteras: Bogotá_, Thriller gap, and cannibal-pair penalty on _True Crime: Highway 101_
 - Agent runs audited via MCP INSERT into `agent_runs`
 
 ## How we use Google Cloud AI (required)

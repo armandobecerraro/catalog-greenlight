@@ -27,7 +27,7 @@ Catalog Greenlight is a web app for a streaming programming chief. Each week it 
 
 ## Link to demo (hosted app)
 
-`TODO_HOSTED_URL` — not deployed in this submission. Judges can run locally: `npm run dev` → http://localhost:5173
+`TODO_HOSTED_URL` — deploy via `render.yaml` (ClickHouse Cloud **8443** + `CLICKHOUSE_SECURE=true`; see `docs/submission/DEPLOY.md`). Until live, judges can run locally: `npm run dev` → http://localhost:5173. Record the demo video against the hosted URL once available (README § “3-minute demo video script”).
 
 ## Link to GitHub repo
 

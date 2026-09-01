@@ -16,7 +16,6 @@ export default function Catalog() {
       .then(r => setEntries(r.entries))
       .catch(e => setError(e instanceof Error ? e.message : t('catalog.loadError')))
       .finally(() => setLoading(false));
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- fetch once on mount
   }, []);
 
   const filtered = entries.filter(

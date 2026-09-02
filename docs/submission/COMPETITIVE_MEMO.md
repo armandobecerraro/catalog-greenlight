@@ -12,7 +12,7 @@
 | Capa | Implementación |
 |------|----------------|
 | Medición | **4 queries MCP fijas** en paralelo (inventario por género, momentum WoW, pares de canibalización, huecos de slate) vía **mcp-clickhouse** oficial en runtime |
-| Ranking | **Scorer TypeScript determinista** — `opportunity = 0.4×genre_gap + 0.4×wow − 0.2×cannibalization`; diversidad de género; sin Gemini en PLAN_SQL del greenlight |
+| Ranking | **Scorer TypeScript determinista** — `opportunity = 0.4×genre_gap + 0.4×wow_momentum − 0.2×cannibalization_penalty + 0.05×language_gap`; diversidad de género; sin Gemini en PLAN_SQL del greenlight |
 | Narrativa | **Gemini** (`@google/genai`, `gemini-flash-latest`) solo en SYNTHESIZE — explica candidatos ya rankeados |
 | Evidencia UI | Timeline de 6 pasos, SQL visible, paneles analytics, provenance por tarjeta, ritual semanal exportable CSV/JSON |
 

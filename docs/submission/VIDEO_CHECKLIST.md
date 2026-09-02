@@ -93,7 +93,7 @@ Read exactly as written. Pause on screen actions; trim only dead air in post if 
 
 **ClickHouse analytics** (below rec-cards): genre gap bars, WoW momentum top titles, cannibal pairs table.
 
-Formula (mention if time): `opportunity = 0.4×genre_gap + 0.4×wow − 0.2×cannibalization`
+Formula (mention if time): `opportunity = 0.4×genre_gap + 0.4×wow_momentum − 0.2×cannibalization_penalty + 0.05×language_gap`
 
 ### Ask page (`/ask`)
 

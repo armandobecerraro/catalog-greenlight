@@ -6,6 +6,13 @@ Judges need a **live URL** through at least judging (~23 Sep – 7 Oct 2026).
 
 **Prerequisites:** ClickHouse Cloud service (HTTP 8123/8443) + `GEMINI_API_KEY`
 
+Verify credentials locally before deploying:
+
+```bash
+cp .env.example .env   # fill GEMINI_API_KEY + ClickHouse Cloud host (8443, SECURE=true)
+npm run check:credentials
+```
+
 1. Push repo to public GitHub (see `VERIFICATION.md`).
 2. Create [Render](https://render.com) account → **New Blueprint** → connect repo (`render.yaml` included).
 3. Set secrets in Render dashboard (Blueprint defaults: `CLICKHOUSE_PORT=8443`, `CLICKHOUSE_SECURE=true` in `render.yaml`):
@@ -50,7 +57,7 @@ gcloud run deploy catalog-greenlight \
   --platform managed \
   --region us-central1 \
   --allow-unauthenticated \
-  --set-env-vars GEMINI_MODEL=gemini-2.0-flash,CLICKHOUSE_PORT=8443,CLICKHOUSE_SECURE=true,... \
+  --set-env-vars GEMINI_MODEL=gemini-flash-latest,CLICKHOUSE_PORT=8443,CLICKHOUSE_SECURE=true,... \
   --set-secrets GEMINI_API_KEY=gemini-key:latest
 ```
 
@@ -66,6 +73,7 @@ Open http://localhost:8080
 ## Post-deploy smoke
 
 ```bash
+npm run check:credentials   # from laptop with same .env values as Render
 curl -s https://catalog-greenlight.onrender.com/api/v1/health | jq .
 curl -s https://catalog-greenlight.onrender.com/api/v1/catalog/stats | jq .
 curl -s 'https://catalog-greenlight.onrender.com/api/v1/greenlight?refresh=1' | jq .

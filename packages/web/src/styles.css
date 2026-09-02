@@ -1145,4 +1145,12 @@ a { color: var(--accent); }
   .topbar { padding: 0.75rem; }
   .brand p { display: none; }
   .content { padding: 1rem; }
+  .provenance-row {
+    grid-template-columns: 1fr;
+    gap: 0.15rem;
+  }
+  .prov-contrib { text-align: left; }
+  .ritual-head { flex-direction: column; }
+  .nav { width: 100%; }
+  .topbar-actions { width: 100%; justify-content: space-between; }
 }

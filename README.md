@@ -157,6 +157,7 @@ CLICKHOUSE_SECURE=false
 ```bash
 npm run build
 npm test
+npm run check:credentials   # verify GEMINI_API_KEY + ClickHouse MCP (no secrets printed)
 npm run test:e2e   # requires npm run dev + .env with Cloud or local CH
 ```
 
@@ -214,10 +215,11 @@ deployment/docker/         ClickHouse, seed SQL, prod compose
 | 0:20–0:45 | Dashboard stats | Open **https://catalog-greenlight.onrender.com** — catalog size, genre breakdown, latest revenue (live ClickHouse via MCP). |
 | 0:45–1:15 | Ingest | `/ingest` — add a title → Gemini enrichment → `/catalog` confirms the new row. |
 | 1:15–2:00 | Ask | `/ask` — “Which genre is under-represented in our catalog?” → 6-step timeline (INTENT → … → AUDIT) → SQL block → evidence rows → grounded answer. |
-| 2:00–2:30 | Greenlight | Dashboard **Greenlight this week** — three rec-cards with `opportunity_score`, `wow_pct`, `genre_gap`, cannibal flag + Gemini narrative. **Say aloud:** “ClickHouse measures. TypeScript scores. Gemini explains.” |
+| 2:00–2:30 | Greenlight | Dashboard **Greenlight this week** — provenance header + weekly ritual table → three rec-cards (score provenance, `opportunity_score`, `wow_pct`, `genre_gap`, cannibal flag) → ClickHouse analytics panels → Gemini narrative. **Say aloud:** “ClickHouse measures. TypeScript scores. Gemini explains.” |
 | 2:30–3:00 | Architecture | Slide: `mcp-clickhouse` + `@google/genai` (Gemini API on Google Cloud — not Agent Builder) + GitHub repo + hosted URL on screen. |
 
 Paste the YouTube link into `docs/submission/DEVPOST.md` as `TODO_YOUTUBE` when uploaded.
+
 ## License
 
 MIT — see [LICENSE](./LICENSE).

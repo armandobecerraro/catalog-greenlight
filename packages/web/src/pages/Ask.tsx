@@ -87,7 +87,11 @@ export default function Ask() {
                       />
                     )}
                     <p>{r.justification}</p>
-                    <p className="evidence">{r.evidence}</p>
+                    {r.evidence && (
+                      <p className="evidence">
+                        {t('common.evidence')}: {r.evidence}
+                      </p>
+                    )}
                   </article>
                 ))}
               </div>

@@ -1,7 +1,7 @@
 # Jury evidence brief — Catalog Greenlight (facts only, no secrets)
 
 **Public GitHub:** https://github.com/armandobecerraro/catalog-greenlight  
-**Commit inspected:** `8840175` (HEAD; Render URL documented in `545ce31`)  
+**Commit inspected:** `d6b1b72` (HEAD; Render URL documented in `545ce31`)  
 **Track:** ClickHouse (official `mcp-clickhouse` required)  
 **Product:** Web app for a streaming **programming chief** — catalog stats, ingest, NL Q&A, weekly greenlight picks.
 
@@ -12,13 +12,13 @@
 | Requirement | Status | Evidence |
 |-------------|--------|----------|
 | Public hosted web URL | **PASS** | https://catalog-greenlight.onrender.com — `GET /api/v1/health` → `ready: true` (verified 2026-09-01). Also in `docs/submission/DEVPOST.md`. |
-| Video ≤3 min EN (YouTube/Vimeo), product working | **PENDING** | `DEVPOST.md` line 38: `TODO_YOUTUBE`. No YouTube/Vimeo link yet. |
+| Video ≤3 min EN (YouTube/Vimeo), product working | **PENDING** | `DEVPOST.md` line 40: `TODO_YOUTUBE`. No YouTube/Vimeo link yet. |
 | Public repo + OSI license visible | **PASS** | GitHub URL above. Root `LICENSE` = MIT. |
 | Google Cloud AI imported AND called at runtime | **PASS** | `@google/genai` in `packages/infrastructure/package.json`. `generateContent.ts`: `GoogleGenAI`, `ai.models.generateContent`. Adapters: `GeminiEnrichmentAdapter.ts`, `GeminiReasoningAdapter.ts`. |
 | ClickHouse via official MCP `mcp-clickhouse` at runtime | **PASS** | `McpClickHouseConnector.ts`: spawns `uv run --with mcp-clickhouse --python 3.13 mcp-clickhouse`; `Client.callTool` → `run_query`, `list_databases`, `list_tables`. No `@clickhouse/client` in `packages/*/package.json`. |
-| Web / mobile platform | **PASS** | React + Vite UI: `packages/web` — routes `/`, `/catalog`, `/ingest`, `/ask`. |
-| New project in contest period | **UNKNOWN** (not verified in repo) | Assumed hackathon build; no creation date in LICENSE (copyright 2025). |
-| No LangChain / OpenAI / Anthropic in runtime | **PASS** | Grep `langchain|openai|anthropic` in `packages/**/*.ts` → no matches in product code. |
+| Web / mobile platform | **PASS** | React + Vite UI: `packages/web` — routes `/`, `/catalog`, `/ingest`, `/ask`, `/guia` (`/about` → `/guia`). |
+| New project in contest period | **UNKNOWN** (not verified in repo) | Assumed hackathon build; no creation date in LICENSE (copyright 2026). |
+| No LangChain / OpenAI / Anthropic in runtime | **PASS** | No imports/deps in `packages/*`; only UI disclaimer strings in `packages/web/src/i18n/translations.ts`. |
 | Devpost form + ClickHouse track | **PENDING** | Hosted URL ready; video (`TODO_YOUTUBE`) and Devpost form submission still outstanding. |
 
 ---
@@ -34,15 +34,15 @@
   → NOT FOUND in packages/ or examples/
 
 @modelcontextprotocol/sdk callTool run_query
-  → McpClickHouseConnector.ts lines 57-58, 120-124
+  → McpClickHouseConnector.ts lines 58-60 (run_query), 121-125 (callToolRaw)
 
 FakeGeminiEnrichmentClient
   → packages/infrastructure/src/gemini/FakeGeminiEnrichmentClient.ts
   → packages/infrastructure/tests/unit/FakeGeminiEnrichmentClient.test.ts ONLY
   → NOT imported in packages/api, packages/web, examples/media-workflows
 
-langchain / @langchain
-  → CLEAN in packages/**/*.ts
+langchain / @langchain / openai / anthropic
+  → CLEAN in packages/* (no imports/deps); disclaimer strings only in translations.ts
 
 @clickhouse/client
   → NOT in any packages/*/package.json (removed from product path)
@@ -52,17 +52,19 @@ langchain / @langchain
 
 ## Agent architecture
 
-**6-step pipeline** (`packages/orchestration/src/agents/AgentRunner.ts`):
+**6-step pipeline** (`packages/orchestration/src/agents/AgentRunner.ts` + `GreenlightAnalyst.ts`):
 
-INTENT → DISCOVER (MCP list_*) → PLAN_SQL (Gemini) → EXECUTE (MCP run_query) → SYNTHESIZE (Gemini) → AUDIT (INSERT agent_runs)
+INTENT → DISCOVER → PLAN_SQL → EXECUTE → SYNTHESIZE → AUDIT
 
+- **Catalog Q&A:** DISCOVER (MCP `list_*`) → PLAN_SQL (**Gemini** NL→SQL) → EXECUTE (MCP `run_query`) → SYNTHESIZE (Gemini) → AUDIT.
+- **Greenlight:** DISCOVER (4 parallel MCP analytics SELECTs) → PLAN_SQL (**TypeScript scorer**, not Gemini) → EXECUTE (top candidate rows) → SYNTHESIZE (Gemini narrative only, 10s timeout → scorer fallback) → AUDIT.
 - SQL guard: `packages/core/src/utils/sqlValidation.ts` — blocks DROP/ALTER/TRUNCATE etc.; allows INSERT for ingest/audit.
-- AUDIT step builds INSERT with string concat + `escapeSql()` in AgentRunner (lines 64-78) — injection risk if prompts contain quotes.
-- UI timeline: `packages/web/src/components/Layout.tsx` `AgentTimeline`; `/ask` page shows SQL block + Evidence JSON.
+- AUDIT step builds INSERT with string concat + `escapeSql()` in AgentRunner — injection risk if prompts contain quotes.
+- UI timeline: `packages/web/src/components/AgentTimeline.tsx`; `/ask` shows SQL + Evidence; dashboard greenlight panel shows timeline below analytics.
 
-**Greenlight** (`packages/api/src/index.ts`):
+**Greenlight API** (`packages/api/src/index.ts`):
 
-- Cache 60s, mutex `greenlightInFlight`, timeout 240s with `greenlightRunGeneration` to invalidate stale runs (no Promise.race orphan cache update).
+- Cache **10 minutes** (`GREENLIGHT_CACHE_TTL_MS`), bypass with `?refresh=1`; mutex `greenlightInFlight` dedupes concurrent runs.
 - Frontend fetch abort 240s: `packages/web/src/api.ts` `AGENT_FETCH_TIMEOUT_MS`.
 
 **Not ADK / not Vertex function calling:** custom `AgentRunner` + prompt-based Gemini adapters.
@@ -105,10 +107,11 @@ INTENT → DISCOVER (MCP list_*) → PLAN_SQL (Gemini) → EXECUTE (MCP run_quer
 
 | Route | File | Behavior |
 |-------|------|----------|
-| `/` | `Dashboard.tsx` | Stats + greenlight in parallel; greenlight can take 1–3 min |
+| `/` | `Dashboard.tsx` + `GreenlightPanel.tsx` | Stats + greenlight in parallel (1–3 min cold). Greenlight UI: provenance header (formula + stack badge), **Weekly programming ritual** table (export CSV/JSON), 3 rec-cards with per-card score provenance, ClickHouse analytics panels (genre gap, WoW momentum, cannibal pairs), agent timeline |
 | `/catalog` | `Catalog.tsx` | Table + filter |
 | `/ingest` | `Ingest.tsx` | Form; requires cast (validation) |
 | `/ask` | `Ask.tsx` | NL question + timeline |
+| `/guia` | `Guide.tsx` | User guide (EN/ES); `/about` redirects here |
 
 **Playwright E2E** (`packages/web/e2e/hackathon.spec.ts`, log `docs/submission/playwright-output.txt`):
 
@@ -166,6 +169,7 @@ INTENT → DISCOVER (MCP list_*) → PLAN_SQL (Gemini) → EXECUTE (MCP run_quer
 | Gemini SDK | `packages/infrastructure/src/gemini/generateContent.ts` |
 | MCP ClickHouse | `packages/infrastructure/src/partners/clickhouse/McpClickHouseConnector.ts` |
 | Agent | `packages/orchestration/src/agents/AgentRunner.ts` |
+| Greenlight scorer | `packages/orchestration/src/greenlight/GreenlightScorer.ts` |
 | API + greenlight | `packages/api/src/index.ts` |
 | SQL guard | `packages/core/src/utils/sqlValidation.ts` |
 | Web API client | `packages/web/src/api.ts` |

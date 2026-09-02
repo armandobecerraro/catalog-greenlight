@@ -7,15 +7,21 @@ import {
   ContentIngestionUseCase,
   MediaIngestionService,
   InsightEngineService,
-  IMcpConnector
+  IMcpConnector,
+  DomainError
 } from '@bas/core';
 import {
   ConnectorFactory,
   buildClickHouseConfig
 } from '@bas/infrastructure';
 import { AgentRunner } from '@bas/orchestration';
+import { requireApiKey } from './middleware/auth';
 
 const app = express();
+
+/** Optional gate: only enforced when API_KEY is set (hackathon hosted stays public by default). */
+const apiAuth: typeof requireApiKey =
+  process.env.API_KEY?.trim() ? requireApiKey : (_req, _res, next) => next();
 
 app.use(helmet({ contentSecurityPolicy: false }));
 app.use(cors());
@@ -43,7 +49,7 @@ async function runGreenlightAgent(bypassCache = false): Promise<Awaited<ReturnTy
   if (!bypassCache && greenlightCache && now < greenlightCache.expiresAt) {
     return greenlightCache.result;
   }
-  if (greenlightInFlight) {
+  if (!bypassCache && greenlightInFlight) {
     return greenlightInFlight;
   }
 
@@ -52,11 +58,14 @@ async function runGreenlightAgent(bypassCache = false): Promise<Awaited<ReturnTy
     return result;
   });
 
-  greenlightInFlight = agentPromise.finally(() => {
-    greenlightInFlight = null;
-  });
+  if (!bypassCache) {
+    greenlightInFlight = agentPromise.finally(() => {
+      greenlightInFlight = null;
+    });
+    return greenlightInFlight;
+  }
 
-  return greenlightInFlight;
+  return agentPromise;
 }
 
 async function init() {
@@ -92,7 +101,7 @@ interface IngestRequest {
   cast: string[];
 }
 
-app.post('/api/v1/media/ingest', requireReady, async (req: Request<{}, {}, IngestRequest>, res: Response, next: NextFunction) => {
+app.post('/api/v1/media/ingest', apiAuth, requireReady, async (req: Request<{}, {}, IngestRequest>, res: Response, next: NextFunction) => {
   try {
     const result = await ingestionUseCase!.execute(req.body);
     res.status(201).json(result);
@@ -101,7 +110,7 @@ app.post('/api/v1/media/ingest', requireReady, async (req: Request<{}, {}, Inges
   }
 });
 
-app.post('/api/v1/agent/ask', requireReady, async (req: Request, res: Response, next: NextFunction) => {
+app.post('/api/v1/agent/ask', apiAuth, requireReady, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { question } = req.body as { question?: string };
     if (!question?.trim()) {
@@ -115,23 +124,21 @@ app.post('/api/v1/agent/ask', requireReady, async (req: Request, res: Response, 
   }
 });
 
-app.get('/api/v1/greenlight', requireReady, async (req: Request, res: Response, next: NextFunction) => {
+app.get('/api/v1/greenlight', apiAuth, requireReady, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const bypass = shouldBypassGreenlightCache(req);
-    const now = Date.now();
-    if (!bypass && greenlightCache && now < greenlightCache.expiresAt) {
+    if (!bypass && greenlightCache && Date.now() < greenlightCache.expiresAt) {
       res.json({ ...greenlightCache.result, cached: true });
       return;
     }
     const result = await runGreenlightAgent(bypass);
-    const servedFromCache = !bypass && greenlightCache !== null && now < greenlightCache.expiresAt;
-    res.json({ ...result, cached: servedFromCache });
+    res.json({ ...result, cached: false });
   } catch (error) {
     next(error);
   }
 });
 
-app.get('/api/v1/catalog', requireReady, async (_req: Request, res: Response, next: NextFunction) => {
+app.get('/api/v1/catalog', apiAuth, requireReady, async (_req: Request, res: Response, next: NextFunction) => {
   try {
     const catalog = await insightEngineService!.getCatalog();
     res.json({ entries: catalog, count: catalog.length });
@@ -140,7 +147,7 @@ app.get('/api/v1/catalog', requireReady, async (_req: Request, res: Response, ne
   }
 });
 
-app.get('/api/v1/catalog/stats', requireReady, async (_req: Request, res: Response, next: NextFunction) => {
+app.get('/api/v1/catalog/stats', apiAuth, requireReady, async (_req: Request, res: Response, next: NextFunction) => {
   try {
     const stats = await insightEngineService!.getCatalogStats();
     res.json(stats);
@@ -153,10 +160,14 @@ app.get('/api/v1/health', (_req: Request, res: Response) => {
   res.json({
     status: initError ? 'degraded' : ingestionUseCase ? 'ok' : 'starting',
     product: 'Catalog Greenlight',
-    ready: Boolean(ingestionUseCase && !initError),
+    ready: Boolean(ingestionUseCase && insightEngineService && agentRunner && !initError),
     error: initError,
     timestamp: new Date().toISOString()
   });
+});
+
+app.all('/api/*', (_req: Request, res: Response) => {
+  res.status(404).json({ error: 'Not found' });
 });
 
 const webDist = path.join(__dirname, '../../web/dist');
@@ -170,6 +181,10 @@ app.get('*', (req: Request, res: Response, next: NextFunction) => {
 
 app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
   console.error(err);
+  if (err instanceof DomainError) {
+    res.status(400).json({ error: err.message, code: err.code });
+    return;
+  }
   res.status(500).json({ error: err.message || 'Internal server error' });
 });
 

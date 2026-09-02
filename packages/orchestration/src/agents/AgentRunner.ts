@@ -113,7 +113,7 @@ export class AgentRunner {
             '${intent}',
             '${this.escapeSql(sql)}',
             ${Date.now() - totalStart},
-            '${this.modelName}',
+            '${this.escapeSql(this.modelName)}',
             '${this.escapeSql(synthesis.answer.slice(0, 500))}'
           )
         `;

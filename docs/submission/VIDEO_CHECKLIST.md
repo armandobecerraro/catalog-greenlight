@@ -15,7 +15,7 @@
 
 - [ ] Confirm hosted app loads: https://catalog-greenlight.onrender.com
 - [ ] Health check: `GET https://catalog-greenlight.onrender.com/api/v1/health` → `ready: true`
-- [ ] **Gemini billing:** `/ask` and `/ingest` need a funded `GEMINI_API_KEY` on Render (429 if credits depleted). Greenlight still returns 3 scorer picks if synthesis times out.
+- [ ] **Gemini billing:** `/ask` and `/ingest` require a funded `GEMINI_API_KEY` on Render (HTTP 429 if credits depleted or rate-limited). Greenlight still returns 3 scorer picks when synthesis fails (timeout, 429, or quota); the UI shows a warning banner but metrics and ritual table remain visible.
 - [ ] Browser: English UI, 1920×1080 or 1280×720, zoom 100%, hide bookmarks bar
 - [ ] Close unrelated tabs; mute notifications
 - [ ] Optional: force fresh greenlight before recording — open `https://catalog-greenlight.onrender.com/api/v1/greenlight?refresh=1` once (bypasses 10-min cache)
@@ -34,7 +34,7 @@
 | 2 | 0:20–0:45 | Dashboard — live stats | Navigate to **/** — three stat cards: catalog size, genres tracked (top genres list), latest revenue ($, views, top title). Narrate: data comes from ClickHouse via MCP at runtime. |
 | 3 | 0:45–1:15 | Ingest → Catalog | `/ingest` — enter a short fictional title (e.g. “Midnight Signal”, genre Sci-Fi) → submit → show Gemini enrichment success → `/catalog` — scroll to confirm the new row. |
 | 4 | 1:15–2:00 | Ask — 6-step agent | `/ask` — use chip or type: *“Which genre is under-represented in our catalog?”* → Run → scroll: **Answer** (numbers in text) → **SQL** block → **Evidence** (query rows JSON) → **Agent timeline** — expand/walk INTENT → DISCOVER → PLAN_SQL → EXECUTE → SYNTHESIZE → AUDIT. |
-| 5 | 2:00–2:30 | Greenlight rec-cards | Back to **/** — **Greenlight this week** panel. On each of three rec-cards, point to metrics: **Score** (`opportunity_score`), **WoW** (`wow_pct`), **Genre gap** (`genre_gap`), **Cannibal pair** (yes/no). Scroll to **analytics panels** below (genre gap bars, WoW momentum top 5, cannibal pairs table). **Say the pitch aloud.** Optionally scroll to greenlight agent timeline below cards. |
+| 5 | 2:00–2:30 | Greenlight ritual + rec-cards | Back to **/** — **Greenlight this week**. Scroll top to bottom: **provenance header** (stack badge + scorer formula) → **Weekly programming ritual** table (3 ranked picks, export buttons) → three **rec-cards** with per-card **score provenance** (genre gap, WoW, cannibal dimensions). Point to metrics on each card: **Score**, **WoW**, **Genre gap**, **Cannibal pair**. Scroll to **ClickHouse analytics** panels (genre gap bars, WoW momentum, cannibal pairs table). **Say the pitch aloud.** Optionally scroll to greenlight agent timeline at the bottom. |
 | 6 | 2:30–3:00 | Architecture + CTA | Cut to slide (or split screen): stack diagram + URLs. End on hosted URL + GitHub. |
 
 **Total:** ≤ 3:00
@@ -53,7 +53,7 @@ Read naturally; shorten pauses if over 3 minutes.
 >
 > **[1:15]** “On Ask, I pose a natural-language question. Watch the six-step agent: intent, schema discovery, SQL planning, execution, synthesis, and audit. Here’s the generated SQL, the result rows, and a grounded answer that cites the numbers.”
 >
-> **[2:00]** “Greenlight this week ranks three titles with a transparent TypeScript scorer. Each card shows opportunity score, week-over-week momentum, genre gap, and cannibalization — plus a Gemini narrative tied to query evidence.”
+> **[2:00]** “Greenlight this week ranks three titles with a transparent TypeScript scorer. The ritual table and provenance header show where each dimension comes from — opportunity score, week-over-week momentum, genre gap, and cannibalization — plus a Gemini narrative tied to query evidence.”
 >
 > **[2:15]** **“ClickHouse measures. TypeScript scores. Gemini explains.”**
 >
@@ -69,9 +69,13 @@ Read naturally; shorten pauses if over 3 minutes.
 - Genre breakdown (from ClickHouse)
 - Latest revenue week: USD total, views, top title
 
-### Greenlight rec-cards (`/` — Greenlight this week)
+### Greenlight panel (`/` — Greenlight this week)
 
-Per card, ensure these are visible:
+**Provenance header** — stack badge (`mcp-clickhouse` + `@google/genai`) + scorer formula bar.
+
+**Weekly programming ritual table** — 3 ranked rows with metrics, justification, evidence; CSV/JSON export buttons.
+
+**Rec-cards** — per card:
 
 | UI label | Field | Notes |
 |----------|-------|-------|
@@ -81,6 +85,9 @@ Per card, ensure these are visible:
 | Cannibal pair | `in_cannibal_pair` | yes / no |
 | Body | `justification` | Gemini narrative |
 | Evidence | `evidence` | Tied to query data |
+| Provenance | score dimensions | Genre gap / WoW / cannibal from MCP queries A–D |
+
+**ClickHouse analytics** (below rec-cards): genre gap bars, WoW momentum top titles, cannibal pairs table.
 
 Formula (mention if time): `opportunity = 0.4×genre_gap + 0.4×wow − 0.2×cannibalization`
 

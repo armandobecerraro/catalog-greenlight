@@ -2,10 +2,14 @@
  * MCP-only runtime smoke test (no Gemini required).
  * Verifies mcp-clickhouse run_query against local ClickHouse.
  *
- * Usage: CLICKHOUSE_HOST=localhost npm run smoke:mcp --workspace=@bas/infrastructure
+ * Usage: npm run smoke:mcp --workspace=@bas/infrastructure
+ * Loads repo-root `.env` automatically (same as check:credentials).
  */
+import { loadRepoEnv } from '../src/loadEnv';
 import { McpClickHouseConnector } from '../src/partners/clickhouse/McpClickHouseConnector';
 import { buildClickHouseConfig } from '../src/partners/ConnectorFactory';
+
+loadRepoEnv();
 
 async function main(): Promise<void> {
   const connector = new McpClickHouseConnector();

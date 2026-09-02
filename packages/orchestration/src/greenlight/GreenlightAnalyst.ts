@@ -292,7 +292,7 @@ async function runAuditStep(
         'greenlight',
         '${escapeSql(input.combinedSql.slice(0, 4000))}',
         ${input.totalLatencyMs},
-        '${input.modelName}',
+        '${escapeSql(input.modelName)}',
         '${escapeSql(input.summary)}'
       )
     `;

@@ -41,7 +41,7 @@ https://github.com/armandobecerraro/catalog-greenlight
 
 ## What it does
 
-1. **Dashboard** — live catalog stats from ClickHouse via MCP, plus **Greenlight this week**: three titles with measured scores (opportunity, WoW %, genre gap) and Gemini narrative
+1. **Dashboard** — live catalog stats from ClickHouse via MCP, plus **Greenlight this week**: provenance header (scorer formula), weekly programming ritual table (export CSV/JSON), three rec-cards with per-card score provenance, ClickHouse analytics panels, and Gemini narrative
 2. **Ingest** — add a title; Gemini enriches summary/tags; MCP INSERT persists it
 3. **Ask the catalog** — natural language → 6-step agent timeline → Gemini-planned SQL → result rows → grounded recommendations
 4. **Greenlight pipeline** — four parallel MCP SELECTs → TypeScript scorer → Gemini synthesis (bounded timeout; scorer fallback if Gemini fails)
@@ -73,6 +73,7 @@ git clone https://github.com/armandobecerraro/catalog-greenlight
 cd catalog-greenlight
 cp .env.example .env   # GEMINI_API_KEY + ClickHouse Cloud host (8443, SECURE=true)
 npm install
+npm run check:credentials   # optional: verify Gemini + ClickHouse before dev
 npm run dev   # http://localhost:5173
 ```
 

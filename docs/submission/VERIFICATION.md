@@ -3,7 +3,7 @@
 **Product:** Catalog Greenlight  
 **Public repo:** https://github.com/armandobecerraro/catalog-greenlight  
 **Verified:** 2026-09-01  
-**Commit under test:** `8840175` (Render URL in `545ce31`)
+**Commit under test:** `d6b1b72` (Render URL in `545ce31`)
 
 ---
 
@@ -62,8 +62,13 @@ npm run smoke:mcp --workspace=@bas/infrastructure
 
 ## 5. Gemini + agent runtime (local with `.env`)
 
+```bash
+npm run check:credentials
+```
+
 | Step | Status | Notes |
 |------|--------|-------|
+| `npm run check:credentials` | PASS (when `.env` funded) | `deployment/scripts/check-credentials.ts` — probes Gemini + ClickHouse MCP; prints key shape only (no secrets); exits 1 on failure |
 | `GEMINI_API_KEY` in local `.env` | PASS | not committed |
 | Ingest via API/UI | PASS | Gemini enrichment + MCP INSERT |
 | `/ask` 6-step pipeline | PASS | SQL + row evidence + numeric answer |
@@ -100,7 +105,8 @@ npm run smoke:mcp --workspace=@bas/infrastructure
 | `/catalog` | PASS | Playwright >10 rows |
 | `/ingest` | PASS | Playwright ingest → catalog row |
 | `/ask` | PASS | Playwright 6 steps + SQL + Evidence |
-| Mobile 390px | PASS | Playwright four routes |
+| `/guia` | PASS | Playwright mobile — User Guide heading |
+| Mobile 390px | PASS | Playwright five routes (`/guia`, `/catalog`, `/ingest`, `/ask`, `/`) |
 
 Full log: `docs/submission/DEV_VERIFY.md` + `docs/submission/playwright-output.txt`
 

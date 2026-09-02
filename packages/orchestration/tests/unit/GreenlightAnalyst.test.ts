@@ -133,6 +133,110 @@ describe('GreenlightAnalyst', () => {
     expect(audit?.error).toMatch(/audit write failed/i);
   });
 
+  it('runs four analytics queries in parallel during DISCOVER', async () => {
+    mockReasoning.synthesizeGreenlight.mockResolvedValue({
+      answer: 'ok',
+      recommendations: []
+    });
+
+    await runGreenlightAnalysis(mockMcp, mockReasoning, 'gemini-test');
+
+    const analyticsCalls = mockMcp.runQuery.mock.calls.filter(
+      c => !String(c[0]).includes('INSERT INTO media_catalog.agent_runs')
+    );
+    expect(analyticsCalls).toHaveLength(4);
+  });
+
+  it('filters poison timeout rows from momentum results before scoring', async () => {
+    mockReasoning.synthesizeGreenlight.mockResolvedValue({
+      answer: 'ok',
+      recommendations: []
+    });
+    mockMcp.runQuery.mockImplementation(async (sql: string) => {
+      if (sql.includes('INSERT INTO media_catalog.agent_runs')) {
+        return { rows: [], metadata: { rowCount: 0, latencyMs: 1, partner: 'clickhouse' } };
+      }
+      if (sql.includes('GROUP BY mc.genre') && sql.includes('revenue_4w')) {
+        return {
+          rows: [
+            { genre: 'Comedy', title_count: 40, revenue_4w: 8000 },
+            { genre: 'Thriller', title_count: 8, revenue_4w: 30000 }
+          ],
+          metadata: { rowCount: 2, latencyMs: 1, partner: 'clickhouse' }
+        };
+      }
+      if (sql.includes('wow_pct')) {
+        return {
+          rows: [
+            { text: 'Query timed out after 30 seconds' },
+            ...momentumRows
+          ],
+          metadata: { rowCount: 26, latencyMs: 1, partner: 'clickhouse' }
+        };
+      }
+      if (sql.includes('quantile')) {
+        return { rows: [], metadata: { rowCount: 0, latencyMs: 1, partner: 'clickhouse' } };
+      }
+      if (sql.includes('hole_type')) {
+        return {
+          rows: [{ hole_type: 'genre', dimension: 'Thriller', gap_score: 0.5 }],
+          metadata: { rowCount: 1, latencyMs: 1, partner: 'clickhouse' }
+        };
+      }
+      return { rows: [], metadata: { rowCount: 0, latencyMs: 1, partner: 'clickhouse' } };
+    });
+
+    const result = await runGreenlightAnalysis(mockMcp, mockReasoning, 'gemini-test');
+    const discover = result.steps.find(s => s.step === 'DISCOVER');
+    const momentumQuery = (discover?.output as { queries: Array<{ id: string; rowCount: number }> }).queries.find(
+      q => q.id === 'B_title_momentum'
+    );
+
+    expect(momentumQuery?.rowCount).toBe(25);
+    expect(result.recommendations!.some(r => r.title === 'Late Winner')).toBe(true);
+  });
+
+  it('escapes single quotes in AUDIT INSERT model name', async () => {
+    mockReasoning.synthesizeGreenlight.mockResolvedValue({
+      answer: 'Weekly picks',
+      recommendations: []
+    });
+    let auditSql = '';
+    mockMcp.runQuery.mockImplementation(async (sql: string) => {
+      if (sql.includes('INSERT INTO media_catalog.agent_runs')) {
+        auditSql = sql;
+        return { rows: [], metadata: { rowCount: 0, latencyMs: 1, partner: 'clickhouse' } };
+      }
+      if (sql.includes('GROUP BY mc.genre') && sql.includes('revenue_4w')) {
+        return {
+          rows: [
+            { genre: 'Comedy', title_count: 40, revenue_4w: 8000 },
+            { genre: 'Thriller', title_count: 8, revenue_4w: 30000 }
+          ],
+          metadata: { rowCount: 2, latencyMs: 1, partner: 'clickhouse' }
+        };
+      }
+      if (sql.includes('wow_pct')) {
+        return { rows: momentumRows, metadata: { rowCount: 25, latencyMs: 1, partner: 'clickhouse' } };
+      }
+      if (sql.includes('quantile')) {
+        return { rows: [], metadata: { rowCount: 0, latencyMs: 1, partner: 'clickhouse' } };
+      }
+      if (sql.includes('hole_type')) {
+        return {
+          rows: [{ hole_type: 'genre', dimension: 'Thriller', gap_score: 0.5 }],
+          metadata: { rowCount: 1, latencyMs: 1, partner: 'clickhouse' }
+        };
+      }
+      return { rows: [], metadata: { rowCount: 0, latencyMs: 1, partner: 'clickhouse' } };
+    });
+
+    await runGreenlightAnalysis(mockMcp, mockReasoning, "gemini'--");
+
+    expect(auditSql).toContain("'gemini''--'");
+    expect(auditSql).not.toMatch(/model,\s*'gemini',\s*'/);
+  });
+
   it('uses full momentum rows for scoring (not DISCOVER timeline slice)', async () => {
     mockReasoning.synthesizeGreenlight.mockResolvedValue({
       answer: 'ok',

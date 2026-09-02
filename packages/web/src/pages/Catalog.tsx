@@ -31,8 +31,25 @@ export default function Catalog() {
     );
   });
 
-  if (loading) return <Loading />;
-  if (error) return <ErrorBanner message={error} />;
+  if (loading) {
+    return (
+      <>
+        <PageHeader title={t('catalog.title')} />
+        <Card>
+          <Loading />
+        </Card>
+      </>
+    );
+  }
+
+  if (error) {
+    return (
+      <>
+        <PageHeader title={t('catalog.title')} subtitle={t('catalog.subtitle', { count: 0 })} />
+        <ErrorBanner message={error} />
+      </>
+    );
+  }
 
   if (entries.length === 0) {
     return (

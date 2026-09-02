@@ -163,7 +163,9 @@ export function StepOutput({ step, output }: { step: string; output: unknown }) 
                       {t('steps.rowCount', { count: Number(attempt.rowCount) })}
                     </span>
                   )}
-                  {attempt.retry === true && <span className="meta-pill retry">retry</span>}
+                  {attempt.retry === true && (
+                    <span className="meta-pill retry">{t('steps.retryLabel')}</span>
+                  )}
                 </div>
                 {typeof attempt.error === 'string' && (
                   <p className="timeline-error">{attempt.error}</p>

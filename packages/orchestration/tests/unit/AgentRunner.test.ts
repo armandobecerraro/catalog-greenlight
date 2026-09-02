@@ -445,4 +445,101 @@ describe('AgentRunner', () => {
     const runner = new AgentRunner(mockMcp, mockReasoning, 'gemini-test', mockAudit);
     await expect(runner.run('Which genre?')).rejects.toThrow(/classifier exploded/);
   });
+
+  it('remaps a greenlight classification for catalog Q&A briefs', async () => {
+    mockReasoning.classifyIntent.mockResolvedValue('greenlight' as AgentIntent);
+    const runner = new AgentRunner(mockMcp, mockReasoning, 'gemini-test', mockAudit);
+    const result = await runner.run('Recommend a feel-good comedy under 2 hours');
+    expect(result.intent).toBe('catalog_qa');
+    expect(result.sql).toMatch(/genre = 'Comedy'/);
+  });
+
+  it('keeps greenlight intent for the weekly slate phrasing', async () => {
+    mockReasoning.classifyIntent.mockResolvedValue('greenlight' as AgentIntent);
+    const runner = new AgentRunner(mockMcp, mockReasoning, 'gemini-test', mockAudit);
+    const result = await runner.run('run greenlight weekly slate');
+    expect(result.intent).toBe('greenlight');
+  });
+
+  it('grounds comedy and revenue-genre asks when Gemini is unavailable', async () => {
+    mockReasoning.classifyIntent.mockRejectedValue(new Error('Gemini API credits exhausted (429)'));
+    mockReasoning.generateSql.mockRejectedValue(new Error('RESOURCE_EXHAUSTED'));
+    mockReasoning.synthesize.mockRejectedValue(new Error('quota exceeded'));
+    mockMcp.runQuery.mockImplementation(async (sql: string) => {
+      if (sql.includes('system.columns')) {
+        return { rows: schemaRows, metadata: { rowCount: 2, latencyMs: 1, partner: 'clickhouse' } };
+      }
+      if (sql.includes('INSERT INTO')) {
+        return { rows: [], metadata: { rowCount: 0, latencyMs: 1, partner: 'clickhouse' } };
+      }
+      if (sql.includes("genre = 'Comedy'")) {
+        return {
+          rows: [{ title: 'Sunday Laughs', genre: 'Comedy', revenue_usd: 400, description: 'warm' }],
+          metadata: { rowCount: 1, latencyMs: 8, partner: 'clickhouse' }
+        };
+      }
+      if (sql.includes('gap_score')) {
+        return {
+          rows: [
+            {
+              hole_type: 'genre',
+              dimension: 'Thriller',
+              gap_score: 0.07,
+              title_share: 0.075,
+              revenue_share: 0.144
+            }
+          ],
+          metadata: { rowCount: 1, latencyMs: 8, partner: 'clickhouse' }
+        };
+      }
+      return {
+        rows: [{ genre: 'Animation', title_count: 10, revenue_4w: 50 }],
+        metadata: { rowCount: 1, latencyMs: 8, partner: 'clickhouse' }
+      };
+    });
+
+    const runner = new AgentRunner(mockMcp, mockReasoning, 'gemini-test', mockAudit);
+    const comedy = await runner.run('Recommend a feel-good comedy under 2 hours');
+    const revenue = await runner.run('Which genre should we greenlight next based on recent revenue?');
+
+    expect(comedy.sql).toMatch(/genre = 'Comedy'/);
+    expect(comedy.answer).toMatch(/Sunday Laughs/);
+    expect(comedy.answer).not.toMatch(/fewest titles/);
+    expect(comedy.queryRows).toHaveLength(1);
+
+    expect(revenue.sql).toMatch(/gap_score/i);
+    expect(revenue.answer).toMatch(/Thriller/);
+    expect(revenue.answer).not.toMatch(/fewest titles/);
+    expect(revenue.answer).not.toBe(comedy.answer);
+  });
+
+  it('replaces Gemini genre-inventory SQL when the user asked for comedies', async () => {
+    mockReasoning.generateSql.mockResolvedValue(
+      'SELECT genre, count() AS cnt FROM media_catalog.media_content GROUP BY genre'
+    );
+    mockMcp.runQuery.mockImplementation(async (sql: string) => {
+      if (sql.includes('system.columns')) {
+        return { rows: schemaRows, metadata: { rowCount: 2, latencyMs: 1, partner: 'clickhouse' } };
+      }
+      if (sql.includes('INSERT INTO')) {
+        return { rows: [], metadata: { rowCount: 0, latencyMs: 1, partner: 'clickhouse' } };
+      }
+      if (sql.includes("genre = 'Comedy'")) {
+        return {
+          rows: [{ title: 'Harbor Jokes', genre: 'Comedy', revenue_usd: 90 }],
+          metadata: { rowCount: 1, latencyMs: 8, partner: 'clickhouse' }
+        };
+      }
+      return {
+        rows: [{ genre: 'Animation', cnt: 10 }],
+        metadata: { rowCount: 1, latencyMs: 8, partner: 'clickhouse' }
+      };
+    });
+
+    const runner = new AgentRunner(mockMcp, mockReasoning, 'gemini-test', mockAudit);
+    const result = await runner.run('Recommend a feel-good comedy under 2 hours');
+    expect(result.fallback).toBe(true);
+    expect(result.sql).toMatch(/genre = 'Comedy'/);
+    expect(result.queryRows[0]).toMatchObject({ title: 'Harbor Jokes' });
+  });
 });

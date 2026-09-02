@@ -66,6 +66,7 @@ describe('GeminiReasoningAdapter', () => {
     const adapter = new GeminiReasoningAdapter('key');
     generate.mockResolvedValueOnce('greenlight');
     await expect(adapter.classifyIntent('picks')).resolves.toBe('greenlight');
+    expect(generate.mock.calls[0][1]).toMatch(/weekly 3-pick/);
     generate.mockResolvedValueOnce('stats please');
     await expect(adapter.classifyIntent('picks')).resolves.toBe('stats');
     generate.mockResolvedValueOnce('ingest title');
@@ -90,6 +91,14 @@ describe('GeminiReasoningAdapter', () => {
     expect(generate.mock.calls[0][1]).toMatch(/Previous SQL failed/);
   });
 
+  it('tells the planner not to invent duration or inventory SQL for title asks', async () => {
+    const adapter = new GeminiReasoningAdapter('key');
+    generate.mockResolvedValueOnce('SELECT 1');
+    await adapter.generateSql('catalog_qa', 'Recommend a feel-good comedy under 2 hours', 'schema');
+    expect(generate.mock.calls[0][1]).toMatch(/NO duration\/runtime/);
+    expect(generate.mock.calls[0][1]).toMatch(/never a genre inventory GROUP BY/);
+  });
+
   it('allows INSERT wording for ingest intent', async () => {
     const adapter = new GeminiReasoningAdapter('key');
     generate.mockResolvedValueOnce('INSERT INTO media_catalog.media_content (id) VALUES (1)');
@@ -108,6 +117,7 @@ describe('GeminiReasoningAdapter', () => {
     const parsed = await adapter.synthesize('catalog_qa', 'q', 'SELECT 1', []);
     expect(parsed.answer).toBe('ok');
     expect(parsed.recommendations?.[0].title).toBe('T');
+    expect(generate.mock.calls[0][1]).toMatch(/Never answer a different question/);
 
     generate.mockResolvedValueOnce('not-json');
     const raw = await adapter.synthesizeGreenlight('q', 'SELECT 1', []);

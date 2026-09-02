@@ -1,5 +1,14 @@
 export { AgentRunner, AgentRunnerOptions } from './agents/AgentRunner';
-export { isGeminiPlannerUnavailable, planSqlFallback, synthesizeFromRows } from './agents/askSqlFallback';
+export {
+  coerceGeneratedAskSql,
+  detectAskedGenre,
+  isGeminiPlannerUnavailable,
+  isRevenueGenreBrief,
+  isSlateHoleBrief,
+  planSqlFallback,
+  resolveAskIntent,
+  synthesizeFromRows
+} from './agents/askSqlFallback';
 export { MediaIngestionAgent, AgentState } from './agents/MediaIngestionAgent';
 export { clearSchemaCache, discoverLiveSchema } from './agents/SchemaCache';
 export {

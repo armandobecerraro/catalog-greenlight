@@ -13,8 +13,10 @@ import { discoverLiveSchema } from './SchemaCache';
 import { runGreenlightAnalysis } from '../greenlight/GreenlightAnalyst';
 import { groundRecommendations } from '../greenlight/groundRecommendations';
 import {
+  coerceGeneratedAskSql,
   isGeminiPlannerUnavailable,
   planSqlFallback,
+  resolveAskIntent,
   synthesizeFromRows
 } from './askSqlFallback';
 
@@ -52,7 +54,8 @@ export class AgentRunner {
     const intent = await runAgentStep(steps, 'INTENT', async () => {
       if (options.defaultIntent) return options.defaultIntent;
       try {
-        return await this.reasoning.classifyIntent(userPrompt);
+        const classified = await this.reasoning.classifyIntent(userPrompt);
+        return resolveAskIntent(classified, userPrompt);
       } catch (error) {
         if (!isGeminiPlannerUnavailable(error)) throw error;
         usedFallback = true;
@@ -72,6 +75,14 @@ export class AgentRunner {
       try {
         sql = await this.reasoning.generateSql(intent, userPrompt, schemaText.schema);
         validateGeneratedSql(sql, intent);
+        const coerced = coerceGeneratedAskSql(userPrompt, sql, schemaText.schema);
+        if (coerced) {
+          sql = coerced.sql;
+          validateGeneratedSql(sql, coerced.intent);
+          usedFallback = true;
+          planAttempts.push({ sql, note: coerced.note, fallback: true });
+          return { attempts: [...planAttempts], fallback: true, queryId: coerced.queryId };
+        }
         planAttempts.push({ sql });
         return { attempts: [...planAttempts] };
       } catch (error) {

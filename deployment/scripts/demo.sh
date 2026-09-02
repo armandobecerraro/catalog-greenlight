@@ -43,7 +43,7 @@ docker compose -f deployment/docker/docker-compose.clickhouse.yml exec -T clickh
   docker-compose -f deployment/docker/docker-compose.clickhouse.yml exec -T clickhouse clickhouse-client --multiquery < deployment/docker/init-schema.sql
 
 echo ""
-echo "3. Seeding catalog (50 titles)..."
+echo "3. Seeding catalog (~200 titles, demo story)..."
 bash deployment/scripts/seed.sh
 
 echo ""

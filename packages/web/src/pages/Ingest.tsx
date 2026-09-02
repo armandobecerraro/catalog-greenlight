@@ -1,7 +1,8 @@
 import { FormEvent, useState } from 'react';
 import { api } from '../api';
-import { PageHeader, Card, ErrorBanner } from '../components/Layout';
+import { PageHeader, Card, ErrorBanner, Link } from '../components/Layout';
 import { useLocale } from '../i18n/LocaleContext';
+import { formatApiError } from '../utils/apiErrors';
 
 export default function Ingest() {
   const { t } = useLocale();
@@ -32,7 +33,7 @@ export default function Ingest() {
       });
       setResult({ contentId: r.contentId, latencyMs: r.latencyMs });
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('ingest.error'));
+      setError(formatApiError(t, err, 'ingest.error'));
     } finally {
       setSubmitting(false);
     }
@@ -93,7 +94,8 @@ export default function Ingest() {
         {error && <ErrorBanner message={error} />}
         {result && (
           <div className="success">
-            {t('ingest.success', { id: result.contentId, ms: result.latencyMs })}
+            {t('ingest.success', { id: result.contentId, ms: result.latencyMs })}{' '}
+            <Link to="/catalog">{t('ingest.viewCatalog')}</Link>
           </div>
         )}
       </Card>

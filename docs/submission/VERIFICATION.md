@@ -2,8 +2,8 @@
 
 **Product:** Catalog Greenlight  
 **Public repo:** https://github.com/armandobecerraro/catalog-greenlight  
-**Verified:** 2026-08-27  
-**Commit under test:** `678b754`
+**Verified:** 2026-09-01  
+**Commit under test:** `8840175` (Render URL in `545ce31`)
 
 ---
 
@@ -41,8 +41,8 @@ npm test
 
 | Source | Status | Notes |
 |--------|--------|-------|
-| ClickHouse Cloud (submission path) | PASS | ~50+ titles in `media_catalog.media_content`; revenue in `title_revenue` |
-| Local Docker seed | PASS | `deployment/scripts/seed.sh` → 50 titles (Path B / `npm run demo`) |
+| ClickHouse Cloud (submission path) | PASS | **200 titles** in `media_catalog.media_content`; revenue in `title_revenue` |
+| Local Docker seed | PASS | `deployment/scripts/seed.sh` → 200 titles via `generate-seed-catalog.mjs` (Path B / `npm run demo`) |
 
 ---
 
@@ -87,8 +87,8 @@ npm run smoke:mcp --workspace=@bas/infrastructure
 | Item | Status |
 |------|--------|
 | `Dockerfile` + `render.yaml` | PASS — bookworm + uv + mcp-clickhouse smoke in image build |
-| Live public URL | **NOT DEPLOYED** — no GCP credits / manual Cloud Run step; judges use `npm run dev` |
-| `DEVPOST.md` hosted field | `TODO_HOSTED_URL` |
+| Live public URL | **PASS** — https://catalog-greenlight.onrender.com (`GET /api/v1/health` → `ready: true`; `totalEntries: 200`) |
+| `DEVPOST.md` hosted field | https://catalog-greenlight.onrender.com |
 
 ---
 
@@ -120,6 +120,6 @@ Unit test: `AgentRunner.test.ts` — PASS
 | Code + tests + MCP smoke | **YES** |
 | Public GitHub | **YES** |
 | Browser E2E (Playwright) | **YES** |
-| Hosted URL | **NO** (honest — local demo) |
-| YouTube video | **NO** (`TODO_YOUTUBE`) |
+| Hosted URL | **YES** — https://catalog-greenlight.onrender.com |
+| YouTube video | **PENDING** (`TODO_YOUTUBE`) |
 | ADK TypeScript | **NO** (next pass) |

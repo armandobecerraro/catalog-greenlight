@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { catalogRowTimeout, greenlightTimeout, greenlightPickLocator, greenlightTitleLocator, statsTimeout } from './helpers';
 
 test.describe.configure({ mode: 'serial' });
 
@@ -13,7 +14,7 @@ test.describe('Catalog Greenlight hackathon UI (1280)', () => {
     await page.goto('/catalog');
     await expect(page.getByText(/titles in ClickHouse/)).toBeVisible({ timeout: 30_000 });
     const rows = page.locator('table tbody tr');
-    await expect(rows.first()).toBeVisible({ timeout: 60_000 });
+    await expect(rows.first()).toBeVisible({ timeout: catalogRowTimeout });
     const count = await rows.count();
     expect(count).toBeGreaterThan(10);
   });
@@ -53,15 +54,16 @@ test.describe('Catalog Greenlight hackathon UI (1280)', () => {
     await page.goto('/');
     await expect(page.getByText('Catalog size')).toBeVisible();
     const catalogStat = page.locator('.stat-value').first();
-    await expect(catalogStat).not.toHaveText('0', { timeout: 60_000 });
+    await expect(catalogStat).not.toHaveText('0', { timeout: statsTimeout });
     await expect(page.getByText('Greenlight this week')).toBeVisible();
   });
 
   test('dashboard: greenlight shows 3 titles from catalog evidence', async ({ page, request }) => {
     await page.goto('/');
-    await expect(page.locator('.rec-card').first()).toBeVisible({ timeout: 60_000 });
-    const recTitles = await page.locator('.rec-card h4').allTextContents();
-    expect(recTitles.length).toBeGreaterThanOrEqual(1);
+    await expect(page.locator(greenlightPickLocator)).toHaveCount(3, { timeout: greenlightTimeout });
+    await expect(page.locator(greenlightTitleLocator)).toHaveCount(3);
+    const recTitles = await page.locator(greenlightTitleLocator).allTextContents();
+    expect(recTitles.length).toBe(3);
 
     const catalogRes = await request.get('/api/v1/catalog');
     expect(catalogRes.ok()).toBeTruthy();

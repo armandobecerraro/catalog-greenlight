@@ -10,7 +10,7 @@ Paste these fields into https://agentic-cinema.devpost.com/
 
 ## Tagline
 
-ClickHouse measures. TypeScript scores. Gemini explains.
+**ClickHouse measures. TypeScript scores. Gemini explains.**
 
 ## Elevator pitch (short description)
 
@@ -19,7 +19,7 @@ Catalog Greenlight is a web app for a streaming programming chief. Each week it 
 ## Built with
 
 - **ClickHouse** — catalog + weekly revenue + agent audit tables; runtime access only via official [mcp-clickhouse](https://github.com/ClickHouse/mcp-clickhouse)
-- **Google Gemini** — `@google/genai` (`gemini-flash-latest`) for ingest enrichment, catalog Q&A (intent + NL→SQL + synthesis), and greenlight narrative only
+- **Google Gemini API** — `@google/genai` (`gemini-flash-latest`) on Google Cloud; direct `GoogleGenAI` + `generateContent` — **not** Agent Builder, ADK, or Vertex function-calling
 - **MCP** — `@modelcontextprotocol/sdk` stdio client (`run_query`, `list_databases`, `list_tables`)
 - **TypeScript monorepo** — hexagonal architecture (core / infrastructure / orchestration / api / web)
 - **React + Vite** — dashboard with greenlight metrics, catalog, ingest, ask-with-timeline
@@ -27,7 +27,9 @@ Catalog Greenlight is a web app for a streaming programming chief. Each week it 
 
 ## Link to demo (hosted app)
 
-`TODO_HOSTED_URL` — deploy via `render.yaml` (ClickHouse Cloud **8443** + `CLICKHOUSE_SECURE=true`; see `docs/submission/DEPLOY.md`). Until live, judges can run locally: `npm run dev` → http://localhost:5173. Record the demo video against the hosted URL once available (README § “3-minute demo video script”).
+https://catalog-greenlight.onrender.com
+
+(Render + ClickHouse Cloud **8443** + `CLICKHOUSE_SECURE=true`; see `docs/submission/DEPLOY.md`. Local fallback: `npm run dev` → http://localhost:5173. **Record the demo video against the hosted URL** — see `docs/submission/VIDEO_CHECKLIST.md`.)
 
 ## Link to GitHub repo
 
@@ -35,7 +37,7 @@ https://github.com/armandobecerraro/catalog-greenlight
 
 ## Video demo (3 min, English)
 
-`TODO_YOUTUBE` — script in README.md § “3-minute demo video script”
+`TODO_YOUTUBE` — shot list + narration: `docs/submission/VIDEO_CHECKLIST.md` (summary in README.md § “3-minute demo video script”). Record against https://catalog-greenlight.onrender.com only.
 
 ## What it does
 
@@ -56,6 +58,7 @@ Gemini does **not** plan SQL for the greenlight path.
 
 ## How we use Google Cloud AI (required)
 
+- **Gemini API on Google Cloud** via `@google/genai` — not Agent Builder, not ADK, not a no-code agent product
 - `packages/infrastructure/src/gemini/generateContent.ts` — `GoogleGenAI` + `models.generateContent`
 - **Ingest** — `GeminiEnrichmentAdapter.ts` enriches title metadata
 - **Catalog Q&A** — `GeminiReasoningAdapter.ts` classifies intent, generates SQL, synthesizes answers

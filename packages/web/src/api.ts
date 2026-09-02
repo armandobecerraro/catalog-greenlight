@@ -1,7 +1,8 @@
-const API_BASE = '/api/v1';
+import { AGENT_FETCH_TIMEOUT_MS, ApiError, parseHttpError, timeoutError } from './utils/apiErrors';
 
-/** Agent calls (Gemini + ClickHouse Cloud) can take ~3 minutes under load. */
-export const AGENT_FETCH_TIMEOUT_MS = 240_000;
+export { AGENT_FETCH_TIMEOUT_MS };
+
+const API_BASE = '/api/v1';
 
 export interface CatalogStats {
   totalEntries: number;
@@ -60,11 +61,9 @@ export interface CatalogEntry {
 }
 
 async function fetchJson<T>(path: string, options?: RequestInit & { timeoutMs?: number }): Promise<T> {
-  const timeoutMs = options?.timeoutMs ?? AGENT_FETCH_TIMEOUT_MS;
+  const { timeoutMs = AGENT_FETCH_TIMEOUT_MS, ...fetchOptions } = options ?? {};
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
-
-  const { timeoutMs: _omit, ...fetchOptions } = options ?? {};
 
   try {
     const res = await fetch(`${API_BASE}${path}`, {
@@ -73,14 +72,13 @@ async function fetchJson<T>(path: string, options?: RequestInit & { timeoutMs?: 
     });
     if (!res.ok) {
       const body = await res.text();
-      throw new Error(body || `HTTP ${res.status}`);
+      throw parseHttpError(res.status, body);
     }
     return res.json() as Promise<T>;
   } catch (err) {
+    if (err instanceof ApiError) throw err;
     if (err instanceof Error && err.name === 'AbortError') {
-      throw new Error(
-        `Request timed out after ${timeoutMs / 1000}s. The agent (Gemini + ClickHouse) can take 1–2 minutes — please wait and retry.`
-      );
+      throw timeoutError(timeoutMs);
     }
     throw err;
   } finally {

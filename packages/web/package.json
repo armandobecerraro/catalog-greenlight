@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "test:e2e": "playwright test",
+    "test:e2e": "playwright test hackathon.spec.ts",
+    "test:e2e:hosted": "BASE_URL=https://catalog-greenlight.onrender.com playwright test hosted-smoke.spec.ts",
     "clean": "rm -rf dist"
   },
   "dependencies": {

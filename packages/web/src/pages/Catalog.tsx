@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { api, CatalogEntry } from '../api';
-import { PageHeader, Card, Loading, ErrorBanner } from '../components/Layout';
+import { PageHeader, Card, Loading, ErrorBanner, EmptyState, Link } from '../components/Layout';
 import { useLocale } from '../i18n/LocaleContext';
+import { formatApiError } from '../utils/apiErrors';
 
 export default function Catalog() {
   const { t } = useLocale();
@@ -14,7 +15,7 @@ export default function Catalog() {
     api
       .getCatalog()
       .then(r => setEntries(r.entries))
-      .catch(e => setError(e instanceof Error ? e.message : t('catalog.loadError')))
+      .catch(e => setError(formatApiError(t, e, 'catalog.loadError')))
       .finally(() => setLoading(false));
   }, []);
 
@@ -27,6 +28,21 @@ export default function Catalog() {
 
   if (loading) return <Loading />;
   if (error) return <ErrorBanner message={error} />;
+
+  if (entries.length === 0) {
+    return (
+      <>
+        <PageHeader title={t('catalog.title')} subtitle={t('catalog.subtitle', { count: 0 })} />
+        <Card>
+          <EmptyState
+            title={t('empty.catalog.title')}
+            body={t('empty.catalog.body')}
+            action={<Link to="/ingest">{t('empty.catalog.cta')}</Link>}
+          />
+        </Card>
+      </>
+    );
+  }
 
   return (
     <>
@@ -53,8 +69,15 @@ export default function Catalog() {
                 <tr key={e.id}>
                   <td>
                     <strong>{e.title}</strong>
-                    <br />
-                    <span className="muted small">{e.description.slice(0, 80)}…</span>
+                    {e.description ? (
+                      <>
+                        <br />
+                        <span className="muted small">
+                          {e.description.slice(0, 80)}
+                          {e.description.length > 80 ? '…' : ''}
+                        </span>
+                      </>
+                    ) : null}
                   </td>
                   <td>
                     <span className="genre-pill">{e.genre}</span>

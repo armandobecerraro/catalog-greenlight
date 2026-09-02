@@ -176,7 +176,7 @@ docker build -t catalog-greenlight .
 docker compose -f deployment/docker/docker-compose.prod.yml up --build
 ```
 
-Hosted deploy: see `docs/submission/DEPLOY.md` (not deployed in this submission — GCP credits / manual step).
+**Hosted demo:** https://catalog-greenlight.onrender.com (Render + ClickHouse Cloud; see `docs/submission/DEPLOY.md`).
 
 ## Hackathon compliance (Stage One)
 
@@ -204,14 +204,18 @@ deployment/docker/         ClickHouse, seed SQL, prod compose
 
 ## 3-minute demo video script (English)
 
-Record against the **public hosted app** (`https://YOUR_HOSTED_URL` — replace with the live URL from Devpost once deployed; use `npm run dev` locally only while preparing). Paste the same URL into `docs/submission/DEVPOST.md` as `TODO_HOSTED_URL`.
+**Record against the hosted app only** — https://catalog-greenlight.onrender.com (not localhost). Full shot list, narration, and checklist: `docs/submission/VIDEO_CHECKLIST.md`.
 
-1. **0:00–0:20** — Problem: a programming chief needs data-backed picks, not generic AI summaries.
-2. **0:20–0:45** — Open **`https://YOUR_HOSTED_URL`** — Dashboard: live stats from ClickHouse (genre counts, 7-day revenue via MCP).
-3. **0:45–1:15** — **Ingest**: add a title → Gemini enrichment success → **Catalog** confirms the row.
-4. **1:15–2:00** — **Ask**: “Which genre is under-represented?” → expand the 6-step agent timeline → SQL + result rows + answer with numbers.
-5. **2:00–2:30** — Dashboard **Greenlight** panel: three titles with numeric metrics on each card (`opportunity_score`, `wow_pct`, `genre_gap`) and Gemini narrative tied to query evidence. **Say aloud:** “ClickHouse measures, TypeScript scores, Gemini explains.”
-6. **2:30–3:00** — Architecture slide: mcp-clickhouse + `@google/genai`, GitHub repo, hosted URL on screen.
+| Time | Scene | What to show |
+|------|-------|--------------|
+| 0:00–0:20 | Hook | Problem: a programming chief needs data-backed picks, not generic AI summaries. |
+| 0:20–0:45 | Dashboard stats | Open **https://catalog-greenlight.onrender.com** — catalog size, genre breakdown, latest revenue (live ClickHouse via MCP). |
+| 0:45–1:15 | Ingest | `/ingest` — add a title → Gemini enrichment → `/catalog` confirms the new row. |
+| 1:15–2:00 | Ask | `/ask` — “Which genre is under-represented in our catalog?” → 6-step timeline (INTENT → … → AUDIT) → SQL block → evidence rows → grounded answer. |
+| 2:00–2:30 | Greenlight | Dashboard **Greenlight this week** — three rec-cards with `opportunity_score`, `wow_pct`, `genre_gap`, cannibal flag + Gemini narrative. **Say aloud:** “ClickHouse measures. TypeScript scores. Gemini explains.” |
+| 2:30–3:00 | Architecture | Slide: `mcp-clickhouse` + `@google/genai` (Gemini API on Google Cloud — not Agent Builder) + GitHub repo + hosted URL on screen. |
+
+Paste the YouTube link into `docs/submission/DEVPOST.md` as `TODO_YOUTUBE` when uploaded.
 
 ## License
 

@@ -4,6 +4,7 @@ import { translations } from '../i18n/translations';
 import type { Locale } from '../i18n/translations';
 
 export const GUIDE_SECTION_ID = 'guia-de-uso';
+export const DEMO_STORY_GUIDE_ANCHOR = 'demo-story';
 
 interface UserGuideContentProps {
   locale: Locale;
@@ -70,18 +71,21 @@ export function UserGuideContent({ locale }: UserGuideContentProps) {
         ))}
       </div>
 
-      <Card className="about-greenlight user-guide-card">
-        <h3>{copy.greenlightTitle}</h3>
-        <p>{copy.greenlightIntro}</p>
-        <ol className="about-steps">
-          {copy.greenlightSteps.map((step, i) => (
-            <li key={i}>{step}</li>
-          ))}
-        </ol>
-        <p className="about-formula">
-          <strong>{copy.formulaTitle}:</strong> {copy.formula}
-        </p>
-      </Card>
+      <div id={DEMO_STORY_GUIDE_ANCHOR}>
+        <Card className="about-greenlight user-guide-card">
+          <h3>{copy.greenlightTitle}</h3>
+          <p className="user-guide-lead">{copy.demoStoryLead}</p>
+          <p>{copy.greenlightIntro}</p>
+          <ol className="about-steps">
+            {copy.greenlightSteps.map((step, i) => (
+              <li key={i}>{step}</li>
+            ))}
+          </ol>
+          <p className="about-formula">
+            <strong>{copy.formulaTitle}:</strong> {copy.formula}
+          </p>
+        </Card>
+      </div>
 
       <div className="about-grid about-grid-2">
         <Card className="user-guide-card">

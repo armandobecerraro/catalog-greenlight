@@ -22,7 +22,30 @@ export const translations = {
       loading: 'Loading…',
       evidence: 'Evidence',
       views: 'views',
-      top: 'Top'
+      top: 'Top',
+      yes: 'yes',
+      no: 'no'
+    },
+    errors: {
+      geminiBilling:
+        'Gemini API credits are exhausted or rate-limited (429). Add billing in Google AI Studio or wait a few minutes, then try again.',
+      clickhouseWaking:
+        'ClickHouse or the API is still starting (503). Wait ~30 seconds until health shows ready: true, then refresh.',
+      timeout:
+        'The request timed out after {seconds}s. Agent calls (Gemini + ClickHouse) can take 1–2 minutes — please wait and retry.',
+      network: 'Could not reach the API. Check that the server is running.',
+      generic: 'Something went wrong. Try again in a moment.'
+    },
+    empty: {
+      catalog: {
+        title: 'No titles in the catalog yet',
+        body: 'Seed the demo database or ingest your first title to populate ClickHouse.',
+        cta: 'Ingest a title →'
+      },
+      recommendations: {
+        title: 'No greenlight picks yet',
+        body: 'The analyst finished but returned no recommendation cards. Check the agent timeline below for MCP or scoring details, or retry in a minute.'
+      }
     },
     dashboard: {
       title: 'Programming Dashboard',
@@ -35,6 +58,17 @@ export const translations = {
       noRevenue: 'No revenue data',
       greenlightTitle: 'Greenlight this week',
       greenlightLoading: 'Running deterministic analyst (4 MCP queries + Gemini writer)…',
+      greenlightProgressMeasuring: 'Measuring catalog in ClickHouse…',
+      greenlightProgressScoring: 'Scoring candidates…',
+      greenlightProgressNarrative: 'Writing narrative…',
+      greenlightProgressHint:
+        'Usually takes 1–3 minutes on cold start. Catalog stats above are already live.',
+      greenlightError429Title: 'Gemini rate limited',
+      greenlightError429:
+        'Gemini returned HTTP 429 (rate limit or quota). Check your API key, quota, and billing in Google AI Studio, then reload the page.',
+      greenlightFallbackNotice:
+        'Showing deterministic scorer picks — Gemini narrative was unavailable.',
+      greenlightPartialNarrative: 'Narrative pending…',
       agentRun: 'Agent run {ms}ms',
       followUp: 'Ask follow-up questions →',
       statsError: 'Failed to load stats',
@@ -42,7 +76,72 @@ export const translations = {
       metricScore: 'Opportunity score',
       metricWow: 'WoW',
       metricGenreGap: 'Genre gap',
-      metricCannibal: 'Cannibal pair'
+      metricCannibal: 'Cannibal pair',
+      metricYes: 'yes',
+      metricNo: 'no',
+      analyticsTitle: 'ClickHouse analytics',
+      analyticsSub: 'From the 4 MCP queries in the greenlight DISCOVER step',
+      analyticsGenreTitle: 'Genre gap & inventory',
+      analyticsGenreHint: 'Revenue share minus title share — higher means underserved',
+      analyticsGenreMeta: '{count} titles · {titles} catalog vs {revenue} revenue',
+      analyticsGenreTooltip: 'Title share {titles} · revenue share {revenue}',
+      analyticsMomentumTitle: 'WoW momentum',
+      analyticsMomentumHint: 'Top titles by week-over-week revenue change',
+      analyticsCannibalTitle: 'Cannibalization pairs',
+      analyticsCannibalHint: 'Same-genre titles both in top revenue quartile',
+      analyticsCannibalClear: 'No cannibal pairs detected this week.',
+      analyticsCannibalWarn: 'These pairs compete in the same genre slot — greenlight applies a penalty.',
+      analyticsColTitleA: 'Title A',
+      analyticsColTitleB: 'Title B',
+      analyticsColGenre: 'Genre',
+      analyticsColRevenue: 'Revenue (7d)',
+      analyticsNoData: 'No rows for this query.',
+      ritualTitle: 'Weekly programming ritual',
+      ritualSubtitle: 'Evidence → 3 picks → contrafactual → export slate',
+      colRank: '#',
+      colTitle: 'Title',
+      colGenre: 'Genre',
+      colEvidence: 'Evidence',
+      exportCsv: 'Export CSV',
+      exportJson: 'Export JSON',
+      contrafactual:
+        'If we pushed the {titleA} / {titleB} pair ({genre}), both titles would cannibalize top-quartile revenue in the same genre — the scorer excluded them from this week\'s slate.',
+      signals: {
+        title: "This week's signals",
+        impact:
+          'Replaces manual analyst SQL — four fixed MCP queries score every title before Gemini writes the narrative.',
+        guideLink: 'How the demo story works',
+        measuring: 'Updating from ClickHouse…',
+        loading: {
+          comedy:
+            'Comedy oversupply — measured from genre inventory (query A: title count vs 4-week revenue share)',
+          thriller: 'Thriller slate hole — scored from slate-holes analytics (query D)',
+          cannibal:
+            'Cannibalization pairs — near-duplicate titles penalized in scoring (query C)',
+          breakout:
+            'LATAM breakout momentum — week-over-week revenue surge from title momentum (query B)'
+        },
+        loaded: {
+          comedy:
+            'Comedy oversupplied: {count} titles ({titlePct}% of catalog) vs {revPct}% of 4-week revenue',
+          comedyStatsOnly:
+            'Comedy leads catalog volume: {count} titles ({titlePct}% of catalog)',
+          thrillerGap: 'Thriller slate hole: {gap} gap score (query D — underserved genre)',
+          thrillerInventory:
+            'Thriller gap: {thrillerCount} titles vs Comedy at {comedyCount} — thin thriller slice',
+          cannibal: 'Cannibal pair flagged: {titleA} ↔ {titleB} (query C penalty applied)',
+          cannibalSingle: 'Cannibal pair flagged: {title} (scorer penalty applied)',
+          breakout: '{title} — {wow} WoW · {genre} (LATAM momentum, query B)',
+          breakoutPick: 'Top pick {title} — {wow} WoW · opportunity {score}'
+        }
+      }
+    },
+    greenlight: {
+      stackBadge: 'Measured by ClickHouse · Scored in TypeScript · Narrated by Gemini',
+      formulaTitle: 'Scoring formula',
+      fallbackBadge: 'Scorer fallback — Gemini writer unavailable',
+      provenanceTitle: 'Score provenance (MCP query dimensions)',
+      fromQuery: '← {query}'
     },
     catalog: {
       title: 'Catalog',
@@ -66,7 +165,8 @@ export const translations = {
       submitting: 'Enriching & storing…',
       submit: 'Ingest via agent pipeline',
       error: 'Ingest failed',
-      success: 'Stored {id} in {ms}ms via MCP INSERT'
+      success: 'Stored {id} in {ms}ms via MCP INSERT',
+      viewCatalog: 'View in catalog →'
     },
     ask: {
       title: 'Ask the catalog',
@@ -87,12 +187,42 @@ export const translations = {
       ]
     },
     steps: {
-      INTENT: 'INTENT',
-      DISCOVER: 'DISCOVER',
-      PLAN_SQL: 'PLAN_SQL',
-      EXECUTE: 'EXECUTE',
-      SYNTHESIZE: 'SYNTHESIZE',
-      AUDIT: 'AUDIT'
+      INTENT: 'Classify intent',
+      DISCOVER: 'Discover schema / analytics',
+      PLAN_SQL: 'Plan SQL',
+      EXECUTE: 'Execute query',
+      SYNTHESIZE: 'Synthesize answer',
+      AUDIT: 'Audit run',
+      showDetails: 'Show details',
+      hideDetails: 'Hide details',
+      noOutput: 'No output',
+      intentLabel: 'Intent',
+      sourceLabel: 'Source',
+      schemaLabel: 'Live schema',
+      sqlLabel: 'SQL',
+      rowsLabel: 'Rows',
+      rowCount: '{count} rows',
+      latency: '{ms} ms',
+      formulaLabel: 'Scoring formula',
+      candidateCountLabel: 'Candidates scored',
+      momentumRowsLabel: 'Momentum rows',
+      topCandidatesLabel: 'Top candidates',
+      attemptLabel: 'Attempt {n}',
+      fallbackLabel: 'Used deterministic fallback',
+      recommendationsLabel: 'Recommendations',
+      auditIdLabel: 'Audit ID',
+      queryLabel: 'Query',
+      rawOutputLabel: 'Raw output',
+      moreRows: '+{count} more rows',
+      cellYes: 'yes',
+      cellNo: 'no',
+      status: {
+        pending: 'Pending',
+        running: 'Running',
+        completed: 'Completed',
+        error: 'Error',
+        failed: 'Failed'
+      }
     },
     about: {
       badge: 'User documentation',
@@ -147,6 +277,8 @@ export const translations = {
           cta: 'Ask a question'
         }
       ],
+      demoStoryLead:
+        'The seeded demo catalog tells one story: Comedy is oversupplied, Thriller is thin, True Crime: Highway 101 forms a cannibal pair, and Crimen sin Fronteras: Bogotá is the LATAM breakout — all surfaced from measured ClickHouse analytics on the dashboard.',
       greenlightTitle: 'How weekly greenlight works',
       greenlightIntro:
         'Greenlight is a deterministic analyst. Gemini writes the narrative; TypeScript chooses the titles.',
@@ -204,7 +336,30 @@ export const translations = {
       loading: 'Cargando…',
       evidence: 'Evidencia',
       views: 'visualizaciones',
-      top: 'Líder'
+      top: 'Líder',
+      yes: 'sí',
+      no: 'no'
+    },
+    errors: {
+      geminiBilling:
+        'Los créditos de Gemini están agotados o hay límite de tasa (429). Añade facturación en Google AI Studio o espera unos minutos e inténtalo de nuevo.',
+      clickhouseWaking:
+        'ClickHouse o la API aún se están iniciando (503). Espera ~30 s hasta que health muestre ready: true y recarga.',
+      timeout:
+        'La solicitud expiró tras {seconds} s. Las llamadas al agente (Gemini + ClickHouse) pueden tardar 1–2 minutos — espera e inténtalo de nuevo.',
+      network: 'No se pudo conectar con la API. Comprueba que el servidor esté en ejecución.',
+      generic: 'Algo salió mal. Inténtalo de nuevo en un momento.'
+    },
+    empty: {
+      catalog: {
+        title: 'Aún no hay títulos en el catálogo',
+        body: 'Sembra la base demo o ingresa tu primer título para poblar ClickHouse.',
+        cta: 'Ingresar un título →'
+      },
+      recommendations: {
+        title: 'Aún no hay recomendaciones de greenlight',
+        body: 'El analista terminó pero no devolvió tarjetas de recomendación. Revisa la línea de tiempo del agente por detalles MCP o de puntuación, o reintenta en un minuto.'
+      }
     },
     dashboard: {
       title: 'Panel de programación',
@@ -217,6 +372,17 @@ export const translations = {
       noRevenue: 'Sin datos de ingresos',
       greenlightTitle: 'Greenlight de la semana',
       greenlightLoading: 'Ejecutando analista determinístico (4 consultas MCP + redacción Gemini)…',
+      greenlightProgressMeasuring: 'Midiendo catálogo en ClickHouse…',
+      greenlightProgressScoring: 'Puntuando candidatos…',
+      greenlightProgressNarrative: 'Redactando narrativa…',
+      greenlightProgressHint:
+        'Suele tardar 1–3 minutos en arranque en frío. Las estadísticas del catálogo arriba ya están en vivo.',
+      greenlightError429Title: 'Gemini con límite de tasa',
+      greenlightError429:
+        'Gemini devolvió HTTP 429 (límite de tasa o cuota). Revisa tu clave API, cuota y facturación en Google AI Studio y recarga la página.',
+      greenlightFallbackNotice:
+        'Mostrando selección del scorer determinístico — la narrativa de Gemini no estuvo disponible.',
+      greenlightPartialNarrative: 'Narrativa pendiente…',
       agentRun: 'Ejecución del agente {ms} ms',
       followUp: 'Hacer preguntas de seguimiento →',
       statsError: 'No se pudieron cargar las estadísticas',
@@ -224,7 +390,72 @@ export const translations = {
       metricScore: 'Puntuación de oportunidad',
       metricWow: 'WoW',
       metricGenreGap: 'Hueco de género',
-      metricCannibal: 'Par canibalizado'
+      metricCannibal: 'Par canibalizado',
+      metricYes: 'sí',
+      metricNo: 'no',
+      analyticsTitle: 'Analítica ClickHouse',
+      analyticsSub: 'De las 4 consultas MCP en el paso DISCOVER del greenlight',
+      analyticsGenreTitle: 'Hueco de género e inventario',
+      analyticsGenreHint: 'Cuota de ingresos menos cuota de títulos — más alto = infra-servido',
+      analyticsGenreMeta: '{count} títulos · {titles} catálogo vs {revenue} ingresos',
+      analyticsGenreTooltip: 'Cuota títulos {titles} · cuota ingresos {revenue}',
+      analyticsMomentumTitle: 'Momentum WoW',
+      analyticsMomentumHint: 'Principales títulos por cambio de ingresos semana a semana',
+      analyticsCannibalTitle: 'Pares de canibalización',
+      analyticsCannibalHint: 'Títulos del mismo género en el cuartil superior de ingresos',
+      analyticsCannibalClear: 'No se detectaron pares canibalizados esta semana.',
+      analyticsCannibalWarn: 'Estos pares compiten en el mismo hueco de género — greenlight aplica penalización.',
+      analyticsColTitleA: 'Título A',
+      analyticsColTitleB: 'Título B',
+      analyticsColGenre: 'Género',
+      analyticsColRevenue: 'Ingresos (7 d)',
+      analyticsNoData: 'Sin filas para esta consulta.',
+      ritualTitle: 'Ritual semanal de programación',
+      ritualSubtitle: 'Evidencia → 3 títulos → contrafactual → exportar slate',
+      colRank: '#',
+      colTitle: 'Título',
+      colGenre: 'Género',
+      colEvidence: 'Evidencia',
+      exportCsv: 'Exportar CSV',
+      exportJson: 'Exportar JSON',
+      contrafactual:
+        'Si impulsáramos el par {titleA} / {titleB} ({genre}), ambos títulos canibalizarían ingresos del cuartil superior en el mismo género — el scorer los excluyó del slate de esta semana.',
+      signals: {
+        title: 'Señales de la semana',
+        impact:
+          'Sustituye SQL manual del analista — cuatro consultas MCP fijas puntúan cada título antes de que Gemini redacte la narrativa.',
+        guideLink: 'Cómo funciona la historia demo',
+        measuring: 'Actualizando desde ClickHouse…',
+        loading: {
+          comedy:
+            'Exceso de comedia — medido con inventario por género (consulta A: títulos vs ingresos 4 semanas)',
+          thriller: 'Hueco de thriller — puntuado con analítica de huecos de programación (consulta D)',
+          cannibal:
+            'Pares de canibalización — títulos casi duplicados penalizados en el scoring (consulta C)',
+          breakout:
+            'Breakout LATAM — momentum semana a semana desde momentum por título (consulta B)'
+        },
+        loaded: {
+          comedy:
+            'Comedia en exceso: {count} títulos ({titlePct}% del catálogo) vs {revPct}% de ingresos en 4 semanas',
+          comedyStatsOnly:
+            'Comedia lidera volumen: {count} títulos ({titlePct}% del catálogo)',
+          thrillerGap: 'Hueco de thriller: {gap} gap score (consulta D — género infra-servido)',
+          thrillerInventory:
+            'Hueco de thriller: {thrillerCount} títulos vs Comedia con {comedyCount} — franja thriller delgada',
+          cannibal: 'Par canibalizado: {titleA} ↔ {titleB} (penalización consulta C)',
+          cannibalSingle: 'Par canibalizado: {title} (penalización del scorer)',
+          breakout: '{title} — {wow} WoW · {genre} (momentum LATAM, consulta B)',
+          breakoutPick: 'Top pick {title} — {wow} WoW · oportunidad {score}'
+        }
+      }
+    },
+    greenlight: {
+      stackBadge: 'Medido en ClickHouse · Puntuado en TypeScript · Narrado por Gemini',
+      formulaTitle: 'Fórmula de puntuación',
+      fallbackBadge: 'Respaldo del scorer — redactor Gemini no disponible',
+      provenanceTitle: 'Procedencia del score (dimensiones MCP)',
+      fromQuery: '← {query}'
     },
     catalog: {
       title: 'Catálogo',
@@ -249,7 +480,8 @@ export const translations = {
       submitting: 'Enriqueciendo y guardando…',
       submit: 'Ingresar vía pipeline del agente',
       error: 'Error al ingresar',
-      success: 'Guardado {id} en {ms} ms vía INSERT MCP'
+      success: 'Guardado {id} en {ms} ms vía INSERT MCP',
+      viewCatalog: 'Ver en el catálogo →'
     },
     ask: {
       title: 'Consultar el catálogo',
@@ -270,12 +502,42 @@ export const translations = {
       ]
     },
     steps: {
-      INTENT: 'INTENCIÓN',
-      DISCOVER: 'DESCUBRIR',
-      PLAN_SQL: 'PLAN_SQL',
-      EXECUTE: 'EJECUTAR',
-      SYNTHESIZE: 'SINTETIZAR',
-      AUDIT: 'AUDITORÍA'
+      INTENT: 'Clasificar intención',
+      DISCOVER: 'Descubrir esquema / analítica',
+      PLAN_SQL: 'Planificar SQL',
+      EXECUTE: 'Ejecutar consulta',
+      SYNTHESIZE: 'Sintetizar respuesta',
+      AUDIT: 'Auditar ejecución',
+      showDetails: 'Mostrar detalles',
+      hideDetails: 'Ocultar detalles',
+      noOutput: 'Sin salida',
+      intentLabel: 'Intención',
+      sourceLabel: 'Origen',
+      schemaLabel: 'Esquema en vivo',
+      sqlLabel: 'SQL',
+      rowsLabel: 'Filas',
+      rowCount: '{count} filas',
+      latency: '{ms} ms',
+      formulaLabel: 'Fórmula de puntuación',
+      candidateCountLabel: 'Candidatos puntuados',
+      momentumRowsLabel: 'Filas de momentum',
+      topCandidatesLabel: 'Mejores candidatos',
+      attemptLabel: 'Intento {n}',
+      fallbackLabel: 'Se usó respaldo determinístico',
+      recommendationsLabel: 'Recomendaciones',
+      auditIdLabel: 'ID de auditoría',
+      queryLabel: 'Consulta',
+      rawOutputLabel: 'Salida sin procesar',
+      moreRows: '+{count} filas más',
+      cellYes: 'sí',
+      cellNo: 'no',
+      status: {
+        pending: 'Pendiente',
+        running: 'En ejecución',
+        completed: 'Completado',
+        error: 'Error',
+        failed: 'Fallido'
+      }
     },
     about: {
       badge: 'Documentación de uso',
@@ -330,6 +592,8 @@ export const translations = {
           cta: 'Hacer una pregunta'
         }
       ],
+      demoStoryLead:
+        'El catálogo demo sembrado cuenta una historia: la comedia está en exceso, el thriller es escaso, True Crime: Highway 101 forma un par canibalizado y Crimen sin Fronteras: Bogotá es el breakout LATAM — todo visible en el panel con analítica medida en ClickHouse.',
       greenlightTitle: 'Cómo funciona el greenlight semanal',
       greenlightIntro:
         'El greenlight es un analista determinístico. Gemini redacta la narrativa; TypeScript elige los títulos.',

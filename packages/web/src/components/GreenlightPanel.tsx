@@ -1,0 +1,325 @@
+import { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
+import type { AgentRunResult, Recommendation } from '../api';
+import AnalyticsInsights from './AnalyticsInsights';
+import { AgentTimeline } from './AgentTimeline';
+import { GreenlightRitualPanel } from './GreenlightRitualPanel';
+import { GreenlightProvenanceHeader, RecProvenance } from './GreenlightProvenance';
+import { ErrorBanner, EmptyState } from './Layout';
+import { useLocale } from '../i18n/LocaleContext';
+import { parseGreenlightAnalytics } from '../utils/greenlightAnalytics';
+import { normalizeTitle } from '../utils/greenlightMetrics';
+import {
+  greenlightPhaseFromElapsed,
+  isGeminiRateLimitError,
+  resolveGreenlightErrorMessage,
+  synthesizeStepError,
+  topCandidatesFromSteps,
+  usedScorerFallback,
+  type GreenlightPhase
+} from '../utils/greenlightUx';
+
+function metricsForRec(rec: Recommendation, queryRows: Record<string, unknown>[]) {
+  const fromRec = {
+    opportunity_score: rec.opportunity_score,
+    wow_pct: rec.wow_pct,
+    genre_gap: rec.genre_gap,
+    in_cannibal_pair: rec.in_cannibal_pair
+  };
+  const row = queryRows.find(
+    r => typeof r.title === 'string' && normalizeTitle(String(r.title)) === normalizeTitle(rec.title)
+  );
+  if (!row) return fromRec;
+  return {
+    opportunity_score: fromRec.opportunity_score ?? num(row, 'opportunity_score'),
+    wow_pct: fromRec.wow_pct ?? num(row, 'wow_pct'),
+    genre_gap: fromRec.genre_gap ?? num(row, 'genre_gap'),
+    in_cannibal_pair: fromRec.in_cannibal_pair ?? bool(row, 'in_cannibal_pair')
+  };
+}
+
+function num(row: Record<string, unknown>, key: string): number | undefined {
+  const v = row[key];
+  return typeof v === 'number' ? v : undefined;
+}
+
+function bool(row: Record<string, unknown>, key: string): boolean | undefined {
+  const v = row[key];
+  return typeof v === 'boolean' ? v : undefined;
+}
+
+function formatPct(value: number | undefined): string {
+  if (value == null) return '—';
+  return `${(value * 100).toFixed(1)}%`;
+}
+
+function useGreenlightPhase(loading: boolean): GreenlightPhase {
+  const [elapsed, setElapsed] = useState(0);
+
+  useEffect(() => {
+    if (!loading) {
+      setElapsed(0);
+      return;
+    }
+    const started = Date.now();
+    const id = window.setInterval(() => setElapsed(Date.now() - started), 400);
+    return () => window.clearInterval(id);
+  }, [loading]);
+
+  return greenlightPhaseFromElapsed(elapsed);
+}
+
+const PHASES: GreenlightPhase[] = ['measuring', 'scoring', 'narrative'];
+
+function phaseLabel(phase: GreenlightPhase, t: (key: string) => string): string {
+  switch (phase) {
+    case 'measuring':
+      return t('dashboard.greenlightProgressMeasuring');
+    case 'scoring':
+      return t('dashboard.greenlightProgressScoring');
+    case 'narrative':
+      return t('dashboard.greenlightProgressNarrative');
+  }
+}
+
+function phaseStatus(
+  phase: GreenlightPhase,
+  current: GreenlightPhase
+): 'done' | 'active' | 'pending' {
+  const currentIdx = PHASES.indexOf(current);
+  const phaseIdx = PHASES.indexOf(phase);
+  if (phaseIdx < currentIdx) return 'done';
+  if (phaseIdx === currentIdx) return 'active';
+  return 'pending';
+}
+
+function SkeletonBar({ width = '100%' }: { width?: string }) {
+  return <span className="skeleton skeleton-bar" style={{ width }} aria-hidden="true" />;
+}
+
+function RecCardSkeleton({ index }: { index: number }) {
+  return (
+    <article className="rec-card rec-card-skeleton" aria-hidden="true">
+      <SkeletonBar width="72%" />
+      <span className="skeleton skeleton-pill" />
+      <dl className="rec-metrics">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i}>
+            <dt>
+              <SkeletonBar width="80%" />
+            </dt>
+            <dd>
+              <SkeletonBar width="55%" />
+            </dd>
+          </div>
+        ))}
+      </dl>
+      <SkeletonBar width="100%" />
+      <SkeletonBar width="88%" />
+      <span className="sr-only">Loading recommendation {index + 1}</span>
+    </article>
+  );
+}
+
+function GreenlightProgress({ phase }: { phase: GreenlightPhase }) {
+  const { t } = useLocale();
+
+  return (
+    <div className="greenlight-progress" role="status" aria-live="polite">
+      <p className="greenlight-progress-lead">{phaseLabel(phase, t)}</p>
+      <ol className="greenlight-progress-steps">
+        {PHASES.map(p => {
+          const status = phaseStatus(p, phase);
+          return (
+            <li key={p} className={`greenlight-progress-step is-${status}`}>
+              <span className="greenlight-progress-dot" aria-hidden="true" />
+              <span>{phaseLabel(p, t)}</span>
+            </li>
+          );
+        })}
+      </ol>
+      <p className="muted greenlight-progress-hint">{t('dashboard.greenlightProgressHint')}</p>
+    </div>
+  );
+}
+
+function RecMetrics({
+  metrics,
+  t
+}: {
+  metrics: ReturnType<typeof metricsForRec>;
+  t: (key: string) => string;
+}) {
+  return (
+    <dl className="rec-metrics">
+      <div>
+        <dt>{t('dashboard.metricScore')}</dt>
+        <dd>{metrics.opportunity_score != null ? metrics.opportunity_score.toFixed(3) : '—'}</dd>
+      </div>
+      <div>
+        <dt>{t('dashboard.metricWow')}</dt>
+        <dd>{formatPct(metrics.wow_pct)}</dd>
+      </div>
+      <div>
+        <dt>{t('dashboard.metricGenreGap')}</dt>
+        <dd>{metrics.genre_gap != null ? metrics.genre_gap.toFixed(3) : '—'}</dd>
+      </div>
+      <div>
+        <dt>{t('dashboard.metricCannibal')}</dt>
+        <dd>{metrics.in_cannibal_pair ? t('dashboard.metricYes') : t('dashboard.metricNo')}</dd>
+      </div>
+    </dl>
+  );
+}
+
+function RecCard({
+  rec,
+  queryRows,
+  narrativePending
+}: {
+  rec: Recommendation;
+  queryRows: Record<string, unknown>[];
+  narrativePending?: boolean;
+}) {
+  const { t } = useLocale();
+  const metrics = metricsForRec(rec, queryRows);
+  const hasNarrative = Boolean(rec.justification?.trim());
+
+  return (
+    <article className="rec-card">
+      <h4>{rec.title}</h4>
+      {rec.genre && <span className="genre-pill">{rec.genre}</span>}
+      <RecMetrics metrics={metrics} t={t} />
+      <RecProvenance rec={rec} queryRows={queryRows} />
+      {narrativePending && !hasNarrative ? (
+        <p className="rec-narrative-pending muted">{t('dashboard.greenlightPartialNarrative')}</p>
+      ) : (
+        <>
+          {rec.justification && <p>{rec.justification}</p>}
+          {rec.evidence && (
+            <p className="evidence">
+              {t('common.evidence')}: {rec.evidence}
+            </p>
+          )}
+        </>
+      )}
+    </article>
+  );
+}
+
+function WarningBanner({ title, message }: { title?: string; message: string }) {
+  return (
+    <div className="warning-banner" role="alert">
+      {title && <strong>{title}</strong>}
+      <p>{message}</p>
+    </div>
+  );
+}
+
+export function GreenlightPanel({
+  greenlight,
+  loading,
+  error
+}: {
+  greenlight: AgentRunResult | null;
+  loading: boolean;
+  error: unknown;
+}) {
+  const { t } = useLocale();
+  const phase = useGreenlightPhase(loading);
+  const queryRows = (greenlight?.queryRows ?? []) as Record<string, unknown>[];
+  const analytics = useMemo(() => parseGreenlightAnalytics(greenlight), [greenlight]);
+
+  const recommendations = greenlight?.recommendations ?? [];
+  const partialCandidates =
+    recommendations.length === 0 ? topCandidatesFromSteps(greenlight) : [];
+  const displayRecs = recommendations.length > 0 ? recommendations : partialCandidates;
+  const showPartialOnly = recommendations.length === 0 && partialCandidates.length > 0;
+
+  const synthError = synthesizeStepError(greenlight);
+  const fallbackUsed = usedScorerFallback(greenlight);
+  const rateLimitHit =
+    isGeminiRateLimitError(error) ||
+    (synthError != null && isGeminiRateLimitError(synthError));
+
+  const resolvedError = error ? resolveGreenlightErrorMessage(error, t) : null;
+
+  return (
+    <>
+      {loading && (
+        <>
+          <GreenlightProgress phase={phase} />
+          <div className="rec-grid" aria-busy="true">
+            {[0, 1, 2].map(i => (
+              <RecCardSkeleton key={i} index={i} />
+            ))}
+          </div>
+        </>
+      )}
+
+      {!loading && resolvedError && (
+        <ErrorBanner
+          message={
+            resolvedError.title
+              ? `${resolvedError.title}: ${resolvedError.message}`
+              : resolvedError.message
+          }
+        />
+      )}
+
+      {!loading && rateLimitHit && displayRecs.length > 0 && (
+        <WarningBanner
+          title={t('dashboard.greenlightError429Title')}
+          message={t('dashboard.greenlightError429')}
+        />
+      )}
+
+      {!loading && fallbackUsed && !rateLimitHit && displayRecs.length > 0 && (
+        <WarningBanner message={t('dashboard.greenlightFallbackNotice')} />
+      )}
+
+      {!loading && greenlight && displayRecs.length > 0 && (
+        <GreenlightProvenanceHeader greenlight={greenlight} />
+      )}
+
+      {!loading && recommendations.length > 0 && !showPartialOnly && greenlight && (
+        <GreenlightRitualPanel greenlight={greenlight} />
+      )}
+
+      {!loading && displayRecs.length > 0 && (
+        <div className="rec-grid">
+          {displayRecs.map((r, i) => (
+            <RecCard
+              key={`${r.title}-${i}`}
+              rec={r}
+              queryRows={queryRows}
+              narrativePending={showPartialOnly}
+            />
+          ))}
+        </div>
+      )}
+
+      {!loading && displayRecs.length === 0 && !error && (
+        greenlight?.answer ? (
+          <p>{greenlight.answer}</p>
+        ) : (
+          <EmptyState
+            title={t('empty.recommendations.title')}
+            body={t('empty.recommendations.body')}
+          />
+        )
+      )}
+
+      {greenlight && !loading && (
+        <>
+          {analytics && <AnalyticsInsights analytics={analytics} />}
+          <p className="muted">
+            {t('dashboard.agentRun', { ms: greenlight.totalLatencyMs })} ·{' '}
+            <Link to="/ask">{t('dashboard.followUp')}</Link>
+          </p>
+          {greenlight.steps && <AgentTimeline steps={greenlight.steps} />}
+        </>
+      )}
+    </>
+  );
+}

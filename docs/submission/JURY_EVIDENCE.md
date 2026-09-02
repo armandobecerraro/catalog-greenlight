@@ -1,8 +1,7 @@
 # Jury evidence brief — Catalog Greenlight (facts only, no secrets)
 
-**Repo path:** `/Users/armandobecerrarodriguez/Proyectos/blockbuster-agentic-studio`  
 **Public GitHub:** https://github.com/armandobecerraro/catalog-greenlight  
-**Commit inspected:** `b18273f` (pushed to `origin/main`)  
+**Commit inspected:** `8840175` (HEAD; Render URL documented in `545ce31`)  
 **Track:** ClickHouse (official `mcp-clickhouse` required)  
 **Product:** Web app for a streaming **programming chief** — catalog stats, ingest, NL Q&A, weekly greenlight picks.
 
@@ -12,19 +11,19 @@
 
 | Requirement | Status | Evidence |
 |-------------|--------|----------|
-| Public hosted web URL | **FAIL** | `docs/submission/DEVPOST.md` line 30: `TODO_HOSTED_URL`. `VERIFICATION.md` §7: NOT DEPLOYED. No live Cloud Run/Render URL in repo. |
-| Video ≤3 min EN (YouTube/Vimeo), product working | **FAIL** | `DEVPOST.md` line 38: `TODO_YOUTUBE`. No YouTube/Vimeo link in README or DEVPOST. |
+| Public hosted web URL | **PASS** | https://catalog-greenlight.onrender.com — `GET /api/v1/health` → `ready: true` (verified 2026-09-01). Also in `docs/submission/DEVPOST.md`. |
+| Video ≤3 min EN (YouTube/Vimeo), product working | **PENDING** | `DEVPOST.md` line 38: `TODO_YOUTUBE`. No YouTube/Vimeo link yet. |
 | Public repo + OSI license visible | **PASS** | GitHub URL above. Root `LICENSE` = MIT. |
 | Google Cloud AI imported AND called at runtime | **PASS** | `@google/genai` in `packages/infrastructure/package.json`. `generateContent.ts`: `GoogleGenAI`, `ai.models.generateContent`. Adapters: `GeminiEnrichmentAdapter.ts`, `GeminiReasoningAdapter.ts`. |
 | ClickHouse via official MCP `mcp-clickhouse` at runtime | **PASS** | `McpClickHouseConnector.ts`: spawns `uv run --with mcp-clickhouse --python 3.13 mcp-clickhouse`; `Client.callTool` → `run_query`, `list_databases`, `list_tables`. No `@clickhouse/client` in `packages/*/package.json`. |
 | Web / mobile platform | **PASS** | React + Vite UI: `packages/web` — routes `/`, `/catalog`, `/ingest`, `/ask`. |
 | New project in contest period | **UNKNOWN** (not verified in repo) | Assumed hackathon build; no creation date in LICENSE (copyright 2025). |
 | No LangChain / OpenAI / Anthropic in runtime | **PASS** | Grep `langchain|openai|anthropic` in `packages/**/*.ts` → no matches in product code. |
-| Devpost form + ClickHouse track | **UNKNOWN** | Not submitted yet per docs (`TODO_HOSTED_URL`, `TODO_YOUTUBE`). |
+| Devpost form + ClickHouse track | **PENDING** | Hosted URL ready; video (`TODO_YOUTUBE`) and Devpost form submission still outstanding. |
 
 ---
 
-## Compliance greps (2026-08-27)
+## Compliance greps (2026-09-01)
 
 ```
 @google/genai / GoogleGenAI / generateContent
@@ -78,15 +77,15 @@ INTENT → DISCOVER (MCP list_*) → PLAN_SQL (Gemini) → EXECUTE (MCP run_quer
 - `title_revenue` — MergeTree ORDER BY (week_start, title_id)
 - `agent_runs` — MergeTree ORDER BY (created_at, id)
 
-**Seed:** `deployment/scripts/seed.sh` + `seed-catalog.sql` — 50 titles (local Docker path).  
+**Seed:** `deployment/scripts/generate-seed-catalog.mjs` + `seed-catalog.sql` — **200 titles**, 10 weeks revenue (local Docker and ClickHouse Cloud submission path).  
 **Submission path:** ClickHouse Cloud HTTPS **8443**, `CLICKHOUSE_SECURE=true` (README Path A; `.env` not in repo).
 
 **Stats query** (`InsightEngineService.ts` ~162-170): revenue 7d uses `week_start >= (SELECT max(week_start) - 7 FROM title_revenue)` not `today()-7`.
 
-**Runtime stats (curl 2026-08-27, API up):**
+**Runtime stats (curl 2026-09-01, Render hosted):**
 
-- `GET /api/v1/health` → `ready: true`
-- `GET /api/v1/catalog/stats` → `totalEntries: 56`, genres distribution, `latestRevenue` non-zero (~6.5M views truncated in log)
+- `GET https://catalog-greenlight.onrender.com/api/v1/health` → `ready: true`
+- `GET https://catalog-greenlight.onrender.com/api/v1/catalog/stats` → `totalEntries: 200`, genres distribution, `latestRevenue` non-zero (~8.6M views)
 
 ---
 
@@ -121,9 +120,8 @@ INTENT → DISCOVER (MCP list_*) → PLAN_SQL (Gemini) → EXECUTE (MCP run_quer
 ## Deployment / infra
 
 - `Dockerfile`: `node:20-bookworm-slim`, installs `uv`, smoke `uv run --with mcp-clickhouse --python 3.13 mcp-clickhouse --help`
-- `render.yaml` exists (referenced in VERIFICATION.md)
+- `render.yaml` — Render web service; live at https://catalog-greenlight.onrender.com
 - **Docker build not verified** in last dev session (daemon not running)
-- **No live hosted URL**
 
 **`.env` loading:** `packages/infrastructure/src/loadEnv.ts` — `loadRepoEnv()` walks up to repo root `.env`. Used by API + CLI demos.
 
@@ -145,19 +143,18 @@ INTENT → DISCOVER (MCP list_*) → PLAN_SQL (Gemini) → EXECUTE (MCP run_quer
 | `@google/genai` not `@google/generative-ai` | YES in code |
 | `gemini-flash-latest` default | YES `generateContent.ts`, `.env.example` |
 | `.env.example` defaults localhost **8123** | YES — judges must edit for Cloud |
-| Hosted demo | NO — honest TODO in DEVPOST |
+| Hosted demo | YES — https://catalog-greenlight.onrender.com |
 
 ---
 
 ## What is NOT demonstrated
 
-- Public hosted URL for Oct judging window
-- English ≤3 min video of working product
+- English ≤3 min video of working product (`TODO_YOUTUBE`)
 - `@google/adk` / Agent Builder / Vertex ADK
 - Grafana MCP (not used — correct for track)
 - LangChain, OpenAI, Anthropic
 - FakeGemini in production runtime path
-- Statistical rigor beyond small catalog (~56 titles)
+- Statistical rigor beyond small catalog (~200 titles)
 - Enterprise IAM / multi-tenant governance
 
 ---

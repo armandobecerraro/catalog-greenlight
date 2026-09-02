@@ -20,7 +20,9 @@
     "start:demo": "npm run start:demo --workspace=@bas/media-workflows-examples",
     "start:ingestion": "npm run start:ingestion --workspace=@bas/media-workflows-examples",
     "demo": "bash deployment/scripts/demo.sh",
+    "check:credentials": "ts-node deployment/scripts/check-credentials.ts",
     "test:e2e": "npm run test:e2e --workspace=@bas/web",
+    "test:e2e:hosted": "npm run test:e2e:hosted --workspace=@bas/web",
     "deploy:infra": "bash scripts/deploy.sh",
     "setup": "bash scripts/setup.sh"
   },

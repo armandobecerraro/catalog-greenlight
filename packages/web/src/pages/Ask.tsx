@@ -1,8 +1,15 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { api, AgentRunResult } from '../api';
-import { PageHeader, Card, ErrorBanner, AgentTimeline } from '../components/Layout';
+import { PageHeader, Card, ErrorBanner } from '../components/Layout';
+import { AgentTimeline } from '../components/AgentTimeline';
+import { DataTable } from '../components/DataTable';
+import {
+  GreenlightProvenanceHeader,
+  RecProvenance
+} from '../components/GreenlightProvenance';
 import { useLocale } from '../i18n/LocaleContext';
 import { translations } from '../i18n/translations';
+import { formatApiError } from '../utils/apiErrors';
 
 export default function Ask() {
   const { locale, t } = useLocale();
@@ -26,7 +33,7 @@ export default function Ask() {
       const r = await api.ask(question);
       setResult(r);
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('ask.error'));
+      setError(formatApiError(t, err, 'ask.error'));
     } finally {
       setLoading(false);
     }
@@ -64,12 +71,21 @@ export default function Ask() {
             <p className="muted">
               {t('ask.intent')}: {result.intent} · {result.totalLatencyMs}ms · model {result.model}
             </p>
+            {result.intent === 'greenlight' && (
+              <GreenlightProvenanceHeader greenlight={result} />
+            )}
             {result.recommendations && result.recommendations.length > 0 && (
               <div className="rec-grid">
                 {result.recommendations.map((r, i) => (
                   <article key={i} className="rec-card">
                     <h4>{r.title}</h4>
                     <span className="genre-pill">{r.genre}</span>
+                    {result.intent === 'greenlight' && (
+                      <RecProvenance
+                        rec={r}
+                        queryRows={(result.queryRows ?? []) as Record<string, unknown>[]}
+                      />
+                    )}
                     <p>{r.justification}</p>
                     <p className="evidence">{r.evidence}</p>
                   </article>
@@ -88,7 +104,7 @@ export default function Ask() {
           {result.queryRows && result.queryRows.length > 0 && (
             <Card>
               <h3>{t('ask.evidenceTitle', { count: result.queryRows.length })}</h3>
-              <pre className="sql-block">{JSON.stringify(result.queryRows.slice(0, 20), null, 2)}</pre>
+              <DataTable rows={result.queryRows as Record<string, unknown>[]} maxRows={20} />
             </Card>
           )}
 

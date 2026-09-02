@@ -1,6 +1,5 @@
 import { Link, NavLink, Outlet } from 'react-router-dom';
 import { LanguageToggle, useLocale } from '../i18n/LocaleContext';
-import type { AgentStep } from '../api';
 
 export function Layout() {
   const { t } = useLocale();
@@ -23,6 +22,7 @@ export function Layout() {
             <NavLink to="/catalog">{t('nav.catalog')}</NavLink>
             <NavLink to="/ingest">{t('nav.ingest')}</NavLink>
             <NavLink to="/ask">{t('nav.ask')}</NavLink>
+            <NavLink to="/guia">{t('nav.about')}</NavLink>
           </nav>
           <LanguageToggle />
         </div>
@@ -46,12 +46,42 @@ export function PageHeader({ title, subtitle }: { title: string; subtitle?: stri
   );
 }
 
-export function Card({ children, className = '' }: { children: React.ReactNode; className?: string }) {
-  return <section className={`card ${className}`}>{children}</section>;
+export function Card({
+  children,
+  className = '',
+  id
+}: {
+  children: React.ReactNode;
+  className?: string;
+  id?: string;
+}) {
+  return (
+    <section id={id} className={`card ${className}`}>
+      {children}
+    </section>
+  );
 }
 
 export function ErrorBanner({ message }: { message: string }) {
   return <div className="error-banner">{message}</div>;
+}
+
+export function EmptyState({
+  title,
+  body,
+  action
+}: {
+  title: string;
+  body: string;
+  action?: React.ReactNode;
+}) {
+  return (
+    <div className="empty-state">
+      <h3>{title}</h3>
+      <p>{body}</p>
+      {action && <div className="empty-state-action">{action}</div>}
+    </div>
+  );
 }
 
 export function Loading() {
@@ -59,25 +89,6 @@ export function Loading() {
   return <div className="loading">{t('common.loading')}</div>;
 }
 
-export function AgentTimeline({ steps }: { steps: AgentStep[] }) {
-  const { t } = useLocale();
-
-  return (
-    <ol className="timeline">
-      {steps.map((s, i) => (
-        <li key={i} className={`timeline-step status-${s.status}`}>
-          <div className="timeline-head">
-            <strong>{t(`steps.${s.step}`)}</strong>
-            <span>{s.latencyMs != null ? `${s.latencyMs}ms` : s.status}</span>
-          </div>
-          {s.error && <p className="timeline-error">{s.error}</p>}
-          {s.output != null && (
-            <pre className="timeline-output">{JSON.stringify(s.output, null, 2).slice(0, 800)}</pre>
-          )}
-        </li>
-      ))}
-    </ol>
-  );
-}
+export { AgentTimeline } from './AgentTimeline';
 
 export { Link };

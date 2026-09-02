@@ -86,8 +86,8 @@ export default function Catalog() {
             {t('catalog.hidePadding')}
           </label>
         </div>
-        <div className="table-wrap">
-          <table>
+        <div className="table-wrap catalog-table-wrap">
+          <table className="catalog-table">
             <thead>
               <tr>
                 <th>{t('catalog.colTitle')}</th>

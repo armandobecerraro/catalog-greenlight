@@ -3,13 +3,11 @@ import { api, AgentRunResult } from '../api';
 import { PageHeader, Card, ErrorBanner, Link } from '../components/Layout';
 import { AgentTimeline } from '../components/AgentTimeline';
 import { DataTable } from '../components/DataTable';
-import {
-  GreenlightProvenanceHeader,
-  RecProvenance
-} from '../components/GreenlightProvenance';
+import { GreenlightProvenanceHeader, RecProvenance } from '../components/GreenlightProvenance';
 import { useLocale } from '../i18n/LocaleContext';
 import { translations } from '../i18n/translations';
 import { formatApiError, ApiError } from '../utils/apiErrors';
+import { filterRecommendations } from '../utils/recommendationGuards';
 
 export default function Ask() {
   const { locale, t } = useLocale();
@@ -43,6 +41,10 @@ export default function Ask() {
     }
   }
 
+  const groundedRecs = result ? filterRecommendations(result.recommendations) : [];
+  const droppedRecCount =
+    result?.recommendations != null ? result.recommendations.length - groundedRecs.length : 0;
+
   return (
     <>
       <PageHeader title={t('ask.title')} subtitle={t('ask.subtitle')} />
@@ -65,54 +67,27 @@ export default function Ask() {
         </form>
       </Card>
 
-      {error && (
-        <ErrorBanner message={error} />
-      )}
+      {error && <ErrorBanner message={error} />}
       {billingHint && (
         <p className="muted small">
           {t('ask.billingHint')} <Link to="/">{t('ask.billingHintCta')}</Link>
         </p>
       )}
 
-      {result?.fallback && (
-        <div className="warning-banner" role="status">
-          <p>{t('ask.fallbackNotice')}</p>
-        </div>
-      )}
-
       {result && (
         <>
+          {result.fallback && (
+            <div className="fallback-badge" role="status">
+              {t('ask.fallbackBadge')}
+            </div>
+          )}
+
           <Card>
             <h3>{t('ask.answer')}</h3>
             <p className="answer">{result.answer}</p>
             <p className="muted">
               {t('ask.intent')}: {result.intent} · {result.totalLatencyMs}ms · model {result.model}
             </p>
-            {result.intent === 'greenlight' && (
-              <GreenlightProvenanceHeader greenlight={result} />
-            )}
-            {result.recommendations && result.recommendations.length > 0 && (
-              <div className="rec-grid">
-                {result.recommendations.map((r, i) => (
-                  <article key={i} className="rec-card">
-                    <h4>{r.title}</h4>
-                    <span className="genre-pill">{r.genre}</span>
-                    {result.intent === 'greenlight' && (
-                      <RecProvenance
-                        rec={r}
-                        queryRows={(result.queryRows ?? []) as Record<string, unknown>[]}
-                      />
-                    )}
-                    <p>{r.justification}</p>
-                    {r.evidence && (
-                      <p className="evidence">
-                        {t('common.evidence')}: {r.evidence}
-                      </p>
-                    )}
-                  </article>
-                ))}
-              </div>
-            )}
           </Card>
 
           {result.sql && (
@@ -133,6 +108,47 @@ export default function Ask() {
             <h3>{t('ask.timelineTitle')}</h3>
             <AgentTimeline steps={result.steps} />
           </Card>
+
+          {groundedRecs.length > 0 && (
+            <Card>
+              {result.intent === 'greenlight' && (
+                <GreenlightProvenanceHeader greenlight={result} />
+              )}
+              <div className="rec-grid">
+                {groundedRecs.map((r, i) => (
+                  <article key={i} className="rec-card">
+                    <h4>{r.title}</h4>
+                    <span className="genre-pill">{r.genre}</span>
+                    {result.intent === 'greenlight' && (
+                      <RecProvenance
+                        rec={r}
+                        queryRows={(result.queryRows ?? []) as Record<string, unknown>[]}
+                      />
+                    )}
+                    {r.justification && <p>{r.justification}</p>}
+                    {r.evidence && (
+                      <p className="evidence">
+                        {t('common.evidence')}: {r.evidence}
+                      </p>
+                    )}
+                  </article>
+                ))}
+              </div>
+            </Card>
+          )}
+
+          {result.recommendations &&
+            result.recommendations.length > 0 &&
+            groundedRecs.length === 0 &&
+            result.intent !== 'greenlight' && (
+              <Card>
+                <p className="muted">{t('ask.ungroundedRecs')}</p>
+              </Card>
+            )}
+
+          {droppedRecCount > 0 && (
+            <p className="muted small ask-filter-note">{t('ask.filteredRecs', { count: droppedRecCount })}</p>
+          )}
         </>
       )}
     </>

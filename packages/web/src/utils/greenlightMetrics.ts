@@ -72,21 +72,40 @@ export interface CannibalPair {
   genre: string;
 }
 
+export function isNearDuplicateTitle(a: string, b: string): boolean {
+  const na = a.trim().toLowerCase();
+  const nb = b.trim().toLowerCase();
+  if (!na || !nb || na === nb) return false;
+  if (na.includes(nb) || nb.includes(na)) return true;
+  let i = 0;
+  while (i < na.length && i < nb.length && na[i] === nb[i]) i += 1;
+  if (i >= 16) return true;
+  const tokensA = na.split(/[\s:]+/).filter(t => t.length > 2).slice(0, 3).join(' ');
+  const tokensB = nb.split(/[\s:]+/).filter(t => t.length > 2).slice(0, 3).join(' ');
+  return tokensA.length >= 10 && tokensA === tokensB;
+}
+
+export function isPaddingTitle(title: string, description?: string): boolean {
+  return title.startsWith('Catalog Extra') || Boolean(description?.startsWith('Padding title'));
+}
+
 export function extractCannibalPairs(steps: AgentStep[]): CannibalPair[] {
   const discover = steps.find(s => s.step === 'DISCOVER');
   if (!discover?.output || typeof discover.output !== 'object') return [];
 
   const output = discover.output as {
+    fullById?: Record<string, Record<string, unknown>[]>;
     queries?: Array<{ id: string; rows?: Record<string, unknown>[] }>;
   };
-  const query = output.queries?.find(q => q.id === 'C_cannibalization');
-  if (!query?.rows?.length) return [];
+  const fromFull = output.fullById?.C_cannibalization;
+  const fromQuery = output.queries?.find(q => q.id === 'C_cannibalization')?.rows;
+  const rows = fromFull ?? fromQuery ?? [];
 
-  return query.rows
+  return rows
     .map(r => ({
       title_a: String(r.title_a ?? ''),
       title_b: String(r.title_b ?? ''),
       genre: String(r.genre ?? '')
     }))
-    .filter(p => p.title_a && p.title_b);
+    .filter(p => p.title_a && p.title_b && isNearDuplicateTitle(p.title_a, p.title_b));
 }

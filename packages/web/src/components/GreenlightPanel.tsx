@@ -230,9 +230,9 @@ export function GreenlightPanel({
   const queryRows = (greenlight?.queryRows ?? []) as Record<string, unknown>[];
   const analytics = useMemo(() => parseGreenlightAnalytics(greenlight), [greenlight]);
 
-  const recommendations = greenlight?.recommendations ?? [];
+  const recommendations = (greenlight?.recommendations ?? []).filter(r => Boolean(r.title?.trim()));
   const partialCandidates =
-    recommendations.length === 0 ? topCandidatesFromSteps(greenlight) : [];
+    recommendations.length === 0 ? topCandidatesFromSteps(greenlight).filter(r => Boolean(r.title?.trim())) : [];
   const displayRecs = recommendations.length > 0 ? recommendations : partialCandidates;
   const showPartialOnly = recommendations.length === 0 && partialCandidates.length > 0;
 

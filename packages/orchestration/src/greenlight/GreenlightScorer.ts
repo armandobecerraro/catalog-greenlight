@@ -76,24 +76,41 @@ export function parseGenreInventory(rows: Record<string, unknown>[]): GenreInven
 }
 
 export function parseTitleMomentum(rows: Record<string, unknown>[]): TitleMomentumRow[] {
-  return rows.map(r => ({
-    title_id: str(r, 'title_id'),
-    title: str(r, 'title'),
-    genre: str(r, 'genre'),
-    language: str(r, 'language') || 'en',
-    revenue_this_week: num(r, 'revenue_this_week'),
-    revenue_prior_week: num(r, 'revenue_prior_week'),
-    wow_pct: num(r, 'wow_pct'),
-    views_this_week: num(r, 'views_this_week')
-  }));
+  return rows
+    .filter(r => str(r, 'title').trim() && !str(r, 'title').startsWith('Catalog Extra'))
+    .map(r => ({
+      title_id: str(r, 'title_id'),
+      title: str(r, 'title'),
+      genre: str(r, 'genre'),
+      language: str(r, 'language') || 'en',
+      revenue_this_week: num(r, 'revenue_this_week'),
+      revenue_prior_week: num(r, 'revenue_prior_week'),
+      wow_pct: num(r, 'wow_pct'),
+      views_this_week: num(r, 'views_this_week')
+    }));
+}
+
+export function isNearDuplicateTitle(a: string, b: string): boolean {
+  const na = a.trim().toLowerCase();
+  const nb = b.trim().toLowerCase();
+  if (!na || !nb || na === nb) return false;
+  if (na.includes(nb) || nb.includes(na)) return true;
+  let i = 0;
+  while (i < na.length && i < nb.length && na[i] === nb[i]) i += 1;
+  if (i >= 16) return true;
+  const tokensA = na.split(/[\s:]+/).filter(t => t.length > 2).slice(0, 3).join(' ');
+  const tokensB = nb.split(/[\s:]+/).filter(t => t.length > 2).slice(0, 3).join(' ');
+  return tokensA.length >= 10 && tokensA === tokensB;
 }
 
 export function parseCannibalization(rows: Record<string, unknown>[]): CannibalizationRow[] {
-  return rows.map(r => ({
-    title_a: str(r, 'title_a'),
-    title_b: str(r, 'title_b'),
-    genre: str(r, 'genre')
-  }));
+  return rows
+    .map(r => ({
+      title_a: str(r, 'title_a'),
+      title_b: str(r, 'title_b'),
+      genre: str(r, 'genre')
+    }))
+    .filter(p => p.title_a && p.title_b && isNearDuplicateTitle(p.title_a, p.title_b));
 }
 
 export function parseSlateHoles(rows: Record<string, unknown>[]): SlateHoleRow[] {
@@ -186,7 +203,9 @@ export function pickTopCandidates(
   scored: ScoredCandidate[],
   limit = 3
 ): ScoredCandidate[] {
-  const sorted = [...scored].sort((a, b) => b.opportunity_score - a.opportunity_score);
+  const sorted = [...scored]
+    .filter(s => s.title.trim())
+    .sort((a, b) => b.opportunity_score - a.opportunity_score);
   const uniqueGenres = new Set(sorted.map(s => s.genre));
   const enforceDiversity = uniqueGenres.size >= limit;
 

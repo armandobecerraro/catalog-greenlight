@@ -87,6 +87,7 @@ export const translations = {
       analyticsGenreTooltip: 'Title share {titles} · revenue share {revenue}',
       analyticsMomentumTitle: 'WoW momentum',
       analyticsMomentumHint: 'Top titles by week-over-week revenue change',
+      analyticsMomentumEmpty: 'No titles with a meaningful week-over-week move in this run.',
       analyticsCannibalTitle: 'Cannibalization pairs',
       analyticsCannibalHint: 'Same-genre titles both in top revenue quartile',
       analyticsCannibalClear: 'No cannibal pairs detected this week.',
@@ -106,6 +107,7 @@ export const translations = {
       exportJson: 'Export JSON',
       contrafactual:
         'If we pushed the {titleA} / {titleB} pair ({genre}), both titles would cannibalize top-quartile revenue in the same genre — the scorer excluded them from this week\'s slate.',
+      contrafactualMore: 'And {count} more near-duplicate pairs — see ClickHouse analytics below.',
       signals: {
         title: "This week's signals",
         impact:
@@ -147,6 +149,7 @@ export const translations = {
       title: 'Catalog',
       subtitle: '{count} titles in ClickHouse',
       filterPlaceholder: 'Filter by title or genre…',
+      hidePadding: 'Hide seed padding (Catalog Extra)',
       loadError: 'Failed to load catalog',
       colTitle: 'Title',
       colGenre: 'Genre',
@@ -157,6 +160,7 @@ export const translations = {
       title: 'Ingest a title',
       subtitle: 'Gemini enriches summary, tags, and positioning, then persists via mcp-clickhouse',
       labelTitle: 'Title',
+      titlePlaceholder: 'e.g. Night Shift Bogotá',
       labelDescription: 'Description',
       labelGenre: 'Genre',
       labelRelease: 'Release date',
@@ -401,6 +405,7 @@ export const translations = {
       analyticsGenreTooltip: 'Cuota títulos {titles} · cuota ingresos {revenue}',
       analyticsMomentumTitle: 'Momentum WoW',
       analyticsMomentumHint: 'Principales títulos por cambio de ingresos semana a semana',
+      analyticsMomentumEmpty: 'Ningún título con un movimiento semana a semana significativo en esta ejecución.',
       analyticsCannibalTitle: 'Pares de canibalización',
       analyticsCannibalHint: 'Títulos del mismo género en el cuartil superior de ingresos',
       analyticsCannibalClear: 'No se detectaron pares canibalizados esta semana.',
@@ -420,6 +425,7 @@ export const translations = {
       exportJson: 'Exportar JSON',
       contrafactual:
         'Si impulsáramos el par {titleA} / {titleB} ({genre}), ambos títulos canibalizarían ingresos del cuartil superior en el mismo género — el scorer los excluyó del slate de esta semana.',
+      contrafactualMore: 'Y {count} pares casi duplicados más — ver analítica ClickHouse abajo.',
       signals: {
         title: 'Señales de la semana',
         impact:
@@ -461,6 +467,7 @@ export const translations = {
       title: 'Catálogo',
       subtitle: '{count} títulos en ClickHouse',
       filterPlaceholder: 'Filtrar por título o género…',
+      hidePadding: 'Ocultar relleno del seed (Catalog Extra)',
       loadError: 'No se pudo cargar el catálogo',
       colTitle: 'Título',
       colGenre: 'Género',
@@ -472,6 +479,7 @@ export const translations = {
       subtitle:
         'Gemini enriquece resumen, etiquetas y posicionamiento; luego persiste vía mcp-clickhouse',
       labelTitle: 'Título',
+      titlePlaceholder: 'p. ej. Night Shift Bogotá',
       labelDescription: 'Descripción',
       labelGenre: 'Género',
       labelRelease: 'Fecha de estreno',

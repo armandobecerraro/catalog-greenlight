@@ -66,7 +66,7 @@ export default function AnalyticsInsights({ analytics }: Props) {
           <h4>{t('dashboard.analyticsMomentumTitle')}</h4>
           <p className="muted small">{t('dashboard.analyticsMomentumHint')}</p>
           {analytics.momentumHighlights.length === 0 ? (
-            <p className="muted small">{t('dashboard.analyticsNoData')}</p>
+            <p className="muted small">{t('dashboard.analyticsMomentumEmpty')}</p>
           ) : (
             <ul className="bar-list">
               {analytics.momentumHighlights.map(row => (

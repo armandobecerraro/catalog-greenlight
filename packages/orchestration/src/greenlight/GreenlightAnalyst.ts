@@ -44,16 +44,7 @@ export async function runGreenlightAnalysis(
   const analyticsFullById = await runStep(steps, 'DISCOVER', async () => {
     const entries = Object.values(GREENLIGHT_ANALYTICS_QUERIES);
     const results = await Promise.all(
-      entries.map(async entry => {
-        const result = await mcp.runQuery(entry.sql);
-        return {
-          id: entry.id,
-          sql: entry.sql,
-          rowCount: result.rows.length,
-          fullRows: result.rows,
-          latencyMs: result.metadata.latencyMs
-        };
-      })
+      entries.map(entry => runAnalyticsQuery(mcp, entry))
     );
 
     const fullById = Object.fromEntries(results.map(r => [r.id, r.fullRows]));
@@ -65,7 +56,8 @@ export async function runGreenlightAnalysis(
         sql: r.sql,
         rowCount: r.rowCount,
         rows: r.fullRows.slice(0, 20),
-        latencyMs: r.latencyMs
+        latencyMs: r.latencyMs,
+        error: r.error
       }))
     };
   });
@@ -183,6 +175,49 @@ async function runSynthesizeStep(
       recommendations: fallbackRecommendations
     };
   }
+}
+
+async function runAnalyticsQuery(
+  mcp: IMcpConnector,
+  entry: { id: string; sql: string },
+  retries = 1
+): Promise<{
+  id: string;
+  sql: string;
+  rowCount: number;
+  fullRows: Record<string, unknown>[];
+  latencyMs: number;
+  error?: string;
+}> {
+  try {
+    const result = await mcp.runQuery(entry.sql);
+    const fullRows = result.rows.filter(row => !isPoisonAnalyticsRow(row));
+    return {
+      id: entry.id,
+      sql: entry.sql,
+      rowCount: fullRows.length,
+      fullRows,
+      latencyMs: result.metadata.latencyMs
+    };
+  } catch (error) {
+    if (retries > 0) {
+      return runAnalyticsQuery(mcp, entry, retries - 1);
+    }
+    return {
+      id: entry.id,
+      sql: entry.sql,
+      rowCount: 0,
+      fullRows: [],
+      latencyMs: 0,
+      error: error instanceof Error ? error.message : String(error)
+    };
+  }
+}
+
+function isPoisonAnalyticsRow(row: Record<string, unknown>): boolean {
+  if (typeof row.title === 'string' && row.title.trim()) return false;
+  const text = typeof row.text === 'string' ? row.text : '';
+  return /timed out|exception:|query timed out/i.test(text);
 }
 
 async function runStep<T>(

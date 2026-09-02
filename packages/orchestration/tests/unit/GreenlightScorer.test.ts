@@ -6,7 +6,8 @@ import {
   scoreTitles,
   pickTopCandidates,
   scoreFromAnalyticsById,
-  SCORER_WEIGHTS
+  SCORER_WEIGHTS,
+  isNearDuplicateTitle
 } from '../../src/greenlight/GreenlightScorer';
 
 /** Demo-story fixtures — mirrors seeded ClickHouse narrative. */
@@ -169,5 +170,10 @@ describe('GreenlightScorer', () => {
 
     expect(full.top[0]?.title).toBe('Late Breakout Thriller');
     expect(truncated.top.map(t => t.title)).not.toContain('Late Breakout Thriller');
+  });
+
+  it('treats Highway 101 + Redux as a cannibal pair but not unrelated thrillers', () => {
+    expect(isNearDuplicateTitle('True Crime: Highway 101', 'True Crime: Highway 101 Redux')).toBe(true);
+    expect(isNearDuplicateTitle('Shadow Road 86', 'Crimen sin Fronteras: Bogotá')).toBe(false);
   });
 });

@@ -34,11 +34,15 @@ export function buildFallbackEvidence(row: Record<string, unknown>): string {
 }
 
 export function buildFallbackJustification(row: Record<string, unknown>): string {
+  const title = typeof row.title === 'string' ? row.title.trim() : '';
   const score = num(row, 'opportunity_score');
   const wow = num(row, 'wow_pct');
   const gap = num(row, 'genre_gap');
-  const cannibal = bool(row, 'in_cannibal_pair');
-  return `Scorer pick: opportunity ${score ?? 'n/a'}, WoW ${wow ?? 'n/a'}, genre gap ${gap ?? 'n/a'}${cannibal ? ' (cannibalization risk)' : ''}.`;
+  const wowLabel = wow == null ? 'n/a' : `${(wow * 100).toFixed(0)}% WoW`;
+  const gapLabel = gap == null ? 'n/a' : `genre gap ${gap.toFixed(2)}`;
+  const scoreLabel = score == null ? 'n/a' : score.toFixed(2);
+  const name = title || 'This title';
+  return `${name} scores ${scoreLabel} on the TypeScript formula (${gapLabel}, ${wowLabel}). Gemini narrative unavailable — ClickHouse measured these numbers.`;
 }
 
 function enrichFromRow(
@@ -59,16 +63,19 @@ function enrichFromRow(
 export function recommendationsFromCandidateRows(
   candidateRows: Record<string, unknown>[]
 ): GreenlightRecommendation[] {
-  return candidateRows.slice(0, 3).map(row => ({
-    title: String(row.title ?? ''),
-    genre: String(row.genre ?? ''),
-    justification: buildFallbackJustification(row),
-    evidence: buildFallbackEvidence(row),
-    opportunity_score: num(row, 'opportunity_score'),
-    wow_pct: num(row, 'wow_pct'),
-    genre_gap: num(row, 'genre_gap'),
-    in_cannibal_pair: bool(row, 'in_cannibal_pair')
-  }));
+  return candidateRows
+    .filter(row => typeof row.title === 'string' && row.title.trim())
+    .slice(0, 3)
+    .map(row => ({
+      title: String(row.title),
+      genre: String(row.genre ?? ''),
+      justification: buildFallbackJustification(row),
+      evidence: buildFallbackEvidence(row),
+      opportunity_score: num(row, 'opportunity_score'),
+      wow_pct: num(row, 'wow_pct'),
+      genre_gap: num(row, 'genre_gap'),
+      in_cannibal_pair: bool(row, 'in_cannibal_pair')
+    }));
 }
 
 /** Ground Gemini picks to candidates; case-insensitive title match. Falls back to scorer rows. */

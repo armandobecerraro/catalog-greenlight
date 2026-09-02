@@ -16,45 +16,28 @@ ORDER BY revenue_4w DESC
 `.trim();
 
 export const GREENLIGHT_QUERY_B_TITLE_MOMENTUM = `
-WITH latest AS (
-  SELECT max(week_start) AS w FROM media_catalog.title_revenue
-),
-this_week AS (
-  SELECT
-    tr.title_id,
-    any(tr.title) AS title,
-    sum(tr.revenue_usd) AS revenue_this_week,
-    sum(tr.views) AS views_this_week
-  FROM media_catalog.title_revenue AS tr
-  CROSS JOIN latest
-  WHERE tr.week_start = latest.w
-  GROUP BY tr.title_id
-),
-prior_week AS (
-  SELECT
-    tr.title_id,
-    sum(tr.revenue_usd) AS revenue_prior_week
-  FROM media_catalog.title_revenue AS tr
-  CROSS JOIN latest
-  WHERE tr.week_start = latest.w - 7
-  GROUP BY tr.title_id
-)
 SELECT
   mc.id AS title_id,
   mc.title AS title,
   mc.genre AS genre,
   mc.language AS language,
-  tw.revenue_this_week,
-  coalesce(pw.revenue_prior_week, 0) AS revenue_prior_week,
+  tw.revenue_usd AS revenue_this_week,
+  coalesce(pw.revenue_usd, 0) AS revenue_prior_week,
   if(
-    coalesce(pw.revenue_prior_week, 0) = 0,
-    if(tw.revenue_this_week > 0, 1.0, 0.0),
-    (tw.revenue_this_week - pw.revenue_prior_week) / pw.revenue_prior_week
+    coalesce(pw.revenue_usd, 0) = 0,
+    if(tw.revenue_usd > 0, toFloat64(1), toFloat64(0)),
+    (tw.revenue_usd - pw.revenue_usd) / pw.revenue_usd
   ) AS wow_pct,
-  tw.views_this_week
-FROM this_week AS tw
-INNER JOIN media_catalog.media_content AS mc ON mc.id = tw.title_id
-LEFT JOIN prior_week AS pw ON pw.title_id = tw.title_id
+  tw.views AS views_this_week
+FROM media_catalog.media_content AS mc
+INNER JOIN media_catalog.title_revenue AS tw
+  ON tw.title_id = mc.id
+ AND tw.week_start = (SELECT max(week_start) FROM media_catalog.title_revenue)
+LEFT JOIN media_catalog.title_revenue AS pw
+  ON pw.title_id = mc.id
+ AND pw.week_start = (SELECT max(week_start) - 7 FROM media_catalog.title_revenue)
+WHERE mc.title != ''
+  AND mc.title NOT LIKE 'Catalog Extra%'
 ORDER BY wow_pct DESC
 `.trim();
 
@@ -89,6 +72,12 @@ INNER JOIN title_rev AS b
 CROSS JOIN threshold
 WHERE a.revenue_this_week >= threshold.q75
   AND b.revenue_this_week >= threshold.q75
+  AND (
+    positionCaseInsensitiveUTF8(a.title, b.title) > 0
+    OR positionCaseInsensitiveUTF8(b.title, a.title) > 0
+    OR leftUTF8(lowerUTF8(a.title), 18) = leftUTF8(lowerUTF8(b.title), 18)
+  )
+LIMIT 40
 `.trim();
 
 export const GREENLIGHT_QUERY_D_SLATE_HOLES = `

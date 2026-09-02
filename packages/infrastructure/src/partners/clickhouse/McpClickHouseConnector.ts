@@ -24,6 +24,7 @@ export class McpClickHouseConnector implements IMcpConnector {
       CLICKHOUSE_SECURE: String(config.credentials.secure || 'false'),
       CLICKHOUSE_DATABASE: config.credentials.database || 'media_catalog',
       CLICKHOUSE_ALLOW_WRITE_ACCESS: config.credentials.allowWriteAccess || 'true',
+      CLICKHOUSE_SEND_RECEIVE_TIMEOUT: process.env.CLICKHOUSE_SEND_RECEIVE_TIMEOUT || '90',
       ...process.env
     };
 
@@ -149,6 +150,11 @@ export class McpClickHouseConnector implements IMcpConnector {
   }
 
   private parseJsonText(textContent: string): Record<string, unknown>[] {
+    const trimmed = textContent.trim();
+    if (isMcpErrorText(trimmed)) {
+      throw new Error(trimmed);
+    }
+
     try {
       const parsed = JSON.parse(textContent);
       if (
@@ -172,8 +178,14 @@ export class McpClickHouseConnector implements IMcpConnector {
       }
       if (parsed && typeof parsed === 'object') return [parsed as Record<string, unknown>];
       return [{ text: textContent }];
-    } catch {
+    } catch (error) {
+      if (error instanceof Error && isMcpErrorText(error.message)) throw error;
+      if (isMcpErrorText(trimmed)) throw new Error(trimmed);
       return [{ text: textContent }];
     }
   }
+}
+
+export function isMcpErrorText(text: string): boolean {
+  return /timed out|query timed out|exception:|code:\s*\d+/i.test(text);
 }

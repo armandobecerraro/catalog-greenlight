@@ -1,4 +1,5 @@
 import { AgentRunResult } from '../api';
+import { isNearDuplicateTitle } from './greenlightMetrics';
 
 const QUERY_IDS = {
   genreInventory: 'A_genre_inventory',
@@ -85,16 +86,20 @@ export function parseGreenlightAnalytics(greenlight: AgentRunResult | null): Gre
       genre: str(row.genre),
       wowPct: num(row.wow_pct)
     }))
+    .filter(row => row.title && !row.title.startsWith('Catalog Extra') && Math.abs(row.wowPct) >= 0.01)
     .sort((a, b) => b.wowPct - a.wowPct)
     .slice(0, 5);
 
-  const cannibalPairs = (fullById[QUERY_IDS.cannibalization] ?? []).map(row => ({
-    titleA: str(row.title_a),
-    titleB: str(row.title_b),
-    genre: str(row.genre),
-    revenueA: num(row.revenue_a),
-    revenueB: num(row.revenue_b)
-  }));
+  const cannibalPairs = (fullById[QUERY_IDS.cannibalization] ?? [])
+    .map(row => ({
+      titleA: str(row.title_a),
+      titleB: str(row.title_b),
+      genre: str(row.genre),
+      revenueA: num(row.revenue_a),
+      revenueB: num(row.revenue_b)
+    }))
+    .filter(pair => pair.titleA && pair.titleB && isNearDuplicateTitle(pair.titleA, pair.titleB))
+    .slice(0, 6);
 
   if (genreGaps.length === 0 && momentumHighlights.length === 0 && cannibalPairs.length === 0) {
     return null;

@@ -44,9 +44,16 @@ export default function Ingest() {
       <PageHeader title={t('ingest.title')} subtitle={t('ingest.subtitle')} />
       <Card>
         <form className="form" onSubmit={onSubmit}>
-          <label>
+          <label className="form-first-field">
             {t('ingest.labelTitle')}
-            <input className="input" value={title} onChange={e => setTitle(e.target.value)} required />
+            <input
+              className="input"
+              value={title}
+              onChange={e => setTitle(e.target.value)}
+              required
+              autoComplete="off"
+              placeholder={t('ingest.titlePlaceholder')}
+            />
           </label>
           <label>
             {t('ingest.labelDescription')}

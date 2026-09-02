@@ -6,14 +6,15 @@ import {
   metricsForRec
 } from '../utils/greenlightMetrics';
 import { contrafactualPairs, exportWeeklySlate } from '../utils/greenlightExport';
-import { RecProvenance } from './GreenlightProvenance';
 
 export function GreenlightRitualPanel({ greenlight }: { greenlight: AgentRunResult }) {
   const { t } = useLocale();
-  const recommendations = greenlight.recommendations ?? [];
+  const recommendations = (greenlight.recommendations ?? []).filter(r => r.title?.trim());
   const queryRows = (greenlight.queryRows ?? []) as Record<string, unknown>[];
   const cannibalPairs = extractCannibalPairs(greenlight.steps);
   const excludedPairs = contrafactualPairs(cannibalPairs, recommendations);
+  const shownPairs = excludedPairs.slice(0, 2);
+  const extraPairCount = Math.max(0, excludedPairs.length - shownPairs.length);
 
   if (recommendations.length === 0) return null;
 
@@ -42,9 +43,9 @@ export function GreenlightRitualPanel({ greenlight }: { greenlight: AgentRunResu
         </div>
       </div>
 
-      {excludedPairs.length > 0 && (
+      {shownPairs.length > 0 && (
         <div className="contrafactual-callout" role="note">
-          {excludedPairs.map((pair, i) => (
+          {shownPairs.map((pair, i) => (
             <p key={i}>
               {t('dashboard.contrafactual', {
                 titleA: pair.title_a,
@@ -53,6 +54,9 @@ export function GreenlightRitualPanel({ greenlight }: { greenlight: AgentRunResu
               })}
             </p>
           ))}
+          {extraPairCount > 0 && (
+            <p className="muted small">{t('dashboard.contrafactualMore', { count: extraPairCount })}</p>
+          )}
         </div>
       )}
 
@@ -79,7 +83,6 @@ export function GreenlightRitualPanel({ greenlight }: { greenlight: AgentRunResu
                   <td>
                     <strong>{rec.title}</strong>
                     <p className="muted small slate-justification">{rec.justification}</p>
-                    <RecProvenance rec={rec} queryRows={queryRows} />
                   </td>
                   <td>
                     <span className="genre-pill">{rec.genre}</span>

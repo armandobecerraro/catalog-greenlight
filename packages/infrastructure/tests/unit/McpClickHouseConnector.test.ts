@@ -37,6 +37,12 @@ describe('McpClickHouseConnector', () => {
     ]);
   });
 
+  it('throws when MCP returns a query timeout string instead of rows', () => {
+    expect(() =>
+      connector.parseMcpResult([{ type: 'text', text: 'Query timed out after 30 seconds' }])
+    ).toThrow(/timed out/i);
+  });
+
   it('parses MCP database list JSON array', () => {
     const rows = connector.parseMcpResult([
       { type: 'text', text: '["default", "media_catalog", "system"]' }

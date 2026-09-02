@@ -3,6 +3,7 @@ import { api, CatalogEntry } from '../api';
 import { PageHeader, Card, Loading, ErrorBanner, EmptyState, Link } from '../components/Layout';
 import { useLocale } from '../i18n/LocaleContext';
 import { formatApiError } from '../utils/apiErrors';
+import { isPaddingTitle } from '../utils/greenlightMetrics';
 
 export default function Catalog() {
   const { t } = useLocale();
@@ -10,6 +11,8 @@ export default function Catalog() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('');
+
+  const [hidePadding, setHidePadding] = useState(true);
 
   useEffect(() => {
     api
@@ -19,12 +22,14 @@ export default function Catalog() {
       .finally(() => setLoading(false));
   }, []);
 
-  const filtered = entries.filter(
-    e =>
-      !filter ||
+  const filtered = entries.filter(e => {
+    if (hidePadding && isPaddingTitle(e.title, e.description)) return false;
+    if (!filter) return true;
+    return (
       e.title.toLowerCase().includes(filter.toLowerCase()) ||
       e.genre.toLowerCase().includes(filter.toLowerCase())
-  );
+    );
+  });
 
   if (loading) return <Loading />;
   if (error) return <ErrorBanner message={error} />;
@@ -46,14 +51,24 @@ export default function Catalog() {
 
   return (
     <>
-      <PageHeader title={t('catalog.title')} subtitle={t('catalog.subtitle', { count: entries.length })} />
+      <PageHeader title={t('catalog.title')} subtitle={t('catalog.subtitle', { count: filtered.length })} />
       <Card>
-        <input
-          className="input"
-          placeholder={t('catalog.filterPlaceholder')}
-          value={filter}
-          onChange={e => setFilter(e.target.value)}
-        />
+        <div className="catalog-toolbar">
+          <input
+            className="input"
+            placeholder={t('catalog.filterPlaceholder')}
+            value={filter}
+            onChange={e => setFilter(e.target.value)}
+          />
+          <label className="catalog-padding-toggle">
+            <input
+              type="checkbox"
+              checked={hidePadding}
+              onChange={e => setHidePadding(e.target.checked)}
+            />
+            {t('catalog.hidePadding')}
+          </label>
+        </div>
         <div className="table-wrap">
           <table>
             <thead>

@@ -110,8 +110,8 @@ export class InsightEngineService {
       query: `
         SELECT id, title, description, genre, release_date, cast, enrichment
         FROM media_catalog.media_content
-        ORDER BY created_at DESC
-        LIMIT 200
+        ORDER BY if(title LIKE 'Catalog Extra%', 1, 0) ASC, title ASC
+        LIMIT 500
       `
     });
 

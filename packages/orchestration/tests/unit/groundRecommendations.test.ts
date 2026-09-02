@@ -42,7 +42,8 @@ describe('groundRecommendations', () => {
     expect(usedFallback).toBe(true);
     expect(recommendations).toHaveLength(2);
     expect(recommendations[0].title).toBe('Crimen sin Fronteras: Bogotá');
-    expect(recommendations[0].justification).toContain('Scorer pick');
+    expect(recommendations[0].justification).toContain('Crimen sin Fronteras: Bogotá');
+    expect(recommendations[0].justification).toContain('TypeScript formula');
   });
 
   it('falls back to three scorer rows when Gemini returns empty', () => {
@@ -67,5 +68,20 @@ describe('groundRecommendations', () => {
     expect(recs[0].evidence).toContain('opportunity_score=0.58');
     expect(recs[0].evidence).toContain('wow_pct=1.33');
     expect(normalizeTitle(recs[0].title)).toBe(normalizeTitle('Crimen sin Fronteras: Bogotá'));
+  });
+
+  it('skips candidate rows with empty titles', () => {
+    const recs = recommendationsFromCandidateRows([
+      { title: '', genre: 'Drama', opportunity_score: 0.1, wow_pct: 0, genre_gap: 0 },
+      {
+        title: 'Crimen sin Fronteras: Bogotá',
+        genre: 'Thriller',
+        opportunity_score: 0.58,
+        wow_pct: 1.33,
+        genre_gap: 0.41
+      }
+    ]);
+    expect(recs).toHaveLength(1);
+    expect(recs[0].title).toBe('Crimen sin Fronteras: Bogotá');
   });
 });

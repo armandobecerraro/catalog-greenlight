@@ -53,7 +53,7 @@ Gemini does **not** plan SQL for the greenlight path.
 - Official **mcp-clickhouse** at runtime — no direct Node ClickHouse client in product code
 - Greenlight: four fixed analytics queries (genre inventory, title momentum, cannibalization pairs, slate holes) executed in parallel via MCP `run_query`
 - Catalog Q&A: Gemini-generated SELECT with SQL guard (blocks DROP/ALTER/TRUNCATE); schema discovered live from `system.columns`
-- ~200-title seed catalog with 10 weeks of revenue; demo story surfaces LATAM breakout *Crimen sin Fronteras: Bogotá*, Thriller gap, and cannibal-pair penalty on *True Crime: Highway 101*
+- ~200-title seed catalog with 10 weeks of revenue; demo story surfaces LATAM breakout _Crimen sin Fronteras: Bogotá_, Thriller gap, and cannibal-pair penalty on _True Crime: Highway 101_
 - Agent runs audited via MCP INSERT into `agent_runs`
 
 ## How we use Google Cloud AI (required)

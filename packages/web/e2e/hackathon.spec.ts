@@ -1,7 +1,12 @@
 import { test, expect } from '@playwright/test';
-import { catalogRowTimeout, greenlightTimeout, greenlightPickLocator, greenlightTitleLocator, statsTimeout } from './helpers';
-
-test.describe.configure({ mode: 'serial' });
+import {
+  catalogRowTimeout,
+  expectGreenlightPicks,
+  getGreenlightTitles,
+  statsTimeout,
+  waitForAskTimeline,
+  waitForIngestSuccess
+} from './helpers';
 
 test.describe('Catalog Greenlight hackathon UI (1280)', () => {
   test.use({ viewport: { width: 1280, height: 800 } });
@@ -27,7 +32,8 @@ test.describe('Catalog Greenlight hackathon UI (1280)', () => {
     await page.getByLabel('Release date').fill('2025-12-01');
     await page.getByLabel('Cast (comma-separated)').fill('Test Actor One');
     await page.getByRole('button', { name: /Ingest via agent pipeline/i }).click();
-    await expect(page.getByText(/Stored .* in .*ms via MCP INSERT/)).toBeVisible({ timeout: 120_000 });
+    const ingestOutcome = await waitForIngestSuccess(page);
+    test.skip(ingestOutcome === 'gemini', 'Gemini API unavailable (429/credits exhausted)');
 
     await page.goto('/catalog');
     await page.getByPlaceholder('Filter by title or genre').fill(uniqueTitle);
@@ -39,7 +45,8 @@ test.describe('Catalog Greenlight hackathon UI (1280)', () => {
     await page.getByLabel('Your question').fill('Which genre is under-represented?');
     await page.getByRole('button', { name: 'Run agent' }).click();
 
-    await expect(page.getByText('Agent timeline')).toBeVisible({ timeout: 260_000 });
+    const askOutcome = await waitForAskTimeline(page);
+    test.skip(askOutcome === 'gemini', 'Gemini API unavailable (429/credits exhausted)');
     await expect(page.locator('.timeline-step.status-completed')).toHaveCount(6, { timeout: 260_000 });
     await expect(page.getByText('SQL executed (MCP run_query)')).toBeVisible();
     await expect(page.getByRole('heading', { name: /Evidence/ })).toBeVisible();
@@ -60,9 +67,8 @@ test.describe('Catalog Greenlight hackathon UI (1280)', () => {
 
   test('dashboard: greenlight shows 3 titles from catalog evidence', async ({ page, request }) => {
     await page.goto('/');
-    await expect(page.locator(greenlightPickLocator)).toHaveCount(3, { timeout: greenlightTimeout });
-    await expect(page.locator(greenlightTitleLocator)).toHaveCount(3);
-    const recTitles = await page.locator(greenlightTitleLocator).allTextContents();
+    await expectGreenlightPicks(page);
+    const recTitles = await getGreenlightTitles(page);
     expect(recTitles.length).toBe(3);
 
     const catalogRes = await request.get('/api/v1/catalog');

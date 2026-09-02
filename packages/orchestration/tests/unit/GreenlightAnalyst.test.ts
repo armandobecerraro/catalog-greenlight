@@ -73,7 +73,8 @@ describe('GreenlightAnalyst', () => {
     expect(result.recommendations).toHaveLength(3);
     expect(result.recommendations![0].opportunity_score).toBeDefined();
     const synth = result.steps.find(s => s.step === 'SYNTHESIZE');
-    expect(synth?.status).toBe('error');
+    expect(synth?.status).toBe('completed');
+    expect((synth?.output as { fallback?: boolean }).fallback).toBe(true);
     expect(result.recommendations!.some(r => r.title === 'Late Winner')).toBe(true);
   });
 
@@ -87,8 +88,9 @@ describe('GreenlightAnalyst', () => {
 
     expect(result.recommendations).toHaveLength(3);
     const synth = result.steps.find(s => s.step === 'SYNTHESIZE');
-    expect(synth?.status).toBe('error');
-    expect(synth?.error).toMatch(/timed out/i);
+    expect(synth?.status).toBe('completed');
+    expect((synth?.output as { fallback?: boolean; geminiError?: string }).fallback).toBe(true);
+    expect((synth?.output as { geminiError?: string }).geminiError).toMatch(/timed out/i);
     jest.useRealTimers();
   });
 

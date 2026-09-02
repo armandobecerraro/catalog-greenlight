@@ -52,8 +52,21 @@ export interface ScoredCandidate {
 export const SCORER_WEIGHTS = {
   genre_gap: 0.4,
   wow_momentum: 0.4,
-  cannibalization_penalty: 0.2
+  cannibalization_penalty: 0.2,
+  language_gap: 0.05
 } as const;
+
+/** Seed-generator titles look like "Fading Line 75" — keep story titles with a colon. */
+export function isSeedFillerTitle(title: string, description?: string): boolean {
+  const t = title.trim();
+  if (!t) return true;
+  if (/^Catalog Extra\b/i.test(t)) return true;
+  if (description && /catalog title for demo seed|padding title/i.test(description)) return true;
+  if (t.includes(':')) return false;
+  const parts = t.split(/\s+/);
+  const last = parts[parts.length - 1];
+  return parts.length >= 3 && /^\d{1,3}$/.test(last);
+}
 
 function num(row: Record<string, unknown>, key: string): number {
   const v = row[key];
@@ -77,7 +90,10 @@ export function parseGenreInventory(rows: Record<string, unknown>[]): GenreInven
 
 export function parseTitleMomentum(rows: Record<string, unknown>[]): TitleMomentumRow[] {
   return rows
-    .filter(r => str(r, 'title').trim() && !str(r, 'title').startsWith('Catalog Extra'))
+    .filter(r => {
+      const title = str(r, 'title').trim();
+      return title && !isSeedFillerTitle(title);
+    })
     .map(r => ({
       title_id: str(r, 'title_id'),
       title: str(r, 'title'),
@@ -184,7 +200,7 @@ export function scoreTitles(
       SCORER_WEIGHTS.genre_gap * genre_gap +
       SCORER_WEIGHTS.wow_momentum * wow_momentum -
       SCORER_WEIGHTS.cannibalization_penalty * cannibalization_penalty +
-      0.05 * language_gap;
+      SCORER_WEIGHTS.language_gap * language_gap;
 
     return {
       ...t,
@@ -204,7 +220,7 @@ export function pickTopCandidates(
   limit = 3
 ): ScoredCandidate[] {
   const sorted = [...scored]
-    .filter(s => s.title.trim())
+    .filter(s => s.title.trim() && !isSeedFillerTitle(s.title))
     .sort((a, b) => b.opportunity_score - a.opportunity_score);
   const uniqueGenres = new Set(sorted.map(s => s.genre));
   const enforceDiversity = uniqueGenres.size >= limit;

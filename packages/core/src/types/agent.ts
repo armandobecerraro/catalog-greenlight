@@ -33,4 +33,6 @@ export interface AgentRunResult {
   steps: AgentStep[];
   totalLatencyMs: number;
   model: string;
+  /** True when Gemini was skipped or failed and MCP + TypeScript still produced the answer. */
+  fallback?: boolean;
 }

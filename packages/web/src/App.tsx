@@ -13,6 +13,7 @@ export default function App() {
         <Route index element={<Dashboard />} />
         <Route path="guia" element={<Guide />} />
         <Route path="about" element={<Navigate to="/guia" replace />} />
+        <Route path="judge" element={<Navigate to="/guia" replace />} />
         <Route path="catalog" element={<Catalog />} />
         <Route path="ingest" element={<Ingest />} />
         <Route path="ask" element={<Ask />} />

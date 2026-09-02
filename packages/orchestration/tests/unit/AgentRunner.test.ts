@@ -181,4 +181,41 @@ describe('AgentRunner', () => {
     expect(result.intent).toBe('greenlight');
     expect(result.steps).toHaveLength(6);
   });
+
+  it('falls back to deterministic MCP SQL when Gemini planner returns 429', async () => {
+    mockReasoning.classifyIntent.mockRejectedValue(new Error('Gemini API credits exhausted (429)'));
+    mockReasoning.generateSql.mockRejectedValue(new Error('RESOURCE_EXHAUSTED'));
+    mockReasoning.synthesize.mockRejectedValue(new Error('quota exceeded'));
+    mockMcp.runQuery.mockImplementation(async (sql: string) => {
+      if (sql.includes('system.columns')) {
+        return { rows: schemaRows, metadata: { rowCount: 2, latencyMs: 1, partner: 'clickhouse' } };
+      }
+      if (sql.includes('INSERT INTO')) {
+        return { rows: [], metadata: { rowCount: 0, latencyMs: 1, partner: 'clickhouse' } };
+      }
+      return {
+        rows: [
+          {
+            hole_type: 'genre',
+            dimension: 'Thriller',
+            gap_score: 0.07,
+            title_share: 0.075,
+            revenue_share: 0.144
+          }
+        ],
+        metadata: { rowCount: 1, latencyMs: 8, partner: 'clickhouse' }
+      };
+    });
+
+    const runner = new AgentRunner(mockMcp, mockReasoning, 'gemini-test');
+    const result = await runner.run('Which genre is under-represented in our catalog?');
+
+    expect(result.fallback).toBe(true);
+    expect(result.sql).toMatch(/gap_score/i);
+    expect(result.answer).toMatch(/Thriller/);
+    expect(result.queryRows).toHaveLength(1);
+    expect(result.steps.find(s => s.step === 'DISCOVER')?.status).toBe('completed');
+    expect(result.steps.find(s => s.step === 'EXECUTE')?.status).toBe('completed');
+    expect(result.steps.find(s => s.step === 'PLAN_SQL')?.output).toMatchObject({ fallback: true });
+  });
 });

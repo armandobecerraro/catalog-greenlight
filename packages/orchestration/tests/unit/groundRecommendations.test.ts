@@ -15,7 +15,7 @@ describe('groundRecommendations', () => {
       in_cannibal_pair: false
     },
     {
-      title: 'Winter Harbor 3',
+        title: 'Winter Harbor',
       genre: 'Drama',
       opportunity_score: 0.26,
       wow_pct: 0.25,
@@ -50,7 +50,7 @@ describe('groundRecommendations', () => {
     const three = [
       ...candidates,
       {
-        title: 'Laugh Night 1',
+        title: 'Open Mic Circuit',
         genre: 'Comedy',
         opportunity_score: 0.09,
         wow_pct: -0.05,

@@ -47,6 +47,20 @@ export interface AgentRunResult {
   steps: AgentStep[];
   totalLatencyMs: number;
   model: string;
+  fallback?: boolean;
+}
+
+export interface HealthStatus {
+  status: string;
+  ready: boolean;
+  product?: string;
+  error?: string | null;
+  timestamp?: string;
+  partners?: {
+    clickhouse?: string;
+    mcp?: string;
+    gemini?: string;
+  };
 }
 
 export interface CatalogEntry {
@@ -87,7 +101,7 @@ async function fetchJson<T>(path: string, options?: RequestInit & { timeoutMs?: 
 }
 
 export const api = {
-  health: () => fetchJson<{ status: string; ready: boolean }>('/health', { timeoutMs: 15_000 }),
+  health: () => fetchJson<HealthStatus>('/health', { timeoutMs: 15_000 }),
 
   getStats: () => fetchJson<CatalogStats>('/catalog/stats', { timeoutMs: 60_000 }),
 

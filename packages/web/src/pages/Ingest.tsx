@@ -92,6 +92,7 @@ export default function Ingest() {
               value={cast}
               onChange={e => setCast(e.target.value)}
               placeholder={t('ingest.castPlaceholder')}
+              required
             />
           </label>
           <button className="btn primary" type="submit" disabled={submitting}>

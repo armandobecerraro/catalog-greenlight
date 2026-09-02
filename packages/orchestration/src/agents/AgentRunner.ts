@@ -12,6 +12,11 @@ import {
 import { discoverLiveSchema } from './SchemaCache';
 import { runGreenlightAnalysis } from '../greenlight/GreenlightAnalyst';
 import { groundRecommendations } from '../greenlight/groundRecommendations';
+import {
+  isGeminiPlannerUnavailable,
+  planSqlFallback,
+  synthesizeFromRows
+} from './askSqlFallback';
 
 export interface AgentRunnerOptions {
   defaultIntent?: AgentIntent;
@@ -38,9 +43,17 @@ export class AgentRunner {
     const totalStart = Date.now();
     const steps: AgentStep[] = [];
 
+    let usedFallback = false;
+
     const intent = await this.runStep(steps, 'INTENT', async () => {
       if (options.defaultIntent) return options.defaultIntent;
-      return this.reasoning.classifyIntent(userPrompt);
+      try {
+        return await this.reasoning.classifyIntent(userPrompt);
+      } catch (error) {
+        if (!isGeminiPlannerUnavailable(error)) throw error;
+        usedFallback = true;
+        return 'catalog_qa' as AgentIntent;
+      }
     });
 
     const schemaText = await this.runStep(steps, 'DISCOVER', async () => {
@@ -48,14 +61,24 @@ export class AgentRunner {
       return { schema };
     });
 
-    const planAttempts: Array<{ sql: string; note?: string }> = [];
+    const planAttempts: Array<{ sql: string; note?: string; fallback?: boolean }> = [];
     let sql = '';
 
     await this.runStep(steps, 'PLAN_SQL', async () => {
-      sql = await this.reasoning.generateSql(intent, userPrompt, schemaText.schema);
-      validateGeneratedSql(sql, intent);
-      planAttempts.push({ sql });
-      return { attempts: [...planAttempts] };
+      try {
+        sql = await this.reasoning.generateSql(intent, userPrompt, schemaText.schema);
+        validateGeneratedSql(sql, intent);
+        planAttempts.push({ sql });
+        return { attempts: [...planAttempts] };
+      } catch (error) {
+        if (intent === 'ingest' || !isGeminiPlannerUnavailable(error)) throw error;
+        const fallback = planSqlFallback(userPrompt);
+        sql = fallback.sql;
+        validateGeneratedSql(sql, fallback.intent);
+        usedFallback = true;
+        planAttempts.push({ sql, note: fallback.note, fallback: true });
+        return { attempts: [...planAttempts], fallback: true, queryId: fallback.queryId };
+      }
     });
 
     const executeAttempts: Array<{ sql: string; rowCount: number; error?: string; retry?: boolean }> = [];
@@ -63,7 +86,7 @@ export class AgentRunner {
 
     await this.runStep(steps, 'EXECUTE', async () => {
       const runOnce = async (statement: string) => {
-        validateGeneratedSql(statement, intent);
+        validateGeneratedSql(statement, intent === 'ingest' ? intent : 'catalog_qa');
         const result = await this.mcp.runQuery(statement);
         return result;
       };
@@ -81,13 +104,24 @@ export class AgentRunner {
         if (intent === 'ingest') {
           return { rows: [], attempts: executeAttempts };
         }
-        const retrySql = await this.reasoning.generateSql(intent, userPrompt, schemaText.schema, {
-          previousSql: sql,
-          errorOrEmpty: message
-        });
-        validateGeneratedSql(retrySql, intent);
-        sql = retrySql;
-        planAttempts.push({ sql, note: 'retry after execute failure' });
+        try {
+          const retrySql = await this.reasoning.generateSql(intent, userPrompt, schemaText.schema, {
+            previousSql: sql,
+            errorOrEmpty: message
+          });
+          validateGeneratedSql(retrySql, intent);
+          sql = retrySql;
+          planAttempts.push({ sql, note: 'retry after execute failure' });
+        } catch (retryErr) {
+          if (!isGeminiPlannerUnavailable(retryErr) && !isGeminiPlannerUnavailable(err)) {
+            throw retryErr;
+          }
+          const fallback = planSqlFallback(userPrompt);
+          sql = fallback.sql;
+          validateGeneratedSql(sql, fallback.intent);
+          usedFallback = true;
+          planAttempts.push({ sql, note: fallback.note, fallback: true });
+        }
         const retryResult = await runOnce(sql);
         queryRows = retryResult.rows;
         executeAttempts.push({ sql, rowCount: queryRows.length, retry: true });
@@ -97,9 +131,16 @@ export class AgentRunner {
     });
 
     const synthesis = await this.runStep(steps, 'SYNTHESIZE', async () => {
-      const raw = await this.reasoning.synthesize(intent, userPrompt, sql, queryRows);
-      const { recommendations } = groundRecommendations(raw.recommendations, queryRows);
-      return { answer: raw.answer, recommendations };
+      try {
+        const raw = await this.reasoning.synthesize(intent, userPrompt, sql, queryRows);
+        const { recommendations } = groundRecommendations(raw.recommendations, queryRows);
+        return { answer: raw.answer, recommendations };
+      } catch (error) {
+        if (!isGeminiPlannerUnavailable(error)) throw error;
+        usedFallback = true;
+        const raw = synthesizeFromRows(userPrompt, queryRows);
+        return { answer: raw.answer, recommendations: raw.recommendations, fallback: true };
+      }
     });
 
     if (!options.skipAudit) {
@@ -133,7 +174,8 @@ export class AgentRunner {
       recommendations: synthesis.recommendations,
       steps,
       totalLatencyMs: Date.now() - totalStart,
-      model: this.modelName
+      model: this.modelName,
+      fallback: usedFallback || undefined
     };
   }
 

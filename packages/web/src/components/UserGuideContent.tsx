@@ -22,6 +22,15 @@ export function UserGuideContent({ locale }: UserGuideContentProps) {
       </header>
 
       <Card className="about-intro user-guide-card">
+        <h3>{copy.judgeTitle}</h3>
+        <ol className="about-steps">
+          {copy.judgeSteps.map((step, i) => (
+            <li key={i}>{step}</li>
+          ))}
+        </ol>
+      </Card>
+
+      <Card className="about-intro user-guide-card">
         <h3>{copy.whatTitle}</h3>
         <p className="user-guide-lead">{copy.whatBody}</p>
         <p className="muted">{copy.audience}</p>

@@ -1,5 +1,5 @@
 import { AgentRunResult } from '../api';
-import { isNearDuplicateTitle } from './greenlightMetrics';
+import { isNearDuplicateTitle, isSeedFillerTitle } from './greenlightMetrics';
 
 const QUERY_IDS = {
   genreInventory: 'A_genre_inventory',
@@ -86,7 +86,7 @@ export function parseGreenlightAnalytics(greenlight: AgentRunResult | null): Gre
       genre: str(row.genre),
       wowPct: num(row.wow_pct)
     }))
-    .filter(row => row.title && !row.title.startsWith('Catalog Extra') && Math.abs(row.wowPct) >= 0.01)
+    .filter(row => row.title && !isSeedFillerTitle(row.title) && Math.abs(row.wowPct) >= 0.01)
     .sort((a, b) => b.wowPct - a.wowPct)
     .slice(0, 5);
 

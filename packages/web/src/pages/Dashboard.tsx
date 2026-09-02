@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { api, AgentRunResult, CatalogStats } from '../api';
+import { api, AgentRunResult, CatalogStats, HealthStatus } from '../api';
 import { GreenlightPanel } from '../components/GreenlightPanel';
 import { WeekSignalsPanel } from '../components/WeekSignalsPanel';
 import { PageHeader, Card, Loading, ErrorBanner } from '../components/Layout';
@@ -10,6 +10,7 @@ export default function Dashboard() {
   const { t } = useLocale();
   const [stats, setStats] = useState<CatalogStats | null>(null);
   const [greenlight, setGreenlight] = useState<AgentRunResult | null>(null);
+  const [health, setHealth] = useState<HealthStatus | null>(null);
   const [statsError, setStatsError] = useState<unknown>(null);
   const [greenlightError, setGreenlightError] = useState<unknown>(null);
   const [statsLoading, setStatsLoading] = useState(true);
@@ -31,9 +32,24 @@ export default function Dashboard() {
       .finally(() => setGreenlightLoading(false));
   }, []);
 
+  useEffect(() => {
+    api.health().then(setHealth).catch(() => setHealth(null));
+  }, []);
+
   return (
     <>
       <PageHeader title={t('dashboard.title')} subtitle={t('dashboard.subtitle')} />
+
+      <div className="live-strip" role="status">
+        <p>{t('dashboard.liveStrip')}</p>
+        {health?.partners && (
+          <p className="live-strip-meta muted small">
+            {t('dashboard.liveClickhouse', { status: health.partners.clickhouse ?? 'starting' })}
+            {' · '}
+            {t('dashboard.liveMcp', { server: health.partners.mcp ?? 'mcp-clickhouse' })}
+          </p>
+        )}
+      </div>
 
       <WeekSignalsPanel
         stats={stats}

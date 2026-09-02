@@ -51,6 +51,14 @@ export const translations = {
       title: 'Programming Dashboard',
       subtitle:
         'Live catalog stats from ClickHouse via MCP · Weekly greenlight picks from measured gaps and momentum',
+      liveStrip:
+        'Live ClickHouse Cloud via official mcp-clickhouse — ClickHouse measures, TypeScript scores, Gemini explains.',
+      liveClickhouse: 'ClickHouse {status}',
+      liveMcp: 'MCP {server}',
+      mcpSqlTitle: 'MCP SQL evidence',
+      mcpSqlSub: 'The four run_query statements from the greenlight DISCOVER step — copy-paste proof for judges.',
+      mcpSqlMeta: '{rows} rows · {ms} ms',
+      mcpSqlError: 'query error',
       catalogSize: 'Catalog size',
       addedLast30: '{count} added in the last 30 days',
       genresTracked: 'Genres tracked',
@@ -67,7 +75,7 @@ export const translations = {
       greenlightError429:
         'Gemini returned HTTP 429 (rate limit or quota). Check your API key, quota, and billing in Google AI Studio, then reload the page.',
       greenlightFallbackNotice:
-        'Showing deterministic scorer picks — Gemini narrative was unavailable.',
+        'ClickHouse measured these picks and TypeScript scored them. Gemini prose is optional — the numbers are still live.',
       greenlightPartialNarrative: 'Narrative pending…',
       agentRun: 'Agent run {ms}ms',
       followUp: 'Ask follow-up questions →',
@@ -141,7 +149,7 @@ export const translations = {
     greenlight: {
       stackBadge: 'Measured by ClickHouse · Scored in TypeScript · Narrated by Gemini',
       formulaTitle: 'Scoring formula',
-      fallbackBadge: 'Scorer fallback — Gemini writer unavailable',
+      fallbackBadge: 'Measured scores — Gemini memo optional',
       provenanceTitle: 'Score provenance (MCP query dimensions)',
       fromQuery: '← {query}'
     },
@@ -149,7 +157,7 @@ export const translations = {
       title: 'Catalog',
       subtitle: '{count} titles in ClickHouse',
       filterPlaceholder: 'Filter by title or genre…',
-      hidePadding: 'Hide seed padding (Catalog Extra)',
+      hidePadding: 'Hide seed filler (numbered demo titles)',
       loadError: 'Failed to load catalog',
       colTitle: 'Title',
       colGenre: 'Genre',
@@ -174,7 +182,11 @@ export const translations = {
     },
     ask: {
       title: 'Ask the catalog',
-      subtitle: 'Natural language → INTENT → DISCOVER → PLAN_SQL → EXECUTE → SYNTHESIZE → AUDIT',
+      subtitle: 'Natural language → 6-step agent. Demo chips still query ClickHouse if Gemini is unavailable.',
+      fallbackNotice:
+        'Gemini planner/writer was unavailable. ClickHouse still ran via mcp-clickhouse — SQL and rows below are live.',
+      billingHint: 'Greenlight on the dashboard still measures ClickHouse without Gemini.',
+      billingHintCta: 'Open dashboard →',
       labelQuestion: 'Your question',
       running: 'Agent running…',
       submit: 'Run agent',
@@ -233,6 +245,13 @@ export const translations = {
       badge: 'User documentation',
       title: 'User Guide — Catalog Greenlight',
       subtitle: 'What this application does and how to use it',
+      judgeTitle: '60-second path for judges',
+      judgeSteps: [
+        'Dashboard: live catalog size, revenue, and three greenlight picks with opportunity / WoW / genre gap.',
+        'Expand MCP SQL evidence under analytics — four official mcp-clickhouse run_query statements.',
+        'Ask the catalog with a chip. If Gemini is rate-limited, SQL + rows still come from ClickHouse.',
+        'Catalog hides seed padding by default. Ingest needs Gemini credits (enrichment).'
+      ],
       whatTitle: 'What is Catalog Greenlight?',
       whatBody:
         'Catalog Greenlight is an agentic programming assistant for streaming catalogs. Each week it recommends three titles to push — not because an LLM guessed, but because the system measured genre gaps, week-over-week revenue momentum, and cannibalization risk in ClickHouse.',
@@ -315,7 +334,8 @@ export const translations = {
       troubleshootColFix: 'What to do',
       troubleshoot: [
         { symptom: 'Empty dashboard / 503 error', fix: 'Wait until API health shows ready: true, then refresh.' },
-        { symptom: 'Greenlight without recommendation cards', fix: 'Check the agent timeline below for MCP or timeout errors.' },
+        { symptom: 'Ask or Ingest returns 429 / credits exhausted', fix: 'Fund GEMINI_API_KEY in Google AI Studio. Greenlight still scores from ClickHouse without Gemini.' },
+        { symptom: 'Greenlight shows measured scores without a Gemini memo', fix: 'That is the designed fallback — ClickHouse + TypeScript still produced the slate.' },
         { symptom: 'Missing GEMINI_API_KEY', fix: 'Add it to .env and restart npm run dev.' }
       ]
     }
@@ -370,6 +390,14 @@ export const translations = {
       title: 'Panel de programación',
       subtitle:
         'Estadísticas del catálogo en vivo vía MCP · Greenlight semanal según huecos medidos y momentum',
+      liveStrip:
+        'ClickHouse Cloud en vivo vía mcp-clickhouse oficial — ClickHouse mide, TypeScript puntúa, Gemini explica.',
+      liveClickhouse: 'ClickHouse {status}',
+      liveMcp: 'MCP {server}',
+      mcpSqlTitle: 'Evidencia SQL MCP',
+      mcpSqlSub: 'Las cuatro sentencias run_query del paso DISCOVER — prueba copiable para el jurado.',
+      mcpSqlMeta: '{rows} filas · {ms} ms',
+      mcpSqlError: 'error de consulta',
       catalogSize: 'Tamaño del catálogo',
       addedLast30: '{count} añadidos en los últimos 30 días',
       genresTracked: 'Géneros monitorizados',
@@ -386,7 +414,7 @@ export const translations = {
       greenlightError429:
         'Gemini devolvió HTTP 429 (límite de tasa o cuota). Revisa tu clave API, cuota y facturación en Google AI Studio y recarga la página.',
       greenlightFallbackNotice:
-        'Mostrando selección del scorer determinístico — la narrativa de Gemini no estuvo disponible.',
+        'ClickHouse midió estos picks y TypeScript los puntuó. La prosa de Gemini es opcional — los números siguen en vivo.',
       greenlightPartialNarrative: 'Narrativa pendiente…',
       agentRun: 'Ejecución del agente {ms} ms',
       followUp: 'Hacer preguntas de seguimiento →',
@@ -460,7 +488,7 @@ export const translations = {
     greenlight: {
       stackBadge: 'Medido en ClickHouse · Puntuado en TypeScript · Narrado por Gemini',
       formulaTitle: 'Fórmula de puntuación',
-      fallbackBadge: 'Respaldo del scorer — redactor Gemini no disponible',
+      fallbackBadge: 'Puntuación medida — memo Gemini opcional',
       provenanceTitle: 'Procedencia del score (dimensiones MCP)',
       fromQuery: '← {query}'
     },
@@ -468,7 +496,7 @@ export const translations = {
       title: 'Catálogo',
       subtitle: '{count} títulos en ClickHouse',
       filterPlaceholder: 'Filtrar por título o género…',
-      hidePadding: 'Ocultar relleno del seed (Catalog Extra)',
+      hidePadding: 'Ocultar relleno del seed (títulos numerados)',
       loadError: 'No se pudo cargar el catálogo',
       colTitle: 'Título',
       colGenre: 'Género',
@@ -494,7 +522,11 @@ export const translations = {
     },
     ask: {
       title: 'Consultar el catálogo',
-      subtitle: 'Lenguaje natural → INTENT → DISCOVER → PLAN_SQL → EXECUTE → SYNTHESIZE → AUDIT',
+      subtitle: 'Lenguaje natural → agente de 6 pasos. Los chips de demo siguen consultando ClickHouse si Gemini no está disponible.',
+      fallbackNotice:
+        'El planificador/redactor Gemini no estuvo disponible. ClickHouse sí corrió vía mcp-clickhouse — el SQL y las filas de abajo son en vivo.',
+      billingHint: 'El greenlight del panel sigue midiendo ClickHouse sin Gemini.',
+      billingHintCta: 'Abrir panel →',
       labelQuestion: 'Tu pregunta',
       running: 'Ejecutando agente…',
       submit: 'Ejecutar agente',
@@ -553,6 +585,13 @@ export const translations = {
       badge: 'Documentación de uso',
       title: 'Guía de uso — Catalog Greenlight',
       subtitle: 'Qué hace esta aplicación y cómo utilizarla',
+      judgeTitle: 'Ruta de 60 segundos para el jurado',
+      judgeSteps: [
+        'Panel: tamaño e ingresos del catálogo en vivo y tres picks de greenlight con opportunity / WoW / hueco de género.',
+        'Abre la evidencia SQL MCP bajo analítica — cuatro sentencias oficiales run_query de mcp-clickhouse.',
+        'Pregunta al catálogo con un chip. Si Gemini está limitado, SQL + filas siguen saliendo de ClickHouse.',
+        'El catálogo oculta el relleno seed por defecto. Ingest necesita créditos Gemini (enriquecimiento).'
+      ],
       whatTitle: '¿Qué es Catalog Greenlight?',
       whatBody:
         'Catalog Greenlight es un asistente agentic de programación para catálogos de streaming. Cada semana recomienda tres títulos para impulsar — no porque un LLM adivinó, sino porque el sistema midió huecos de género, momentum de ingresos semana a semana y riesgo de canibalización en ClickHouse.',
@@ -635,7 +674,8 @@ export const translations = {
       troubleshootColFix: 'Qué hacer',
       troubleshoot: [
         { symptom: 'Panel vacío / error 503', fix: 'Espera a que la API muestre ready: true y recarga.' },
-        { symptom: 'Greenlight sin tarjetas de recomendación', fix: 'Revisa la línea de tiempo del agente por errores MCP o timeout.' },
+        { symptom: 'Ask o Ingest devuelve 429 / créditos agotados', fix: 'Recarga GEMINI_API_KEY en Google AI Studio. Greenlight sigue puntuando desde ClickHouse sin Gemini.' },
+        { symptom: 'Greenlight muestra puntuaciones medidas sin memo de Gemini', fix: 'Es el respaldo diseñado — ClickHouse + TypeScript igual produjeron la pizarra.' },
         { symptom: 'Falta GEMINI_API_KEY', fix: 'Añádela al .env y reinicia npm run dev.' }
       ]
     }

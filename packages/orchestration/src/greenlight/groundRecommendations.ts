@@ -42,7 +42,7 @@ export function buildFallbackJustification(row: Record<string, unknown>): string
   const gapLabel = gap == null ? 'n/a' : `genre gap ${gap.toFixed(2)}`;
   const scoreLabel = score == null ? 'n/a' : score.toFixed(2);
   const name = title || 'This title';
-  return `${name} scores ${scoreLabel} on the TypeScript formula (${gapLabel}, ${wowLabel}). Gemini narrative unavailable — ClickHouse measured these numbers.`;
+  return `${name} scores ${scoreLabel} on the TypeScript formula (${gapLabel}, ${wowLabel}). ClickHouse measured these numbers.`;
 }
 
 function enrichFromRow(

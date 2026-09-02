@@ -1,6 +1,6 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { api, AgentRunResult } from '../api';
-import { PageHeader, Card, ErrorBanner } from '../components/Layout';
+import { PageHeader, Card, ErrorBanner, Link } from '../components/Layout';
 import { AgentTimeline } from '../components/AgentTimeline';
 import { DataTable } from '../components/DataTable';
 import {
@@ -9,7 +9,7 @@ import {
 } from '../components/GreenlightProvenance';
 import { useLocale } from '../i18n/LocaleContext';
 import { translations } from '../i18n/translations';
-import { formatApiError } from '../utils/apiErrors';
+import { formatApiError, ApiError } from '../utils/apiErrors';
 
 export default function Ask() {
   const { locale, t } = useLocale();
@@ -17,23 +17,27 @@ export default function Ask() {
   const [question, setQuestion] = useState<string>(suggestions[0]);
   const [result, setResult] = useState<AgentRunResult | null>(null);
   const [error, setError] = useState('');
+  const [billingHint, setBillingHint] = useState(false);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     setQuestion(translations[locale].ask.suggestions[0]);
     setResult(null);
     setError('');
+    setBillingHint(false);
   }, [locale]);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setLoading(true);
     setError('');
+    setBillingHint(false);
     try {
       const r = await api.ask(question);
       setResult(r);
     } catch (err) {
       setError(formatApiError(t, err, 'ask.error'));
+      setBillingHint(err instanceof ApiError && err.code === 'gemini_billing');
     } finally {
       setLoading(false);
     }
@@ -61,7 +65,20 @@ export default function Ask() {
         </form>
       </Card>
 
-      {error && <ErrorBanner message={error} />}
+      {error && (
+        <ErrorBanner message={error} />
+      )}
+      {billingHint && (
+        <p className="muted small">
+          {t('ask.billingHint')} <Link to="/">{t('ask.billingHintCta')}</Link>
+        </p>
+      )}
+
+      {result?.fallback && (
+        <div className="warning-banner" role="status">
+          <p>{t('ask.fallbackNotice')}</p>
+        </div>
+      )}
 
       {result && (
         <>

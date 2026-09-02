@@ -8,11 +8,12 @@ export function normalizeTitle(title: string): string {
 export const SCORER_WEIGHTS = {
   genre_gap: 0.4,
   wow_momentum: 0.4,
-  cannibalization_penalty: 0.2
+  cannibalization_penalty: 0.2,
+  language_gap: 0.05
 } as const;
 
 export function scorerFormulaText(): string {
-  return `opportunity = ${SCORER_WEIGHTS.genre_gap}*genre_gap + ${SCORER_WEIGHTS.wow_momentum}*wow_momentum - ${SCORER_WEIGHTS.cannibalization_penalty}*cannibalization_penalty`;
+  return `opportunity = ${SCORER_WEIGHTS.genre_gap}*genre_gap + ${SCORER_WEIGHTS.wow_momentum}*wow_momentum - ${SCORER_WEIGHTS.cannibalization_penalty}*cannibalization_penalty + ${SCORER_WEIGHTS.language_gap}*language_gap`;
 }
 
 export interface RecMetrics {
@@ -86,7 +87,25 @@ export function isNearDuplicateTitle(a: string, b: string): boolean {
 }
 
 export function isPaddingTitle(title: string, description?: string): boolean {
-  return title.startsWith('Catalog Extra') || Boolean(description?.startsWith('Padding title'));
+  return isSeedFillerTitle(title, description);
+}
+
+export function isSeedFillerTitle(title: string, description?: string): boolean {
+  const t = title.trim();
+  if (!t) return true;
+  if (/^Catalog Extra\b/i.test(t)) return true;
+  if (description && /catalog title for demo seed|padding title/i.test(description)) return true;
+  if (t.includes(':')) return false;
+  const parts = t.split(/\s+/);
+  const last = parts[parts.length - 1];
+  return parts.length >= 3 && /^\d{1,3}$/.test(last);
+}
+
+export function formatCast(cast: string[]): string {
+  const names = cast.map(c => c.trim()).filter(Boolean);
+  if (names.length === 0) return '—';
+  if (names.every(n => /^Actor [A-Z]$/i.test(n))) return '—';
+  return names.slice(0, 3).join(', ');
 }
 
 export function extractCannibalPairs(steps: AgentStep[]): CannibalPair[] {

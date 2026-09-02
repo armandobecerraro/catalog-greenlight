@@ -3,7 +3,7 @@ import { api, CatalogEntry } from '../api';
 import { PageHeader, Card, Loading, ErrorBanner, EmptyState, Link } from '../components/Layout';
 import { useLocale } from '../i18n/LocaleContext';
 import { formatApiError } from '../utils/apiErrors';
-import { isPaddingTitle } from '../utils/greenlightMetrics';
+import { isPaddingTitle, formatCast } from '../utils/greenlightMetrics';
 
 export default function Catalog() {
   const { t } = useLocale();
@@ -115,7 +115,7 @@ export default function Catalog() {
                     <span className="genre-pill">{e.genre}</span>
                   </td>
                   <td>{e.releaseDate}</td>
-                  <td className="small">{e.cast.slice(0, 3).join(', ')}</td>
+                  <td className="small">{formatCast(e.cast)}</td>
                 </tr>
               ))}
             </tbody>

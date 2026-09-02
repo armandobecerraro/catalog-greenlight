@@ -157,12 +157,18 @@ app.get('/api/v1/catalog/stats', apiAuth, requireReady, async (_req: Request, re
 });
 
 app.get('/api/v1/health', (_req: Request, res: Response) => {
+  const clickhouse = mcpConnector && !initError ? 'connected' : initError ? 'error' : 'starting';
   res.json({
     status: initError ? 'degraded' : ingestionUseCase ? 'ok' : 'starting',
     product: 'Catalog Greenlight',
     ready: Boolean(ingestionUseCase && insightEngineService && agentRunner && !initError),
     error: initError,
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    partners: {
+      clickhouse,
+      mcp: 'mcp-clickhouse',
+      gemini: process.env.GEMINI_MODEL || 'gemini-flash-latest'
+    }
   });
 });
 
@@ -185,7 +191,12 @@ app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
     res.status(400).json({ error: err.message, code: err.code });
     return;
   }
-  res.status(500).json({ error: err.message || 'Internal server error' });
+  const text = err.message || '';
+  if (/429|RESOURCE_EXHAUSTED|prepayment|quota|credits exhausted|rate.?limit/i.test(text)) {
+    res.status(429).json({ error: text, code: 'gemini_billing' });
+    return;
+  }
+  res.status(500).json({ error: text || 'Internal server error' });
 });
 
 const PORT = process.env.PORT || 8080;

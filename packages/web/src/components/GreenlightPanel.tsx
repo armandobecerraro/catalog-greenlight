@@ -5,15 +5,14 @@ import AnalyticsInsights from './AnalyticsInsights';
 import { AgentTimeline } from './AgentTimeline';
 import { GreenlightRitualPanel } from './GreenlightRitualPanel';
 import { GreenlightProvenanceHeader, RecProvenance } from './GreenlightProvenance';
+import { McpSqlEvidence } from './McpSqlEvidence';
 import { ErrorBanner, EmptyState } from './Layout';
 import { useLocale } from '../i18n/LocaleContext';
 import { parseGreenlightAnalytics } from '../utils/greenlightAnalytics';
 import { normalizeTitle } from '../utils/greenlightMetrics';
 import {
   greenlightPhaseFromElapsed,
-  isGeminiRateLimitError,
   resolveGreenlightErrorMessage,
-  synthesizeStepError,
   topCandidatesFromSteps,
   usedScorerFallback,
   type GreenlightPhase
@@ -236,11 +235,7 @@ export function GreenlightPanel({
   const displayRecs = recommendations.length > 0 ? recommendations : partialCandidates;
   const showPartialOnly = recommendations.length === 0 && partialCandidates.length > 0;
 
-  const synthError = synthesizeStepError(greenlight);
   const fallbackUsed = usedScorerFallback(greenlight);
-  const rateLimitHit =
-    isGeminiRateLimitError(error) ||
-    (synthError != null && isGeminiRateLimitError(synthError));
 
   const resolvedError = error ? resolveGreenlightErrorMessage(error, t) : null;
 
@@ -267,14 +262,7 @@ export function GreenlightPanel({
         />
       )}
 
-      {!loading && rateLimitHit && displayRecs.length > 0 && (
-        <WarningBanner
-          title={t('dashboard.greenlightError429Title')}
-          message={t('dashboard.greenlightError429')}
-        />
-      )}
-
-      {!loading && fallbackUsed && !rateLimitHit && displayRecs.length > 0 && (
+      {!loading && fallbackUsed && displayRecs.length > 0 && (
         <WarningBanner message={t('dashboard.greenlightFallbackNotice')} />
       )}
 
@@ -313,6 +301,7 @@ export function GreenlightPanel({
       {greenlight && !loading && (
         <>
           {analytics && <AnalyticsInsights analytics={analytics} />}
+          <McpSqlEvidence greenlight={greenlight} />
           <p className="muted">
             {t('dashboard.agentRun', { ms: greenlight.totalLatencyMs })} ·{' '}
             <Link to="/ask">{t('dashboard.followUp')}</Link>

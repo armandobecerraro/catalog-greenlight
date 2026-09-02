@@ -1,5 +1,11 @@
 import { test, expect } from '@playwright/test';
-import { greenlightTimeout, greenlightPickLocator, greenlightTitleLocator, isHosted, statsTimeout } from './helpers';
+import {
+  expectGreenlightPicks,
+  getGreenlightTitles,
+  greenlightTimeout,
+  isHosted,
+  statsTimeout
+} from './helpers';
 
 test.describe.configure({ mode: 'serial' });
 
@@ -58,9 +64,8 @@ test.describe('Hosted smoke — catalog-greenlight.onrender.com', () => {
     await expect(catalogStat).not.toHaveText('0', { timeout: statsTimeout });
     await expect(page.getByText('Greenlight this week')).toBeVisible();
 
-    await expect(page.locator(greenlightPickLocator)).toHaveCount(3, { timeout: greenlightTimeout });
-    await expect(page.locator(greenlightTitleLocator)).toHaveCount(3);
-    const recTitles = await page.locator(greenlightTitleLocator).allTextContents();
+    await expectGreenlightPicks(page, { timeout: greenlightTimeout });
+    const recTitles = await getGreenlightTitles(page);
     expect(recTitles.length).toBe(3);
 
     const catalogRes = await page.request.get('/api/v1/catalog');

@@ -51,7 +51,7 @@ const DEMO_MOMENTUM = parseTitleMomentum([
   },
   {
     title_id: 'comedy-weak',
-    title: 'Laugh Night 1',
+    title: 'Open Mic Circuit',
     genre: 'Comedy',
     language: 'en',
     revenue_this_week: 90,
@@ -61,7 +61,7 @@ const DEMO_MOMENTUM = parseTitleMomentum([
   },
   {
     title_id: 'thriller-2',
-    title: 'Shadow Protocol 2',
+    title: 'Shadow Protocol',
     genre: 'Thriller',
     language: 'en',
     revenue_this_week: 310,
@@ -71,7 +71,7 @@ const DEMO_MOMENTUM = parseTitleMomentum([
   },
   {
     title_id: 'drama-hole',
-    title: 'Winter Harbor 3',
+    title: 'Winter Harbor',
     genre: 'Drama',
     language: 'es',
     revenue_this_week: 250,
@@ -99,7 +99,8 @@ describe('GreenlightScorer', () => {
     expect(SCORER_WEIGHTS).toEqual({
       genre_gap: 0.4,
       wow_momentum: 0.4,
-      cannibalization_penalty: 0.2
+      cannibalization_penalty: 0.2,
+      language_gap: 0.05
     });
   });
 
@@ -107,7 +108,7 @@ describe('GreenlightScorer', () => {
     const scored = scoreTitles(DEMO_MOMENTUM, DEMO_INVENTORY, DEMO_CANNIBAL, DEMO_HOLES);
     const breakout = scored.find(s => s.title === 'Crimen sin Fronteras: Bogotá')!;
     const cannibalA = scored.find(s => s.title === 'True Crime: Highway 101')!;
-    const comedy = scored.find(s => s.title === 'Laugh Night 1')!;
+    const comedy = scored.find(s => s.title === 'Open Mic Circuit')!;
 
     expect(breakout.in_cannibal_pair).toBe(false);
     expect(cannibalA.in_cannibal_pair).toBe(true);
@@ -175,5 +176,31 @@ describe('GreenlightScorer', () => {
   it('treats Highway 101 + Redux as a cannibal pair but not unrelated thrillers', () => {
     expect(isNearDuplicateTitle('True Crime: Highway 101', 'True Crime: Highway 101 Redux')).toBe(true);
     expect(isNearDuplicateTitle('Shadow Road 86', 'Crimen sin Fronteras: Bogotá')).toBe(false);
+  });
+
+  it('drops numbered seed-generator titles from momentum', () => {
+    const rows = parseTitleMomentum([
+      {
+        title_id: 'story',
+        title: 'Crimen sin Fronteras: Bogotá',
+        genre: 'Thriller',
+        language: 'es',
+        revenue_this_week: 420,
+        revenue_prior_week: 180,
+        wow_pct: 1.33,
+        views_this_week: 85000
+      },
+      {
+        title_id: 'filler',
+        title: 'Fading Line 75',
+        genre: 'Drama',
+        language: 'en',
+        revenue_this_week: 250,
+        revenue_prior_week: 200,
+        wow_pct: 0.29,
+        views_this_week: 38000
+      }
+    ]);
+    expect(rows.map(r => r.title)).toEqual(['Crimen sin Fronteras: Bogotá']);
   });
 });

@@ -40,4 +40,30 @@ describe('sqlValidation', () => {
       )
     ).not.toThrow();
   });
+
+  it('ignores forbidden keywords inside comments and quoted strings', () => {
+    expect(() =>
+      validateGeneratedSql("SELECT 'DROP TABLE x' -- DELETE FROM t\nFROM media_catalog.media_content", 'catalog_qa')
+    ).not.toThrow();
+  });
+
+  it('rejects audit SQL that is not an INSERT into agent_runs', () => {
+    expect(() => validateAuditSql('SELECT 1')).toThrow(SqlValidationError);
+    expect(() =>
+      validateAuditSql("INSERT INTO media_catalog.media_content (id) VALUES ('x')")
+    ).toThrow(SqlValidationError);
+    expect(() =>
+      validateAuditSql("INSERT INTO media_catalog.agent_runs (id) VALUES ('x'); DROP TABLE media_catalog.agent_runs")
+    ).toThrow(/Forbidden SQL keyword in audit/);
+  });
+
+  it('rejects greenlight SQL that is not SELECT/WITH', () => {
+    expect(() => validateGeneratedSql('EXPLAIN SELECT 1', 'stats')).toThrow(SqlValidationError);
+  });
+
+  it('treats comment-only SQL as unknown keyword', () => {
+    expect(() => validateGeneratedSql('/* comment only */', 'catalog_qa')).toThrow(/unknown/);
+    expect(() => validateGeneratedSql('/* comment only */', 'ingest')).toThrow(/unknown/);
+    expect(() => validateAuditSql('/* comment only */')).toThrow(/unknown/);
+  });
 });

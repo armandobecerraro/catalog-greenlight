@@ -1,5 +1,11 @@
-import { ContentIngestionUseCase, MediaIngestionService } from '@bas/core';
-import { ConnectorFactory, buildClickHouseConfig, loadRepoEnv } from '@bas/infrastructure';
+import { ContentIngestionUseCase, MediaIngestionService, IMcpConnector } from '@bas/core';
+import {
+  ConnectorFactory,
+  buildClickHouseConfig,
+  GeminiClientFactory,
+  McpCatalogRepository,
+  loadRepoEnv
+} from '@bas/infrastructure';
 
 loadRepoEnv();
 
@@ -7,9 +13,10 @@ async function main() {
   console.log('🎬 Catalog Greenlight — Media Ingestion Demo\n');
 
   const connectorFactory = new ConnectorFactory();
-  const connector = await connectorFactory.create('clickhouse', buildClickHouseConfig());
-  const geminiEnrichment = connectorFactory.createGeminiClient();
-  const ingestionService = new MediaIngestionService(connector, geminiEnrichment);
+  const connector = (await connectorFactory.create('clickhouse', buildClickHouseConfig())) as IMcpConnector;
+  const geminiEnrichment = new GeminiClientFactory().createEnrichmentClient();
+  const catalog = new McpCatalogRepository(connector);
+  const ingestionService = new MediaIngestionService(catalog, geminiEnrichment);
   const useCase = new ContentIngestionUseCase(ingestionService);
 
   const demoData = {

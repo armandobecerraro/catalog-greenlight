@@ -1,0 +1,302 @@
+import type { ReactElement } from 'react';
+import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
+import { LocaleProvider } from '../i18n/LocaleContext';
+import App from '../App';
+import Catalog from './Catalog';
+import Ingest from './Ingest';
+import Ask from './Ask';
+import Guide from './Guide';
+import { api } from '../api';
+import { ApiError } from '../utils/apiErrors';
+import type { AgentRunResult } from '../api';
+
+vi.mock('../api', () => ({
+  api: {
+    health: vi.fn(),
+    getStats: vi.fn(),
+    getCatalog: vi.fn(),
+    getGreenlight: vi.fn(),
+    ask: vi.fn(),
+    ingest: vi.fn()
+  }
+}));
+
+const mockedApi = api as unknown as {
+  health: ReturnType<typeof vi.fn>;
+  getStats: ReturnType<typeof vi.fn>;
+  getCatalog: ReturnType<typeof vi.fn>;
+  getGreenlight: ReturnType<typeof vi.fn>;
+  ask: ReturnType<typeof vi.fn>;
+  ingest: ReturnType<typeof vi.fn>;
+};
+
+function wrap(ui: ReactElement, path = '/') {
+  return render(
+    <MemoryRouter initialEntries={[path]}>
+      <LocaleProvider>{ui}</LocaleProvider>
+    </MemoryRouter>
+  );
+}
+
+const askResult: AgentRunResult = {
+  intent: 'catalog_qa',
+  answer: 'Thriller is underserved.',
+  sql: 'SELECT genre, count() FROM media_catalog.media_content GROUP BY genre',
+  queryRows: [{ genre: 'Thriller', cnt: 8, active: true, nested: { a: 1 } }],
+  recommendations: [
+    {
+      title: 'Crimen sin Fronteras: Bogotá',
+      genre: 'Thriller',
+      justification: 'gap',
+      evidence: 'wow 32%'
+    }
+  ],
+  steps: [
+    { step: 'INTENT', status: 'completed', output: { intent: 'catalog_qa', source: 'gemini' }, latencyMs: 4 },
+    { step: 'DISCOVER', status: 'completed', output: { schema: 'media_catalog.media_content(id UUID)' } },
+    { step: 'PLAN_SQL', status: 'completed', output: { attempts: [{ sql: 'SELECT 1', note: 'ok' }] } },
+    {
+      step: 'EXECUTE',
+      status: 'completed',
+      output: { attempts: [{ sql: 'SELECT 1', rowCount: 1, retry: true, error: '0 rows' }], rows: [{ genre: 'Thriller' }] }
+    },
+    { step: 'SYNTHESIZE', status: 'completed', output: { answer: 'ok', fallback: true, geminiError: 'quota', recommendations: [{ title: 'T' }] } },
+    { step: 'AUDIT', status: 'completed', output: { auditId: 'run-1' } },
+    { step: 'UNKNOWN', status: 'failed', output: { extra: true }, error: 'nope' }
+  ],
+  totalLatencyMs: 12,
+  model: 'gemini-test',
+  fallback: true
+};
+
+beforeEach(() => {
+  mockedApi.health.mockResolvedValue({
+    status: 'ok',
+    ready: true,
+    partners: { clickhouse: 'connected', mcp: 'mcp-clickhouse', gemini: 'gemini-test' }
+  });
+  mockedApi.getStats.mockResolvedValue({
+    totalEntries: 200,
+    genres: { Drama: 40, Thriller: 15 },
+    recentAdditions: 2,
+    latestRevenue: { totalViews: 1000, totalRevenueUsd: 500, topTitle: 'Crimen sin Fronteras: Bogotá' }
+  });
+  mockedApi.getGreenlight.mockResolvedValue({
+    ...askResult,
+    intent: 'greenlight',
+    recommendations: [
+      {
+        title: 'Crimen sin Fronteras: Bogotá',
+        genre: 'Thriller',
+        justification: 'breakout',
+        evidence: 'wow',
+        opportunity_score: 0.26,
+        wow_pct: 0.32,
+        genre_gap: 0.13
+      }
+    ],
+    queryRows: [{ title: 'Crimen sin Fronteras: Bogotá', opportunity_score: 0.26, wow_pct: 0.32, genre_gap: 0.13 }],
+    steps: [
+      {
+        step: 'DISCOVER',
+        status: 'completed',
+        output: {
+          fullById: {
+            A_genre_inventory: [{ genre: 'Thriller', title_count: 15, revenue_4w: 200 }],
+            B_title_momentum: [{ title: 'Crimen sin Fronteras: Bogotá', genre: 'Thriller', wow_pct: 0.32 }],
+            C_cannibalization: [],
+            D_slate_holes: [{ hole_type: 'genre', dimension: 'Thriller', gap_score: 0.4, title_share: 0.1, revenue_share: 0.3 }]
+          },
+          queries: [{ id: 'A_genre_inventory', sql: 'SELECT 1', rowCount: 1, latencyMs: 3 }]
+        }
+      },
+      { step: 'SYNTHESIZE', status: 'completed', output: { fallback: true } }
+    ]
+  });
+  mockedApi.getCatalog.mockResolvedValue({
+    count: 2,
+    entries: [
+      {
+        id: '1',
+        title: 'Crimen sin Fronteras: Bogotá',
+        description: 'A long enough description for the catalog row that should truncate in the table.',
+        genre: 'Thriller',
+        releaseDate: '2020-01-01',
+        cast: ['Gael García Bernal']
+      },
+      {
+        id: '2',
+        title: 'Fading Line 75',
+        description: 'catalog title for demo seed',
+        genre: 'Drama',
+        releaseDate: '2020-01-01',
+        cast: ['Actor A']
+      }
+    ]
+  });
+  mockedApi.ask.mockResolvedValue(askResult);
+  mockedApi.ingest.mockResolvedValue({ contentId: 'c-1', latencyMs: 9 });
+});
+
+describe('pages', () => {
+  it('renders the dashboard with catalog stats and greenlight', async () => {
+    wrap(<App />);
+    expect(await screen.findByText('200')).toBeInTheDocument();
+    expect(screen.getAllByText('Crimen sin Fronteras: Bogotá').length).toBeGreaterThan(0);
+    fireEvent.click(screen.getByRole('button', { name: 'Language' }));
+  });
+
+  it('shows dashboard errors when stats fail', async () => {
+    mockedApi.getStats.mockRejectedValue(new Error('stats down'));
+    mockedApi.getGreenlight.mockRejectedValue(new ApiError('clickhouse_waking', 'booting'));
+    mockedApi.health.mockRejectedValue(new Error('down'));
+    wrap(<App />);
+    expect(await screen.findByText('stats down')).toBeInTheDocument();
+  });
+
+  it('lists catalog titles, filters them, and can show padding', async () => {
+    wrap(<Catalog />);
+    expect(await screen.findByText('Crimen sin Fronteras: Bogotá')).toBeInTheDocument();
+    expect(screen.queryByText('Fading Line 75')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('checkbox'));
+    expect(screen.getByText('Fading Line 75')).toBeInTheDocument();
+    fireEvent.change(screen.getByPlaceholderText(/Filter by title or genre/i), { target: { value: 'thriller' } });
+    expect(screen.getByText('Crimen sin Fronteras: Bogotá')).toBeInTheDocument();
+    expect(screen.queryByText('Fading Line 75')).not.toBeInTheDocument();
+  });
+
+  it('shows catalog error and empty states', async () => {
+    mockedApi.getCatalog.mockRejectedValueOnce(new Error('catalog down'));
+    const errorView = wrap(<Catalog />);
+    expect(await screen.findByText(/catalog down/i)).toBeInTheDocument();
+    errorView.unmount();
+
+    mockedApi.getCatalog.mockResolvedValueOnce({ count: 0, entries: [] });
+    wrap(<Catalog />);
+    expect(await screen.findByText('No titles in the catalog yet')).toBeInTheDocument();
+  });
+
+  it('ingests a title and surfaces API errors', async () => {
+    wrap(<Ingest />);
+    fireEvent.change(screen.getByLabelText(/title|título/i), { target: { value: 'New Title' } });
+    fireEvent.change(screen.getByLabelText(/description|sinopsis/i), { target: { value: 'A description' } });
+    fireEvent.change(screen.getByLabelText(/cast|reparto/i), { target: { value: 'Ada, Grace' } });
+    fireEvent.change(screen.getByLabelText(/genre|género/i), { target: { value: 'Drama' } });
+    fireEvent.change(screen.getByLabelText(/release|estreno/i), { target: { value: '2024-07-01' } });
+    fireEvent.submit(screen.getByRole('button', { name: /Ingest via agent/i }).closest('form')!);
+    expect(await screen.findByText(/c-1/i)).toBeInTheDocument();
+
+    mockedApi.ingest.mockRejectedValueOnce(new Error('ingest failed'));
+    fireEvent.submit(screen.getByRole('button', { name: /Ingest via agent/i }).closest('form')!);
+    expect(await screen.findByText('ingest failed')).toBeInTheDocument();
+  });
+
+  it('asks a question and renders SQL evidence plus timeline details', async () => {
+    wrap(<Ask />);
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: 'Which genre is under-represented?' } });
+    fireEvent.click(screen.getAllByRole('button').find(btn => btn.className.includes('chip')) ?? screen.getAllByRole('button')[0]);
+    fireEvent.submit(screen.getByRole('button', { name: /Run agent/i }).closest('form')!);
+    expect(await screen.findByText('Thriller is underserved.')).toBeInTheDocument();
+    fireEvent.click(screen.getAllByRole('button').find(btn => /show|ver|details|detalle/i.test(btn.textContent ?? ''))!);
+  });
+
+  it('renders greenlight provenance on Ask results', async () => {
+    mockedApi.ask.mockResolvedValueOnce({
+      ...askResult,
+      intent: 'greenlight',
+      queryRows: undefined,
+      recommendations: [
+        {
+          title: 'Crimen sin Fronteras: Bogotá',
+          genre: 'Thriller',
+          justification: 'gap',
+          evidence: 'wow',
+          opportunity_score: 0.26,
+          wow_pct: 0.32,
+          genre_gap: 0.13
+        }
+      ]
+    });
+    wrap(<Ask />);
+    fireEvent.submit(screen.getByRole('button', { name: /Run agent/i }).closest('form')!);
+    expect(await screen.findByText(/Measured by ClickHouse|Medido en ClickHouse/i)).toBeInTheDocument();
+  });
+
+  it('shows Gemini billing hint on Ask errors', async () => {
+    mockedApi.ask.mockRejectedValueOnce(new ApiError('gemini_billing', 'quota'));
+    wrap(<Ask />);
+    fireEvent.submit(screen.getByRole('button', { name: /Run agent/i }).closest('form')!);
+    expect(await screen.findByText(/quota|billing|Gemini/i)).toBeInTheDocument();
+  });
+
+  it('renders the judge guide and redirects /about', async () => {
+    const guide = wrap(<Guide />, '/guia');
+    expect(screen.getByRole('heading', { level: 2, name: /User Guide/i })).toBeInTheDocument();
+    guide.unmount();
+    wrap(<App />, '/about');
+    expect(await screen.findByRole('heading', { level: 2, name: /User Guide/i })).toBeInTheDocument();
+  });
+
+  it('redirects /judge to the guide and scrolls a hash target', async () => {
+    wrap(<App />, '/judge');
+    expect(await screen.findByRole('heading', { level: 2, name: /User Guide/i })).toBeInTheDocument();
+
+    const scrollIntoView = vi.fn();
+    const original = document.getElementById.bind(document);
+    vi.spyOn(document, 'getElementById').mockImplementation(id => {
+      const el = original(id);
+      if (el) Object.assign(el, { scrollIntoView });
+      return el;
+    });
+    wrap(<Guide />, '/guia#demo-story');
+    await vi.waitFor(() => expect(scrollIntoView).toHaveBeenCalled());
+  });
+
+  it('shows catalog descriptions shorter than 80 characters', async () => {
+    mockedApi.getCatalog.mockResolvedValueOnce({
+      count: 2,
+      entries: [
+        {
+          id: '1',
+          title: 'Short',
+          description: 'Short desc',
+          genre: 'Drama',
+          releaseDate: '2020-01-01',
+          cast: ['Ada']
+        },
+        {
+          id: '3',
+          title: 'Blank',
+          description: '',
+          genre: 'Drama',
+          releaseDate: '2020-01-01',
+          cast: ['Ada']
+        },
+        {
+          id: '4',
+          title: 'Long',
+          description: 'A catalog description that is deliberately longer than eighty characters so the table truncates it with an ellipsis.',
+          genre: 'Drama',
+          releaseDate: '2020-01-01',
+          cast: ['Ada']
+        }
+      ]
+    });
+    wrap(<Catalog />);
+    expect(await screen.findByText('Short desc')).toBeInTheDocument();
+    expect(screen.getByText(/A catalog description that is deliberately/)).toBeInTheDocument();
+  });
+
+  it('shows dashboard without revenue and with a health miss', async () => {
+    mockedApi.getStats.mockResolvedValueOnce({
+      totalEntries: 3,
+      genres: { Drama: 3 },
+      recentAdditions: 0
+    });
+    mockedApi.health.mockResolvedValueOnce({ status: 'ok', ready: true, partners: {} });
+    wrap(<App />);
+    expect(await screen.findByText(/No revenue data|Sin datos de ingresos/i)).toBeInTheDocument();
+  });
+});

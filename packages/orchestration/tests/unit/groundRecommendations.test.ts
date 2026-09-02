@@ -1,7 +1,10 @@
 import {
   groundRecommendations,
   recommendationsFromCandidateRows,
-  normalizeTitle
+  normalizeTitle,
+  candidateTitleSet,
+  buildFallbackEvidence,
+  buildFallbackJustification
 } from '../../src/greenlight/groundRecommendations';
 
 describe('groundRecommendations', () => {
@@ -83,5 +86,40 @@ describe('groundRecommendations', () => {
     ]);
     expect(recs).toHaveLength(1);
     expect(recs[0].title).toBe('Crimen sin Fronteras: Bogotá');
+  });
+
+  it('covers string metrics, missing fields, and empty candidate sets', () => {
+    expect(candidateTitleSet([{ title: 1 }, { title: '  Keep  ' }]).has('keep')).toBe(true);
+    expect(groundRecommendations(undefined, [{ title: 'X', genre: 'Drama' }]).usedFallback).toBe(true);
+    expect(buildFallbackJustification({ title: 9 })).toMatch(/^This title/);
+
+    const stringRow = {
+      title: 'String Title',
+      genre: 'Drama',
+      opportunity_score: '0.5',
+      wow_pct: '0.2',
+      genre_gap: '0.1',
+      in_cannibal_pair: true
+    };
+    const grounded = groundRecommendations(
+      [{ title: 'String Title', genre: 'Drama', justification: 'j', evidence: 'e' }],
+      [stringRow]
+    );
+    expect(grounded.usedFallback).toBe(false);
+    expect(grounded.recommendations[0].opportunity_score).toBe(0.5);
+    expect(grounded.recommendations[0].in_cannibal_pair).toBe(true);
+
+    const empty = { title: '  ', genre: 9 };
+    expect(buildFallbackJustification(empty)).toMatch(/^This title/);
+    const groundedMissing = groundRecommendations(
+      [{ title: 'String Title', genre: 'Kept', justification: 'j', evidence: 'e', opportunity_score: 9, wow_pct: 8, genre_gap: 7, in_cannibal_pair: false }],
+      [{ title: 'String Title' }]
+    );
+    expect(groundedMissing.recommendations[0].opportunity_score).toBe(9);
+    expect(groundedMissing.recommendations[0].genre).toBe('Kept');
+
+    expect(recommendationsFromCandidateRows([{ title: 'Solo' }])[0].genre).toBe('');
+    expect(buildFallbackEvidence({ title: 'X' })).toContain('n/a');
+    expect(recommendationsFromCandidateRows([empty, { wow_pct: '', genre_gap: 0 }])).toEqual([]);
   });
 });

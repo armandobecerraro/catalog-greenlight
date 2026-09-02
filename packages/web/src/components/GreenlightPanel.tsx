@@ -92,7 +92,7 @@ function phaseStatus(
   return 'pending';
 }
 
-function SkeletonBar({ width = '100%' }: { width?: string }) {
+function SkeletonBar({ width }: { width: string }) {
   return <span className="skeleton skeleton-bar" style={{ width }} aria-hidden="true" />;
 }
 
@@ -206,10 +206,9 @@ function RecCard({
   );
 }
 
-function WarningBanner({ title, message }: { title?: string; message: string }) {
+function WarningBanner({ message }: { message: string }) {
   return (
     <div className="warning-banner" role="alert">
-      {title && <strong>{title}</strong>}
       <p>{message}</p>
     </div>
   );

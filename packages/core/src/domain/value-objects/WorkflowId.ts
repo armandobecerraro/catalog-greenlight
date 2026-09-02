@@ -1,3 +1,6 @@
+import { v4 as uuidv4 } from 'uuid';
+import { DomainError } from '../errors/DomainError';
+
 export class WorkflowId {
   private readonly _value: string;
 
@@ -6,17 +9,19 @@ export class WorkflowId {
   }
 
   static create(): WorkflowId {
-    return new WorkflowId(`wf-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`);
+    return new WorkflowId(uuidv4());
   }
 
   static fromString(value: string): WorkflowId {
     if (!value || value.trim().length === 0) {
-      throw new DomainError('WorkflowId cannot be empty');
+      throw new DomainError('WorkflowId cannot be empty', 'EMPTY_WORKFLOW_ID');
     }
-    return new WorkflowId(value);
+    return new WorkflowId(value.trim());
   }
 
-  get value(): string { return this._value; }
+  get value(): string {
+    return this._value;
+  }
 
   equals(other: WorkflowId): boolean {
     return this._value === other._value;
@@ -24,12 +29,5 @@ export class WorkflowId {
 
   toString(): string {
     return this._value;
-  }
-}
-
-export class DomainError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = 'DomainError';
   }
 }

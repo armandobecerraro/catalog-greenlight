@@ -1,26 +1,36 @@
 import {
   ContentIngestionUseCase,
   MediaIngestionService,
-  InsightEngineService,
+  CatalogQueryService,
   IMcpConnector
 } from '@bas/core';
-import { ConnectorFactory, buildClickHouseConfig, loadRepoEnv } from '@bas/infrastructure';
+import {
+  ConnectorFactory,
+  buildClickHouseConfig,
+  GeminiClientFactory,
+  McpCatalogRepository,
+  McpAgentAuditAdapter,
+  loadRepoEnv
+} from '@bas/infrastructure';
+import { AgentRunner } from '@bas/orchestration';
 
 loadRepoEnv();
-import { AgentRunner } from '@bas/orchestration';
 
 async function main() {
   console.log('🎬 Catalog Greenlight — Agent Demo (Gemini + mcp-clickhouse)\n');
 
   const connectorFactory = new ConnectorFactory();
   const connector = (await connectorFactory.create('clickhouse', buildClickHouseConfig())) as IMcpConnector;
-  const geminiEnrichment = connectorFactory.createGeminiClient();
-  const geminiReasoning = connectorFactory.createGeminiReasoningClient();
+  const geminiFactory = new GeminiClientFactory();
+  const geminiEnrichment = geminiFactory.createEnrichmentClient();
+  const geminiReasoning = geminiFactory.createReasoningClient();
+  const catalog = new McpCatalogRepository(connector);
+  const audit = new McpAgentAuditAdapter(connector);
 
-  const ingestionService = new MediaIngestionService(connector, geminiEnrichment);
-  const insightEngine = new InsightEngineService(connector, geminiEnrichment);
+  const ingestionService = new MediaIngestionService(catalog, geminiEnrichment);
+  const catalogQueries = new CatalogQueryService(catalog);
   const useCase = new ContentIngestionUseCase(ingestionService);
-  const agent = new AgentRunner(connector, geminiReasoning, geminiReasoning.modelName);
+  const agent = new AgentRunner(connector, geminiReasoning, geminiReasoning.modelName, audit);
 
   console.log('Step 1: Ingest one new title via Gemini enrichment + MCP INSERT...\n');
   const ingestStart = Date.now();
@@ -35,7 +45,7 @@ async function main() {
 
   console.log('Step 2: Catalog stats via MCP...\n');
   const statsStart = Date.now();
-  const stats = await insightEngine.getCatalogStats();
+  const stats = await catalogQueries.getCatalogStats();
   console.log(`  📊 ${stats.totalEntries} titles · ${Object.keys(stats.genres).length} genres · ${Date.now() - statsStart}ms`);
   if (stats.latestRevenue) {
     console.log(`  💰 7d revenue $${stats.latestRevenue.totalRevenueUsd.toFixed(0)} · top: ${stats.latestRevenue.topTitle}`);

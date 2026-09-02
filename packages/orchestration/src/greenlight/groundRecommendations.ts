@@ -51,7 +51,7 @@ function enrichFromRow(
 ): GreenlightRecommendation {
   return {
     ...rec,
-    title: String(row.title ?? rec.title),
+    title: String(row.title),
     genre: String(row.genre ?? rec.genre),
     opportunity_score: num(row, 'opportunity_score') ?? rec.opportunity_score,
     wow_pct: num(row, 'wow_pct') ?? rec.wow_pct,

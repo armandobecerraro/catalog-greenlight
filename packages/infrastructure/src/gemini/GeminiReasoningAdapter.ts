@@ -7,10 +7,8 @@ import {
 } from '@bas/core';
 import { generateGeminiText } from './generateContent';
 
-const MODEL = process.env.GEMINI_MODEL || 'gemini-flash-latest';
-
 export class GeminiReasoningAdapter implements IGeminiReasoningPort {
-  readonly modelName = MODEL;
+  readonly modelName = process.env.GEMINI_MODEL || 'gemini-flash-latest';
 
   constructor(private readonly apiKey: string) {}
 

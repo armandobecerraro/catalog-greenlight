@@ -3,7 +3,7 @@ import { DomainError } from '../errors/DomainError';
 import { MediaEnrichment } from '../value-objects/MediaEnrichment';
 import { ReleaseDate } from '../value-objects/ReleaseDate';
 import { Cast } from '../value-objects/Cast';
-import { MediaEnrichmentCompleted, DomainEvent } from '../events/DomainEvent';
+import { MediaContentCreated, MediaEnrichmentCompleted, DomainEvent } from '../events/DomainEvent';
 
 export class MediaContent {
   private readonly _id: string;
@@ -40,7 +40,9 @@ export class MediaContent {
     }
     const releaseDateVO = ReleaseDate.create(releaseDate);
     const castVO = Cast.create(cast);
-    return new MediaContent(uuidv4(), title.trim(), description.trim(), genre.trim(), releaseDateVO, castVO);
+    const content = new MediaContent(uuidv4(), title.trim(), description.trim(), genre.trim(), releaseDateVO, castVO);
+    content._domainEvents.push(new MediaContentCreated(content._id, content._title, content._genre));
+    return content;
   }
 
   get id(): string { return this._id; }

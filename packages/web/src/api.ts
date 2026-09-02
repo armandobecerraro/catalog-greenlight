@@ -74,8 +74,8 @@ export interface CatalogEntry {
   language?: string;
 }
 
-async function fetchJson<T>(path: string, options?: RequestInit & { timeoutMs?: number }): Promise<T> {
-  const { timeoutMs = AGENT_FETCH_TIMEOUT_MS, ...fetchOptions } = options ?? {};
+async function fetchJson<T>(path: string, options: RequestInit & { timeoutMs?: number } = {}): Promise<T> {
+  const { timeoutMs = AGENT_FETCH_TIMEOUT_MS, ...fetchOptions } = options;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
 
@@ -88,15 +88,16 @@ async function fetchJson<T>(path: string, options?: RequestInit & { timeoutMs?: 
       const body = await res.text();
       throw parseHttpError(res.status, body);
     }
-    return res.json() as Promise<T>;
+    const data = (await res.json()) as T;
+    clearTimeout(timer);
+    return data;
   } catch (err) {
+    clearTimeout(timer);
     if (err instanceof ApiError) throw err;
     if (err instanceof Error && err.name === 'AbortError') {
       throw timeoutError(timeoutMs);
     }
     throw err;
-  } finally {
-    clearTimeout(timer);
   }
 }
 
@@ -131,3 +132,5 @@ export const api = {
 
   getGreenlight: () => fetchJson<AgentRunResult>('/greenlight', { timeoutMs: AGENT_FETCH_TIMEOUT_MS })
 };
+
+export { fetchJson };

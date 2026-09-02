@@ -1,7 +1,7 @@
 /**
  * Deterministic greenlight scoring — TypeScript analyst, not Gemini.
  *
- * opportunity = 0.4 * genre_gap + 0.4 * wow_momentum - 0.2 * cannibalization_penalty
+ * opportunity = 0.4 * genre_gap + 0.4 * wow_momentum - 0.2 * cannibalization_penalty + 0.05 * language_gap
  */
 
 export interface GenreInventoryRow {
@@ -150,7 +150,7 @@ export function buildGenreGapMap(inventory: GenreInventoryRow[]): Map<string, nu
   const values = [...gaps.values()];
   const min = Math.min(...values, 0);
   const max = Math.max(...values, 1);
-  const span = max - min || 1;
+  const span = max - min;
   for (const [genre, gap] of gaps) {
     gaps.set(genre, (gap - min) / span);
   }
@@ -234,17 +234,6 @@ export function pickTopCandidates(
     if (c.in_cannibal_pair) continue;
     picked.push(c);
     usedGenres.add(c.genre);
-  }
-
-  if (picked.length < limit) {
-    for (const c of sorted) {
-      if (picked.length >= limit) break;
-      if (picked.some(p => p.title_id === c.title_id)) continue;
-      if (c.in_cannibal_pair) continue;
-      if (enforceDiversity && usedGenres.has(c.genre)) continue;
-      picked.push(c);
-      usedGenres.add(c.genre);
-    }
   }
 
   if (picked.length < limit) {

@@ -1,7 +1,10 @@
 import { GoogleGenAI, HarmBlockThreshold, HarmCategory } from '@google/genai';
 
-const DEFAULT_MODEL = process.env.GEMINI_MODEL || 'gemini-flash-latest';
 const FALLBACK_MODELS = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-3.5-flash-lite'];
+
+function defaultModel(): string {
+  return process.env.GEMINI_MODEL || 'gemini-flash-latest';
+}
 
 function isModelUnavailable(error: unknown): boolean {
   const message = error instanceof Error ? error.message : String(error);
@@ -29,7 +32,11 @@ function isRetryable(error: unknown): boolean {
  * Calls Gemini via the official `@google/genai` SDK (`google-genai`).
  * Uses the same generateContent RPC as AI Studio's curl (X-goog-api-key / AQ. keys).
  */
-export async function generateGeminiText(apiKey: string, prompt: string, model = DEFAULT_MODEL): Promise<string> {
+export async function generateGeminiText(
+  apiKey: string,
+  prompt: string,
+  model = defaultModel()
+): Promise<string> {
   const ai = new GoogleGenAI({ apiKey });
   const models = [model, ...FALLBACK_MODELS.filter(m => m !== model)];
   let lastError: unknown;
@@ -42,7 +49,7 @@ export async function generateGeminiText(apiKey: string, prompt: string, model =
           contents: prompt,
           config: { safetySettings: SAFETY }
         });
-        const text = response.text?.trim();
+        const text = response?.text?.trim();
         if (text) return text;
         throw new Error('Gemini returned an empty response');
       } catch (error) {

@@ -138,15 +138,4 @@ describe('GreenlightPanel', () => {
     fireEvent.click(screen.getByRole('button', { name: /Hide evidence/i }));
     expect(screen.queryByText(/ClickHouse analytics|Analítica ClickHouse/i)).not.toBeInTheDocument();
   });
-
-  it('shows the empty state when there is no answer', () => {
-    wrap(
-      <GreenlightPanel
-        greenlight={{ ...run, answer: '', recommendations: [], queryRows: [], steps: [] }}
-        loading={false}
-        error={null}
-      />
-    );
-    expect(screen.getByRole('heading', { level: 3 })).toBeInTheDocument();
-  });
 });

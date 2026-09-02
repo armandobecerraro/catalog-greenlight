@@ -2,8 +2,12 @@
 
 **Product:** Catalog Greenlight  
 **Public repo:** https://github.com/armandobecerraro/catalog-greenlight  
-**Verified:** 2026-09-01  
-**Commit under test:** `d6b1b72` (Render URL in `545ce31`)
+**Verified:** 2026-09-02 (docs pass; runtime greps 2026-09-01)  
+**Commit under test:** `eef06480ab53021babce09821aaab22988fcb8bd` (`git rev-parse HEAD`)
+
+**Differentiation vs Chloe:** Catalog Greenlight = programming chief / weekly catalog slate / 4 MCP SELECTs + TypeScript scorer. Chloe = screenplay→film (competing entry).
+
+**Pitch:** ClickHouse measures. TypeScript scores. Gemini explains.
 
 ---
 
@@ -117,6 +121,8 @@ Full log: `docs/submission/DEV_VERIFY.md` + `docs/submission/playwright-output.t
 `AgentRunner.ts`: INTENT → DISCOVER → PLAN_SQL → EXECUTE → SYNTHESIZE → AUDIT  
 Unit test: `AgentRunner.test.ts` — PASS
 
+**Greenlight scorer** (`GreenlightScorer.ts`): four parallel MCP SELECTs → `scoreFromAnalyticsById` → `opportunity = 0.4×genre_gap + 0.4×wow_momentum − 0.2×cannibalization_penalty + 0.05×language_gap` → `pickTopCandidates` (genre diversity). Gemini (`@google/genai`, **not** Agent Builder / ADK) narrative only; 10s timeout or 429 → scorer fallback (`GreenlightAnalyst.ts`).
+
 ---
 
 ## Summary
@@ -128,4 +134,5 @@ Unit test: `AgentRunner.test.ts` — PASS
 | Browser E2E (Playwright) | **YES** |
 | Hosted URL | **YES** — https://catalog-greenlight.onrender.com |
 | YouTube video | **PENDING** (`TODO_YOUTUBE`) |
-| ADK TypeScript | **NO** (next pass) |
+| Devpost draft 1155720 submitted | **NO** — copy in `DEVPOST.md`; form not Submitted |
+| Gemini integration | **YES** — `@google/genai` on Google Cloud; **not** Agent Builder / ADK |

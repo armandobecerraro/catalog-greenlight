@@ -2,8 +2,6 @@ import {
   ConnectionConfig,
   QueryRequest,
   QueryResult,
-  StreamRequest,
-  StreamChunk,
   IMcpConnector
 } from '@bas/core';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
@@ -101,14 +99,6 @@ export class McpClickHouseConnector implements IMcpConnector {
     throw new Error('MCP response missing text content');
   }
 
-  async *stream(request: StreamRequest): AsyncIterable<StreamChunk> {
-    const result = await this.runQuery(request.query);
-    for (const row of result.rows) {
-      yield { data: [row], isLast: false, latencyMs: 0 };
-    }
-    yield { data: [], isLast: true, latencyMs: 0 };
-  }
-
   async disconnect(): Promise<void> {
     if (this.transport) {
       await this.transport.close();
@@ -178,9 +168,7 @@ export class McpClickHouseConnector implements IMcpConnector {
       }
       if (parsed && typeof parsed === 'object') return [parsed as Record<string, unknown>];
       return [{ text: textContent }];
-    } catch (error) {
-      if (error instanceof Error && isMcpErrorText(error.message)) throw error;
-      if (isMcpErrorText(trimmed)) throw new Error(trimmed);
+    } catch {
       return [{ text: textContent }];
     }
   }

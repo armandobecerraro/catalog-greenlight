@@ -1,13 +1,13 @@
-import { v4 as uuidv4 } from 'uuid';
 import {
   AgentRunResult,
   AgentStep,
-  AgentStepName,
   IMcpConnector,
   IGeminiReasoningPort,
+  IAgentAuditPort,
   AgentIntent,
+  WorkflowId,
   validateGeneratedSql,
-  validateAuditSql
+  runAgentStep
 } from '@bas/core';
 import { discoverLiveSchema } from './SchemaCache';
 import { runGreenlightAnalysis } from '../greenlight/GreenlightAnalyst';
@@ -27,25 +27,29 @@ export class AgentRunner {
   constructor(
     private readonly mcp: IMcpConnector,
     private readonly reasoning: IGeminiReasoningPort,
-    private readonly modelName: string = process.env.GEMINI_MODEL || 'gemini-flash-latest'
+    private readonly modelName: string,
+    private readonly audit: IAgentAuditPort
   ) {}
 
   async runGreenlight(): Promise<AgentRunResult> {
-    return runGreenlightAnalysis(this.mcp, this.reasoning, this.modelName);
+    return runGreenlightAnalysis(this.mcp, this.reasoning, this.modelName, this.audit);
   }
 
   async run(userPrompt: string, options: AgentRunnerOptions = {}): Promise<AgentRunResult> {
-    if (options.defaultIntent === 'greenlight') {
-      return this.runGreenlight();
+    if (options.defaultIntent) {
+      const special = this.specialIntentRunners[options.defaultIntent];
+      if (special) {
+        return special();
+      }
     }
 
-    const runId = uuidv4();
+    const runId = WorkflowId.create().value;
     const totalStart = Date.now();
     const steps: AgentStep[] = [];
 
     let usedFallback = false;
 
-    const intent = await this.runStep(steps, 'INTENT', async () => {
+    const intent = await runAgentStep(steps, 'INTENT', async () => {
       if (options.defaultIntent) return options.defaultIntent;
       try {
         return await this.reasoning.classifyIntent(userPrompt);
@@ -56,7 +60,7 @@ export class AgentRunner {
       }
     });
 
-    const schemaText = await this.runStep(steps, 'DISCOVER', async () => {
+    const schemaText = await runAgentStep(steps, 'DISCOVER', async () => {
       const schema = await discoverLiveSchema(this.mcp);
       return { schema };
     });
@@ -64,7 +68,7 @@ export class AgentRunner {
     const planAttempts: Array<{ sql: string; note?: string; fallback?: boolean }> = [];
     let sql = '';
 
-    await this.runStep(steps, 'PLAN_SQL', async () => {
+    await runAgentStep(steps, 'PLAN_SQL', async () => {
       try {
         sql = await this.reasoning.generateSql(intent, userPrompt, schemaText.schema);
         validateGeneratedSql(sql, intent);
@@ -84,11 +88,10 @@ export class AgentRunner {
     const executeAttempts: Array<{ sql: string; rowCount: number; error?: string; retry?: boolean }> = [];
     let queryRows: Record<string, unknown>[] = [];
 
-    await this.runStep(steps, 'EXECUTE', async () => {
+    await runAgentStep(steps, 'EXECUTE', async () => {
       const runOnce = async (statement: string) => {
         validateGeneratedSql(statement, intent === 'ingest' ? intent : 'catalog_qa');
-        const result = await this.mcp.runQuery(statement);
-        return result;
+        return this.mcp.runQuery(statement);
       };
 
       try {
@@ -130,7 +133,7 @@ export class AgentRunner {
       return { rows: queryRows, attempts: executeAttempts, planAttempts: [...planAttempts] };
     });
 
-    const synthesis = await this.runStep(steps, 'SYNTHESIZE', async () => {
+    const synthesis = await runAgentStep(steps, 'SYNTHESIZE', async () => {
       try {
         const raw = await this.reasoning.synthesize(intent, userPrompt, sql, queryRows);
         const { recommendations } = groundRecommendations(raw.recommendations, queryRows);
@@ -144,22 +147,16 @@ export class AgentRunner {
     });
 
     if (!options.skipAudit) {
-      await this.runStep(steps, 'AUDIT', async () => {
-        const auditSql = `
-          INSERT INTO media_catalog.agent_runs
-            (id, user_prompt, intent, sql_executed, latency_ms, model, response_summary)
-          VALUES (
-            '${runId}',
-            '${this.escapeSql(userPrompt)}',
-            '${intent}',
-            '${this.escapeSql(sql)}',
-            ${Date.now() - totalStart},
-            '${this.escapeSql(this.modelName)}',
-            '${this.escapeSql(synthesis.answer.slice(0, 500))}'
-          )
-        `;
-        validateAuditSql(auditSql.trim());
-        await this.mcp.runQuery(auditSql);
+      await runAgentStep(steps, 'AUDIT', async () => {
+        await this.audit.record({
+          id: runId,
+          userPrompt,
+          intent,
+          sqlExecuted: sql,
+          latencyMs: Date.now() - totalStart,
+          model: this.modelName,
+          responseSummary: synthesis.answer.slice(0, 500)
+        });
         return { auditId: runId };
       });
     }
@@ -179,33 +176,9 @@ export class AgentRunner {
     };
   }
 
-  private async runStep<T>(
-    steps: AgentStep[],
-    stepName: AgentStepName,
-    fn: () => Promise<T>
-  ): Promise<T> {
-    const startedAt = new Date().toISOString();
-    const step: AgentStep = { step: stepName, status: 'running', startedAt };
-    steps.push(step);
-    const stepStart = Date.now();
-
-    try {
-      const output = await fn();
-      step.status = 'completed';
-      step.completedAt = new Date().toISOString();
-      step.latencyMs = Date.now() - stepStart;
-      step.output = output;
-      return output;
-    } catch (error) {
-      step.status = 'error';
-      step.completedAt = new Date().toISOString();
-      step.latencyMs = Date.now() - stepStart;
-      step.error = error instanceof Error ? error.message : String(error);
-      throw error;
-    }
-  }
-
-  private escapeSql(value: string): string {
-    return value.replace(/'/g, "''");
+  private get specialIntentRunners(): Partial<Record<AgentIntent, () => Promise<AgentRunResult>>> {
+    return {
+      greenlight: () => this.runGreenlight()
+    };
   }
 }

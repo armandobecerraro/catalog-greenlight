@@ -1,7 +1,11 @@
 export { loadRepoEnv, findRepoEnvPath } from './loadEnv';
-export { McpClickHouseConnector } from './partners/clickhouse/McpClickHouseConnector';
+export { McpClickHouseConnector, isMcpErrorText } from './partners/clickhouse/McpClickHouseConnector';
 export { ConnectorFactory, buildClickHouseConfig } from './partners/ConnectorFactory';
 export { GeminiEnrichmentAdapter } from './gemini/GeminiEnrichmentAdapter';
-export { GeminiReasoningAdapter } from './gemini/GeminiReasoningAdapter';
+export { GeminiReasoningAdapter, parseRecommendations } from './gemini/GeminiReasoningAdapter';
+export { GeminiClientFactory } from './gemini/GeminiClientFactory';
 export { resolveGeminiApiKey } from './gemini/resolveGeminiApiKey';
 export { generateGeminiText } from './gemini/generateContent';
+export { McpCatalogRepository, parseCast } from './catalog/McpCatalogRepository';
+export { McpAgentAuditAdapter } from './catalog/McpAgentAuditAdapter';
+export { EnvSecretManager } from './secrets/EnvSecretManager';

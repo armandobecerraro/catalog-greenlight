@@ -25,18 +25,6 @@ export interface QueryResult {
   };
 }
 
-export interface StreamRequest {
-  partner: PartnerType;
-  query: string;
-  params?: Record<string, unknown>;
-}
-
-export interface StreamChunk {
-  data: Record<string, unknown>[];
-  isLast: boolean;
-  latencyMs: number;
-}
-
 export interface ConnectorConfig {
   type: PartnerType;
   secretRef: string;

@@ -1,11 +1,12 @@
-import { v4 as uuidv4 } from 'uuid';
 import {
   AgentRunResult,
   AgentStep,
   GreenlightRecommendation,
   IMcpConnector,
   IGeminiReasoningPort,
-  validateAuditSql
+  IAgentAuditPort,
+  WorkflowId,
+  runAgentStep
 } from '@bas/core';
 import { GREENLIGHT_ANALYTICS_QUERIES } from '../greenlight/greenlightQueries';
 import { scoreFromAnalyticsById, SCORER_WEIGHTS } from '../greenlight/GreenlightScorer';
@@ -30,18 +31,19 @@ const ANALYTICS_QUERY_IDS = {
 export async function runGreenlightAnalysis(
   mcp: IMcpConnector,
   reasoning: IGeminiReasoningPort,
-  modelName: string
+  modelName: string,
+  audit: IAgentAuditPort
 ): Promise<AgentRunResult> {
-  const runId = uuidv4();
+  const runId = WorkflowId.create().value;
   const totalStart = Date.now();
   const steps: AgentStep[] = [];
 
-  await runStep(steps, 'INTENT', async () => ({
+  await runAgentStep(steps, 'INTENT', async () => ({
     intent: 'greenlight',
     source: 'defaultIntent (no Gemini call)'
   }));
 
-  const analyticsFullById = await runStep(steps, 'DISCOVER', async () => {
+  const analyticsFullById = await runAgentStep(steps, 'DISCOVER', async () => {
     const entries = Object.values(GREENLIGHT_ANALYTICS_QUERIES);
     const results = await Promise.all(
       entries.map(entry => runAnalyticsQuery(mcp, entry))
@@ -64,10 +66,10 @@ export async function runGreenlightAnalysis(
 
   const scoredPlan = scoreFromAnalyticsById(analyticsFullById.fullById);
 
-  await runStep(steps, 'PLAN_SQL', async () => ({
+  await runAgentStep(steps, 'PLAN_SQL', async () => ({
     formula: `opportunity = ${SCORER_WEIGHTS.genre_gap}*genre_gap + ${SCORER_WEIGHTS.wow_momentum}*wow_momentum - ${SCORER_WEIGHTS.cannibalization_penalty}*cannibalization_penalty + ${SCORER_WEIGHTS.language_gap}*language_gap`,
     candidateCount: scoredPlan.scored.length,
-    momentumRowsScored: (analyticsFullById.fullById[ANALYTICS_QUERY_IDS.B] ?? []).length,
+    momentumRowsScored: analyticsFullById.fullById[ANALYTICS_QUERY_IDS.B].length,
     topCandidates: scoredPlan.top.map(c => ({
       title: c.title,
       genre: c.genre,
@@ -78,7 +80,7 @@ export async function runGreenlightAnalysis(
     }))
   }));
 
-  const candidates = await runStep(steps, 'EXECUTE', async () => ({
+  const candidates = await runAgentStep(steps, 'EXECUTE', async () => ({
     rows: scoredPlan.candidateRows
   }));
 
@@ -92,7 +94,7 @@ export async function runGreenlightAnalysis(
     combinedSql
   );
 
-  await runAuditStep(steps, mcp, {
+  await runAuditStep(steps, audit, {
     runId,
     combinedSql,
     modelName,
@@ -218,36 +220,6 @@ function isPoisonAnalyticsRow(row: Record<string, unknown>): boolean {
   return /timed out|exception:|query timed out/i.test(text);
 }
 
-async function runStep<T>(
-  steps: AgentStep[],
-  stepName: AgentStep['step'],
-  fn: () => Promise<T>
-): Promise<T> {
-  const startedAt = new Date().toISOString();
-  const step: AgentStep = { step: stepName, status: 'running', startedAt };
-  steps.push(step);
-  const stepStart = Date.now();
-
-  try {
-    const output = await fn();
-    step.status = 'completed';
-    step.completedAt = new Date().toISOString();
-    step.latencyMs = Date.now() - stepStart;
-    step.output = output;
-    return output;
-  } catch (error) {
-    step.status = 'error';
-    step.completedAt = new Date().toISOString();
-    step.latencyMs = Date.now() - stepStart;
-    step.error = error instanceof Error ? error.message : String(error);
-    throw error;
-  }
-}
-
-function escapeSql(value: string): string {
-  return value.replace(/'/g, "''");
-}
-
 function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promise<T> {
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error(message)), ms);
@@ -266,7 +238,7 @@ function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promi
 
 async function runAuditStep(
   steps: AgentStep[],
-  mcp: IMcpConnector,
+  audit: IAgentAuditPort,
   input: {
     runId: string;
     combinedSql: string;
@@ -281,21 +253,15 @@ async function runAuditStep(
   const stepStart = Date.now();
 
   try {
-    const auditSql = `
-      INSERT INTO media_catalog.agent_runs
-        (id, user_prompt, intent, sql_executed, latency_ms, model, response_summary)
-      VALUES (
-        '${input.runId}',
-        '${escapeSql(GREENLIGHT_USER_PROMPT)}',
-        'greenlight',
-        '${escapeSql(input.combinedSql.slice(0, 4000))}',
-        ${input.totalLatencyMs},
-        '${escapeSql(input.modelName)}',
-        '${escapeSql(input.summary)}'
-      )
-    `;
-    validateAuditSql(auditSql.trim());
-    await mcp.runQuery(auditSql.trim());
+    await audit.record({
+      id: input.runId,
+      userPrompt: GREENLIGHT_USER_PROMPT,
+      intent: 'greenlight',
+      sqlExecuted: input.combinedSql.slice(0, 4000),
+      latencyMs: input.totalLatencyMs,
+      model: input.modelName,
+      responseSummary: input.summary
+    });
     step.status = 'completed';
     step.completedAt = new Date().toISOString();
     step.latencyMs = Date.now() - stepStart;

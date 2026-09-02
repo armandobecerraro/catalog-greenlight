@@ -7,14 +7,12 @@
   "scripts": {
     "build": "tsc",
     "dev": "ts-node src/index.ts",
-    "test": "jest",
+    "test": "jest --coverage",
     "lint": "eslint src --ext .ts",
     "clean": "rm -rf dist"
   },
   "dependencies": {
     "@bas/core": "*",
-    "@bas/infrastructure": "*",
-    "uuid": "^9.0.0",
     "zod": "^3.22.0"
   },
   "devDependencies": {

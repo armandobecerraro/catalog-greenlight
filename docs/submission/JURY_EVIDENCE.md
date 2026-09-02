@@ -1,9 +1,13 @@
 # Jury evidence brief — Catalog Greenlight (facts only, no secrets)
 
 **Public GitHub:** https://github.com/armandobecerraro/catalog-greenlight  
-**Commit inspected:** `d6b1b72` (HEAD; Render URL documented in `545ce31`)  
+**Commit inspected:** `eef06480ab53021babce09821aaab22988fcb8bd` (`git rev-parse HEAD`, 2026-09-02)  
 **Track:** ClickHouse (official `mcp-clickhouse` required)  
-**Product:** Web app for a streaming **programming chief** — catalog stats, ingest, NL Q&A, weekly greenlight picks.
+**Product:** Web app for a streaming **programming chief** — catalog stats, ingest, NL Q&A, weekly **catalog slate** greenlight (three picks).
+
+**Pitch:** ClickHouse measures. TypeScript scores. Gemini explains.
+
+**vs Chloe:** **Catalog Greenlight** = programming chief + weekly catalog slate + 4 MCP SELECTs + TypeScript scorer. **Chloe** (competing hackathon entry) = screenplay→film production — different user, output, and stack.
 
 ---
 
@@ -19,7 +23,7 @@
 | Web / mobile platform | **PASS** | React + Vite UI: `packages/web` — routes `/`, `/catalog`, `/ingest`, `/ask`, `/guia` (`/about` → `/guia`). |
 | New project in contest period | **UNKNOWN** (not verified in repo) | Assumed hackathon build; no creation date in LICENSE (copyright 2026). |
 | No LangChain / OpenAI / Anthropic in runtime | **PASS** | No imports/deps in `packages/*`; only UI disclaimer strings in `packages/web/src/i18n/translations.ts`. |
-| Devpost form + ClickHouse track | **PENDING** | Hosted URL ready; video (`TODO_YOUTUBE`) and Devpost form submission still outstanding. |
+| Devpost form + ClickHouse track | **PENDING** | Draft 1155720; hosted URL ready; video (`TODO_YOUTUBE`) and final Devpost submit still outstanding — form **not** marked Submitted. |
 
 ---
 
@@ -57,7 +61,8 @@ langchain / @langchain / openai / anthropic
 INTENT → DISCOVER → PLAN_SQL → EXECUTE → SYNTHESIZE → AUDIT
 
 - **Catalog Q&A:** DISCOVER (MCP `list_*`) → PLAN_SQL (**Gemini** NL→SQL) → EXECUTE (MCP `run_query`) → SYNTHESIZE (Gemini) → AUDIT.
-- **Greenlight:** DISCOVER (4 parallel MCP analytics SELECTs) → PLAN_SQL (**TypeScript scorer**, not Gemini) → EXECUTE (top candidate rows) → SYNTHESIZE (Gemini narrative only, 10s timeout → scorer fallback) → AUDIT.
+- **Greenlight:** DISCOVER (4 parallel MCP analytics SELECTs: A genre inventory, B title momentum, C cannibalization, D slate holes) → PLAN_SQL (**TypeScript scorer** in `GreenlightScorer.ts`, not Gemini) → EXECUTE (top 3 candidate rows) → SYNTHESIZE (Gemini narrative only via `@google/genai` — **not** Agent Builder / ADK; 10s timeout or 429/error → scorer fallback, HTTP 200) → AUDIT.
+- **Scorer formula** (`GreenlightScorer.ts`): `opportunity = 0.4×genre_gap + 0.4×wow_momentum − 0.2×cannibalization_penalty + 0.05×language_gap`; `pickTopCandidates` enforces genre diversity (max one per genre when ≥3 genres).
 - SQL guard: `packages/core/src/utils/sqlValidation.ts` — blocks DROP/ALTER/TRUNCATE etc.; allows INSERT for ingest/audit.
 - AUDIT step builds INSERT with string concat + `escapeSql()` in AgentRunner — injection risk if prompts contain quotes.
 - UI timeline: `packages/web/src/components/AgentTimeline.tsx`; `/ask` shows SQL + Evidence; dashboard greenlight panel shows timeline below analytics.

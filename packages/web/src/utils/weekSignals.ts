@@ -164,8 +164,8 @@ function breakoutBullet(
     const best = pool.reduce<Record<string, unknown> | null>((top, row) => {
       const wow = num(row, 'wow_pct');
       if (wow == null) return top;
-      if (!top || wow > (num(top, 'wow_pct') ?? -Infinity)) return row;
-      return top;
+      if (!top) return row;
+      return wow > num(top, 'wow_pct')! ? row : top;
     }, null);
     if (best) {
       return t('dashboard.signals.loaded.breakout', {

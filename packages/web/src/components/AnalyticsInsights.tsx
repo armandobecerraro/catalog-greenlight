@@ -7,7 +7,6 @@ function pct(value: number): string {
 }
 
 function barWidth(value: number, max: number): string {
-  if (max <= 0) return '0%';
   return `${Math.min(100, Math.max(4, (Math.abs(value) / max) * 100)).toFixed(1)}%`;
 }
 

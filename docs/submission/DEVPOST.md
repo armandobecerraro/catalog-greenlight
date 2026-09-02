@@ -1,6 +1,32 @@
 # Devpost submission copy — Catalog Greenlight
 
-Paste these fields into https://agentic-cinema.devpost.com/
+Paste these fields into https://agentic-cinema.devpost.com/ (draft **1155720**, track **ClickHouse**).
+
+---
+
+## Devpost fields (copy-paste)
+
+| Field | Value |
+|-------|-------|
+| **Draft** | 1155720 |
+| **Track** | ClickHouse |
+| **Project name** | Catalog Greenlight |
+| **Tagline** | ClickHouse measures. TypeScript scores. Gemini explains. |
+| **Built with** | ClickHouse, mcp-clickhouse, Google Gemini API (`@google/genai`), MCP, TypeScript, React, Docker |
+| **Link to demo** | https://catalog-greenlight.onrender.com |
+| **Link to GitHub** | https://github.com/armandobecerraro/catalog-greenlight |
+| **What it does** | Web app for a streaming **programming chief**: four parallel MCP SELECTs measure the catalog; a transparent TypeScript scorer ranks three weekly greenlight picks; Gemini (`@google/genai` on Google Cloud — **not** Agent Builder / ADK) writes the narrative only. Catalog Q&A uses Gemini for NL→SQL. |
+
+---
+
+## vs Chloe (same hackathon)
+
+| | **Catalog Greenlight** (this project) | **Chloe** (competing entry) |
+|---|--------------------------------------|----------------------------|
+| **User** | Streaming **programming chief** | Filmmaker / writer |
+| **Output** | Weekly **catalog slate** — three titles to push | Screenplay → film production |
+| **Analytics** | Four fixed MCP SELECTs + **TypeScript scorer** | Different stack / workflow |
+| **Gemini role** | Narrative synthesis only (greenlight); NL→SQL on `/ask` | Production-oriented agent |
 
 ---
 
@@ -14,7 +40,7 @@ Paste these fields into https://agentic-cinema.devpost.com/
 
 ## Elevator pitch (short description)
 
-Catalog Greenlight is a web app for a streaming programming chief. Each week it greenlights three titles because **ClickHouse measured** genre gaps, week-over-week revenue momentum, and cannibalization — not because Gemini improvised. Four fixed MCP analytics queries run in parallel; a deterministic TypeScript scorer ranks candidates (`opportunity = 0.4×genre_gap + 0.4×wow − 0.2×cannibalization`) and enforces genre diversity. Gemini (`@google/genai`) writes the narrative only. If synthesis fails or hangs, the dashboard still shows three scorer picks with measured `opportunity_score`, `wow_pct`, and `genre_gap`.
+**Catalog Greenlight** is a web app for a streaming **programming chief**. Each week it greenlights three titles in a **catalog slate** because **ClickHouse measured** genre gaps, week-over-week revenue momentum, cannibalization, and language holes — not because Gemini improvised. Four fixed MCP analytics queries run in parallel at runtime; a deterministic **TypeScript scorer** ranks candidates (`opportunity = 0.4×genre_gap + 0.4×wow_momentum − 0.2×cannibalization_penalty + 0.05×language_gap`; see `GreenlightScorer.ts`) and enforces genre diversity. Gemini (`@google/genai` on Google Cloud — **not** Agent Builder / ADK) writes the narrative only. If synthesis fails, times out (10s), or hits 429/quota, the dashboard still returns three scorer picks with measured `opportunity_score`, `wow_pct`, and `genre_gap`.
 
 ## Built with
 
@@ -44,7 +70,7 @@ https://github.com/armandobecerraro/catalog-greenlight
 1. **Dashboard** — live catalog stats from ClickHouse via MCP, plus **Greenlight this week**: provenance header (scorer formula), weekly programming ritual table (export CSV/JSON), three rec-cards with per-card score provenance, ClickHouse analytics panels, and Gemini narrative
 2. **Ingest** — add a title; Gemini enriches summary/tags; MCP INSERT persists it
 3. **Ask the catalog** — natural language → 6-step agent timeline → Gemini-planned SQL → result rows → grounded recommendations
-4. **Greenlight pipeline** — four parallel MCP SELECTs → TypeScript scorer → Gemini synthesis (bounded timeout; scorer fallback if Gemini fails)
+4. **Greenlight pipeline** — four parallel MCP SELECTs → TypeScript scorer → Gemini synthesis (10s timeout; scorer fallback on failure, timeout, or 429)
 
 Gemini does **not** plan SQL for the greenlight path.
 
@@ -64,7 +90,7 @@ Gemini does **not** plan SQL for the greenlight path.
 - **Catalog Q&A** — `GeminiReasoningAdapter.ts` classifies intent, generates SQL, synthesizes answers
 - **Greenlight** — same adapter's `synthesizeGreenlight` writes executive narrative from scorer candidate rows only; scoring is TypeScript, not Gemini
 - Fails fast if `GEMINI_API_KEY` is missing (no silent fake in API/demo/web)
-- Synthesis bounded to 10s; timeout or error → three scorer recommendations still returned (SYNTHESIZE step marked error)
+- Synthesis bounded to 10s (`GREENLIGHT_SYNTHESIZE_TIMEOUT_MS`); timeout, API error, or **429/quota** → three scorer recommendations still returned (HTTP 200; SYNTHESIZE step completes with `fallback: true`)
 
 ## Try it yourself
 

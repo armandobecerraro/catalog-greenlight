@@ -15,7 +15,10 @@ export function forwardSendFileError(err: Error | undefined, next: NextFunction)
 export function createApp(runtime: ApiRuntime): express.Express {
   const app = express();
   const apiAuth = runtime.apiKeyRequired ? requireApiKey : (_req: Request, _res: Response, next: NextFunction) => next();
-  const requireReady = createRequireReady(runtime.isReady, runtime.initError);
+  const requireReady = createRequireReady(
+    () => runtime.isReady(),
+    () => runtime.initError()
+  );
   const greenlightCache = new GreenlightCache({
     runGreenlight: () => runtime.agentRunner.runGreenlight()
   });

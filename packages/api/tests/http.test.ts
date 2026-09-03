@@ -94,6 +94,18 @@ describe('createApp HTTP', () => {
     expect(res.body.error).toMatch(/initializing/i);
   });
 
+  it('honors in-place runtime swap after listen (production startup)', async () => {
+    const runtime = sampleRuntime({ isReady: () => false, initError: () => null });
+    const app = createApp(runtime);
+    expect((await request(app).get('/api/v1/greenlight')).status).toBe(503);
+    expect((await request(app).get('/api/v1/health')).body.ready).toBe(true);
+
+    Object.assign(runtime, sampleRuntime());
+    const gl = await request(app).get('/api/v1/greenlight');
+    expect(gl.status).toBe(200);
+    expect(gl.body.recommendations[0].title).toMatch(/Bogotá/);
+  });
+
   it('asks, lists catalog, stats, ingest, greenlight', async () => {
     const runtime = sampleRuntime();
     const app = createApp(runtime);

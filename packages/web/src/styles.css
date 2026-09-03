@@ -1186,6 +1186,123 @@ a { color: var(--accent); }
   text-align: center;
 }
 
+/* —— Health / trust / dashboard hero —— */
+.health-banner {
+  background: linear-gradient(90deg, #1a2438 0%, #2a1f10 100%);
+  border-bottom: 1px solid var(--accent-dim);
+  padding: 0.85rem 1.5rem;
+}
+.health-banner-inner { max-width: 72rem; margin: 0 auto; }
+.health-banner-title {
+  margin: 0;
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 1.15rem;
+  letter-spacing: 0.06em;
+  color: var(--accent);
+}
+.health-banner-body { margin: 0.25rem 0 0.5rem; }
+.health-banner-retry { margin-top: 0.35rem; }
+
+.trust-strip {
+  margin-bottom: 1rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+}
+.trust-strip-pitch {
+  margin: 0 0 0.5rem;
+  font-weight: 700;
+  color: var(--accent);
+  font-size: 0.95rem;
+}
+.trust-strip-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.trust-badge {
+  display: inline-flex;
+  gap: 0.35rem;
+  align-items: baseline;
+  padding: 0.25rem 0.55rem;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 0.8rem;
+  background: var(--surface-2);
+}
+.trust-badge.is-ok { border-color: var(--success); }
+.trust-badge-label { color: var(--muted); font-weight: 600; }
+.trust-badge-value { color: var(--text); }
+
+.greenlight-hero {
+  border-color: var(--accent-dim);
+  box-shadow: 0 0 0 1px rgba(232, 197, 71, 0.08);
+}
+.greenlight-rec-hero { margin-top: 0.5rem; }
+
+.dashboard-snapshot { margin-top: 1rem; }
+.dashboard-snapshot-toggle { margin-bottom: 0.75rem; }
+
+.evidence-disclosure { margin-top: 1rem; }
+.evidence-toggle { margin-bottom: 0.75rem; }
+
+.fallback-badge {
+  margin: 0.75rem 0;
+  padding: 0.55rem 0.85rem;
+  border-left: 3px solid var(--accent);
+  background: rgba(232, 197, 71, 0.08);
+  font-size: 0.9rem;
+}
+.ask-filter-note { margin-top: 0.5rem; }
+
+.catalog-stats-nav { margin: -0.5rem 0 1rem; }
+
+.catalog-table-wrap {
+  -webkit-overflow-scrolling: touch;
+  max-width: 100%;
+}
+.catalog-table { min-width: 640px; }
+.catalog-table th:first-child,
+.catalog-table td:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--surface);
+  box-shadow: 2px 0 4px rgba(0, 0, 0, 0.25);
+}
+.catalog-table td:first-child { min-width: 10rem; max-width: 14rem; }
+.catalog-table td:last-child { min-width: 8rem; white-space: normal; }
+
+@media (max-width: 640px) {
+  .topbar {
+    padding: 0.65rem 0.85rem;
+    gap: 0.5rem;
+  }
+  .brand h1 { font-size: 1.35rem; }
+  .brand-mark { width: 40px; height: 40px; font-size: 1.1rem; }
+  .topbar-actions {
+    flex: 1 1 100%;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 0.15rem;
+  }
+  .nav {
+    flex-wrap: nowrap;
+    gap: 0.25rem;
+  }
+  .nav a {
+    font-size: 0.8rem;
+    padding: 0.35rem 0.55rem;
+    white-space: nowrap;
+  }
+}
+
 @media (max-width: 390px) {
   .topbar { padding: 0.75rem; }
   .brand p { display: none; }
@@ -1196,6 +1313,6 @@ a { color: var(--accent); }
   }
   .prov-contrib { text-align: left; }
   .ritual-head { flex-direction: column; }
-  .nav { width: 100%; }
-  .topbar-actions { width: 100%; justify-content: space-between; }
+  .nav { width: auto; }
+  .topbar-actions { width: auto; }
 }

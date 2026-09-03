@@ -2,9 +2,12 @@ import {
   runGreenlightAnalysis,
   GREENLIGHT_SYNTHESIZE_TIMEOUT_MS
 } from '../../src/greenlight/GreenlightAnalyst';
-import { IMcpConnector, IGeminiReasoningPort } from '@bas/core';
+import { IMcpConnector, IGeminiReasoningPort, IAgentAuditPort } from '@bas/core';
 
 describe('GreenlightAnalyst', () => {
+  afterEach(() => {
+    jest.useRealTimers();
+  });
   const momentumRows = Array.from({ length: 25 }, (_, i) => ({
     title_id: `t${i}`,
     title: i === 24 ? 'Late Winner' : `Title ${i}`,
@@ -21,7 +24,6 @@ describe('GreenlightAnalyst', () => {
     connect: jest.fn(),
     disconnect: jest.fn(),
     query: jest.fn(),
-    stream: jest.fn(),
     listDatabases: jest.fn(),
     listTables: jest.fn(),
     runQuery: jest.fn()
@@ -34,8 +36,16 @@ describe('GreenlightAnalyst', () => {
     synthesizeGreenlight: jest.fn()
   };
 
+  const mockAudit: jest.Mocked<IAgentAuditPort> = {
+    record: jest.fn().mockResolvedValue(undefined)
+  };
+
+  const analyze = (model = 'gemini-test') =>
+    runGreenlightAnalysis(mockMcp, mockReasoning, model, mockAudit);
+
   beforeEach(() => {
     jest.clearAllMocks();
+    mockAudit.record.mockResolvedValue(undefined);
     mockMcp.runQuery.mockImplementation(async (sql: string) => {
       if (sql.includes('INSERT INTO media_catalog.agent_runs')) {
         return { rows: [], metadata: { rowCount: 0, latencyMs: 1, partner: 'clickhouse' } };
@@ -68,7 +78,7 @@ describe('GreenlightAnalyst', () => {
   it('still returns 3 recommendations when Gemini throws', async () => {
     mockReasoning.synthesizeGreenlight.mockRejectedValue(new Error('Gemini unavailable'));
 
-    const result = await runGreenlightAnalysis(mockMcp, mockReasoning, 'gemini-test');
+    const result = await analyze();
 
     expect(result.recommendations).toHaveLength(3);
     expect(result.recommendations![0].opportunity_score).toBeDefined();
@@ -82,7 +92,7 @@ describe('GreenlightAnalyst', () => {
     jest.useFakeTimers();
     mockReasoning.synthesizeGreenlight.mockImplementation(() => new Promise(() => {}));
 
-    const runPromise = runGreenlightAnalysis(mockMcp, mockReasoning, 'gemini-test');
+    const runPromise = analyze();
     await jest.advanceTimersByTimeAsync(GREENLIGHT_SYNTHESIZE_TIMEOUT_MS + 1);
     const result = await runPromise;
 
@@ -99,35 +109,9 @@ describe('GreenlightAnalyst', () => {
       answer: 'Weekly picks',
       recommendations: []
     });
-    mockMcp.runQuery.mockImplementation(async (sql: string) => {
-      if (sql.includes('INSERT INTO media_catalog.agent_runs')) {
-        throw new Error('audit write failed');
-      }
-      if (sql.includes('GROUP BY mc.genre') && sql.includes('revenue_4w')) {
-        return {
-          rows: [
-            { genre: 'Comedy', title_count: 40, revenue_4w: 8000 },
-            { genre: 'Thriller', title_count: 8, revenue_4w: 30000 }
-          ],
-          metadata: { rowCount: 2, latencyMs: 1, partner: 'clickhouse' }
-        };
-      }
-      if (sql.includes('wow_pct')) {
-        return { rows: momentumRows, metadata: { rowCount: 25, latencyMs: 1, partner: 'clickhouse' } };
-      }
-      if (sql.includes('quantile')) {
-        return { rows: [], metadata: { rowCount: 0, latencyMs: 1, partner: 'clickhouse' } };
-      }
-      if (sql.includes('hole_type')) {
-        return {
-          rows: [{ hole_type: 'genre', dimension: 'Thriller', gap_score: 0.5 }],
-          metadata: { rowCount: 1, latencyMs: 1, partner: 'clickhouse' }
-        };
-      }
-      return { rows: [], metadata: { rowCount: 0, latencyMs: 1, partner: 'clickhouse' } };
-    });
+    mockAudit.record.mockRejectedValueOnce(new Error('audit write failed'));
 
-    const result = await runGreenlightAnalysis(mockMcp, mockReasoning, 'gemini-test');
+    const result = await analyze();
 
     expect(result.recommendations).toHaveLength(3);
     const audit = result.steps.find(s => s.step === 'AUDIT');
@@ -141,7 +125,7 @@ describe('GreenlightAnalyst', () => {
       recommendations: []
     });
 
-    await runGreenlightAnalysis(mockMcp, mockReasoning, 'gemini-test');
+    await analyze();
 
     const analyticsCalls = mockMcp.runQuery.mock.calls.filter(
       c => !String(c[0]).includes('INSERT INTO media_catalog.agent_runs')
@@ -188,7 +172,7 @@ describe('GreenlightAnalyst', () => {
       return { rows: [], metadata: { rowCount: 0, latencyMs: 1, partner: 'clickhouse' } };
     });
 
-    const result = await runGreenlightAnalysis(mockMcp, mockReasoning, 'gemini-test');
+    const result = await analyze();
     const discover = result.steps.find(s => s.step === 'DISCOVER');
     const momentumQuery = (discover?.output as { queries: Array<{ id: string; rowCount: number }> }).queries.find(
       q => q.id === 'B_title_momentum'
@@ -198,45 +182,17 @@ describe('GreenlightAnalyst', () => {
     expect(result.recommendations!.some(r => r.title === 'Late Winner')).toBe(true);
   });
 
-  it('escapes single quotes in AUDIT INSERT model name', async () => {
+  it('passes model name with quotes to the audit port', async () => {
     mockReasoning.synthesizeGreenlight.mockResolvedValue({
       answer: 'Weekly picks',
       recommendations: []
     });
-    let auditSql = '';
-    mockMcp.runQuery.mockImplementation(async (sql: string) => {
-      if (sql.includes('INSERT INTO media_catalog.agent_runs')) {
-        auditSql = sql;
-        return { rows: [], metadata: { rowCount: 0, latencyMs: 1, partner: 'clickhouse' } };
-      }
-      if (sql.includes('GROUP BY mc.genre') && sql.includes('revenue_4w')) {
-        return {
-          rows: [
-            { genre: 'Comedy', title_count: 40, revenue_4w: 8000 },
-            { genre: 'Thriller', title_count: 8, revenue_4w: 30000 }
-          ],
-          metadata: { rowCount: 2, latencyMs: 1, partner: 'clickhouse' }
-        };
-      }
-      if (sql.includes('wow_pct')) {
-        return { rows: momentumRows, metadata: { rowCount: 25, latencyMs: 1, partner: 'clickhouse' } };
-      }
-      if (sql.includes('quantile')) {
-        return { rows: [], metadata: { rowCount: 0, latencyMs: 1, partner: 'clickhouse' } };
-      }
-      if (sql.includes('hole_type')) {
-        return {
-          rows: [{ hole_type: 'genre', dimension: 'Thriller', gap_score: 0.5 }],
-          metadata: { rowCount: 1, latencyMs: 1, partner: 'clickhouse' }
-        };
-      }
-      return { rows: [], metadata: { rowCount: 0, latencyMs: 1, partner: 'clickhouse' } };
-    });
 
-    await runGreenlightAnalysis(mockMcp, mockReasoning, "gemini'--");
+    await analyze("gemini'--");
 
-    expect(auditSql).toContain("'gemini''--'");
-    expect(auditSql).not.toMatch(/model,\s*'gemini',\s*'/);
+    expect(mockAudit.record).toHaveBeenCalledWith(
+      expect.objectContaining({ model: "gemini'--" })
+    );
   });
 
   it('uses full momentum rows for scoring (not DISCOVER timeline slice)', async () => {
@@ -245,9 +201,93 @@ describe('GreenlightAnalyst', () => {
       recommendations: []
     });
 
-    const result = await runGreenlightAnalysis(mockMcp, mockReasoning, 'gemini-test');
+    const result = await analyze();
     const plan = result.steps.find(s => s.step === 'PLAN_SQL');
     expect((plan?.output as { momentumRowsScored?: number }).momentumRowsScored).toBe(25);
     expect(result.recommendations!.some(r => r.title === 'Late Winner')).toBe(true);
+  });
+
+  it('keeps Gemini narrative when recommendations ground to scored titles', async () => {
+    mockReasoning.synthesizeGreenlight.mockImplementation(async (_p, _sql, rows) => ({
+      answer: 'Grounded memo',
+      recommendations: rows.slice(0, 3).map(r => ({
+        title: String(r.title),
+        genre: String(r.genre ?? 'Thriller'),
+        justification: 'measured',
+        evidence: 'score'
+      }))
+    }));
+
+    const result = await analyze();
+    const synth = result.steps.find(s => s.step === 'SYNTHESIZE');
+    expect(result.answer).toBe('Grounded memo');
+    expect((synth?.output as { fallback?: boolean }).fallback).toBeUndefined();
+  });
+
+  it('records analytics query errors after retry is exhausted', async () => {
+    mockReasoning.synthesizeGreenlight.mockResolvedValue({ answer: 'ok', recommendations: [] });
+    mockMcp.runQuery.mockRejectedValue(new Error('mcp down'));
+    const result = await analyze();
+    const discover = result.steps.find(s => s.step === 'DISCOVER');
+    const queries = (discover?.output as { queries: Array<{ error?: string }> }).queries;
+    expect(queries.every(q => q.error === 'mcp down')).toBe(true);
+    expect(mockMcp.runQuery.mock.calls.length).toBeGreaterThanOrEqual(8);
+  });
+
+  it('uses fallback copy when Gemini returns an empty answer', async () => {
+    mockReasoning.synthesizeGreenlight.mockResolvedValue({
+      answer: '',
+      recommendations: [{ title: 'Hallucinated', genre: 'Sci-Fi', justification: 'nope', evidence: 'nope' }]
+    });
+    const result = await analyze();
+    expect(result.answer).toMatch(/Weekly greenlight from measured ClickHouse/);
+    expect((result.steps.find(s => s.step === 'SYNTHESIZE')?.output as { fallback?: boolean }).fallback).toBe(true);
+  });
+
+  it('stringifies non-Error synthesize, analytics, and audit failures', async () => {
+    mockReasoning.synthesizeGreenlight.mockRejectedValue('writer-down');
+    mockAudit.record.mockRejectedValue('audit-down');
+    mockMcp.runQuery.mockRejectedValue('mcp-down');
+    const result = await analyze();
+    expect((result.steps.find(s => s.step === 'SYNTHESIZE')?.output as { geminiError?: string }).geminiError).toBe(
+      'writer-down'
+    );
+    expect(result.steps.find(s => s.step === 'AUDIT')?.error).toBe('audit-down');
+    const queries = (result.steps.find(s => s.step === 'DISCOVER')?.output as { queries: Array<{ error?: string }> })
+      .queries;
+    expect(queries.every(q => q.error === 'mcp-down')).toBe(true);
+  });
+
+  it('keeps momentum rows that have a title even if the text looks like a timeout', async () => {
+    mockReasoning.synthesizeGreenlight.mockResolvedValue({ answer: 'ok', recommendations: [] });
+    mockMcp.runQuery.mockImplementation(async (sql: string) => {
+      if (sql.includes('wow_pct')) {
+        return {
+          rows: [
+            {
+              title_id: 'keep',
+              title: 'Keep Me',
+              genre: 'Thriller',
+              language: 'es',
+              revenue_this_week: 500,
+              revenue_prior_week: 100,
+              wow_pct: 4,
+              views_this_week: 9,
+              text: 'Query timed out after 30 seconds'
+            }
+          ],
+          metadata: { rowCount: 1, latencyMs: 1, partner: 'clickhouse' }
+        };
+      }
+      if (sql.includes('GROUP BY mc.genre') && sql.includes('revenue_4w')) {
+        return {
+          rows: [{ genre: 'Thriller', title_count: 1, revenue_4w: 500 }],
+          metadata: { rowCount: 1, latencyMs: 1, partner: 'clickhouse' }
+        };
+      }
+      return { rows: [], metadata: { rowCount: 0, latencyMs: 1, partner: 'clickhouse' } };
+    });
+    const result = await analyze();
+    expect(result.recommendations!.some(r => r.title === 'Keep Me')).toBe(true);
   });
 });

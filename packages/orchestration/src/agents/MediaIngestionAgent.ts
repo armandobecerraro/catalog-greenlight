@@ -1,4 +1,4 @@
-import { MediaContent, MediaEnrichment, IMcpConnector, IGeminiEnrichmentPort } from '@bas/core';
+import { MediaContent, IMediaIngestionService, MediaEnrichment } from '@bas/core';
 
 export interface AgentState {
   content: MediaContent | null;
@@ -8,13 +8,11 @@ export interface AgentState {
   step: number;
 }
 
+/** Facade over MediaIngestionService — same ingest path as the HTTP API. */
 export class MediaIngestionAgent {
-  constructor(
-    private readonly mcp: IMcpConnector,
-    private readonly geminiClient: IGeminiEnrichmentPort
-  ) {}
+  constructor(private readonly ingestion: IMediaIngestionService) {}
 
-  async execute(content: MediaContent): Promise<AgentState> {
+  async execute(content: MediaContent | null): Promise<AgentState> {
     if (!content) {
       return {
         content: null,
@@ -26,47 +24,14 @@ export class MediaIngestionAgent {
     }
 
     try {
-      const enrichStart = Date.now();
-      const enrichment = await this.geminiClient.enrich({
-        title: content.title,
-        description: content.description,
-        genre: content.genre,
-        releaseDate: content.releaseDate.toISOString(),
-        cast: content.cast
-      });
-      const enrichLatency = Date.now() - enrichStart;
-
-      content.applyEnrichment(enrichment);
-
-      const releaseDate = content.releaseDate.toDateOnlyString();
-      const enrichmentJson = JSON.stringify(enrichment.toJSON()).replace(/'/g, "''");
-      const castArray = [...content.cast].map(c => `'${c.replace(/'/g, "''")}'`).join(', ');
-
-      const insertSql = `
-        INSERT INTO media_catalog.media_content
-          (id, title, description, genre, release_date, cast, enrichment)
-        VALUES (
-          '${content.id.replace(/'/g, "''")}',
-          '${content.title.replace(/'/g, "''")}',
-          '${content.description.replace(/'/g, "''")}',
-          '${content.genre.replace(/'/g, "''")}',
-          '${releaseDate}',
-          [${castArray}],
-          '${enrichmentJson}'
-        )
-      `;
-
-      const storeStart = Date.now();
-      const result = await this.mcp.runQuery(insertSql);
-      const storeLatency = Date.now() - storeStart;
-
+      const result = await this.ingestion.process(content);
       return {
         content,
-        enrichment,
+        enrichment: content.enrichment,
         storageResult: {
-          success: true,
-          latencyMs: enrichLatency + storeLatency,
-          storedRows: result.metadata.rowCount
+          success: result.success,
+          latencyMs: result.latencyMs,
+          storedRows: result.storedRows
         },
         errors: [],
         step: 3

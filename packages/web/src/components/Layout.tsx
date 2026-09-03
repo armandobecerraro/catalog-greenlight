@@ -1,4 +1,5 @@
 import { Link, NavLink, Outlet } from 'react-router-dom';
+import { HealthBanner } from './HealthBanner';
 import { LanguageToggle, useLocale } from '../i18n/LocaleContext';
 
 export function Layout() {
@@ -6,6 +7,7 @@ export function Layout() {
 
   return (
     <div className="app-shell">
+      <HealthBanner />
       <header className="topbar">
         <Link to="/" className="brand brand-link">
           <span className="brand-mark">CG</span>

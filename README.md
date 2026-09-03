@@ -2,13 +2,17 @@
 
 **Agentic Cinema Hackathon — ClickHouse Track**
 
-> The agent that tells programming what to push — with ClickHouse evidence.
+> **ClickHouse measures. TypeScript scores. Gemini explains.**
 
-Catalog Greenlight is a web product for a **programming chief** at a small Latin/US streaming studio. For weekly greenlight, **ClickHouse measures** (four fixed MCP analytics queries), a **TypeScript scorer** ranks titles with a transparent formula and genre diversity, and **Gemini** (`@google/genai`) writes the narrative only — it does not plan greenlight SQL. Catalog Q&A on `/ask` still uses Gemini for intent and NL→SQL.
+**Catalog Greenlight** is a web product for a streaming **programming chief** at a small Latin/US streaming studio. Each week it greenlights three titles in a **catalog slate**: four fixed MCP SELECTs at runtime, a transparent **TypeScript scorer** (`GreenlightScorer.ts`) ranks candidates and enforces genre diversity, and **Gemini** (`@google/genai` on Google Cloud — **not** Agent Builder / ADK) writes the narrative only — it does not plan greenlight SQL. If Gemini synthesis fails, times out, or returns 429, the dashboard still shows three scorer picks. Catalog Q&A on `/ask` uses Gemini for intent and NL→SQL.
+
+**Not Chloe:** the competing **Chloe** entry targets screenplay→film production; **Catalog Greenlight** targets weekly catalog programming decisions backed by ClickHouse analytics.
 
 **Repository:** https://github.com/armandobecerraro/catalog-greenlight
 
 **Live demo:** https://catalog-greenlight.onrender.com
+
+**Demo video:** `TODO_YOUTUBE` — shot list and timing in `docs/submission/VIDEO_CHECKLIST.md` (record against the hosted URL only).
 
 ## User documentation
 
@@ -109,7 +113,7 @@ INTENT (skipped — default greenlight)
   → DISCOVER   (4 parallel MCP SELECTs: genre inventory, WoW momentum, cannibalization, slate holes)
   → PLAN_SQL   (TypeScript scorer — not Gemini)
   → EXECUTE    (top 3 candidate rows)
-  → SYNTHESIZE (Gemini narrative only; 10s timeout → scorer fallback, HTTP 200)
+  → SYNTHESIZE (Gemini narrative only; 10s timeout or 429/error → scorer fallback, HTTP 200)
   → AUDIT      (MCP INSERT into agent_runs; failure logged, recs still returned)
 ```
 
@@ -207,16 +211,16 @@ deployment/docker/         ClickHouse, seed SQL, prod compose
 
 ## 3-minute demo video script (English)
 
-**Record against the hosted app only** — https://catalog-greenlight.onrender.com (not localhost). Full shot list, narration, and checklist: `docs/submission/VIDEO_CHECKLIST.md`.
+**Record against the hosted app only** — https://catalog-greenlight.onrender.com (not localhost). Pre-warm Render 60–90 s; hit `?refresh=1` before rolling. Full word-for-word script, shot list, branches, and checklist: `docs/submission/VIDEO_CHECKLIST.md`.
 
-| Time | Scene | What to show |
-|------|-------|--------------|
-| 0:00–0:20 | Hook | Problem: a programming chief needs data-backed picks, not generic AI summaries. |
-| 0:20–0:45 | Dashboard stats | Open **https://catalog-greenlight.onrender.com** — catalog size, genre breakdown, latest revenue (live ClickHouse via MCP). |
-| 0:45–1:15 | Ingest | `/ingest` — add a title → Gemini enrichment → `/catalog` confirms the new row. |
-| 1:15–2:00 | Ask | `/ask` — “Which genre is under-represented in our catalog?” → 6-step timeline (INTENT → … → AUDIT) → SQL block → evidence rows → grounded answer. |
-| 2:00–2:30 | Greenlight | Dashboard **Greenlight this week** — provenance header + weekly ritual table → three rec-cards (score provenance, `opportunity_score`, `wow_pct`, `genre_gap`, cannibal flag) → ClickHouse analytics panels → Gemini narrative. **Say aloud:** “ClickHouse measures. TypeScript scores. Gemini explains.” |
-| 2:30–3:00 | Architecture | Slide: `mcp-clickhouse` + `@google/genai` (Gemini API on Google Cloud — not Agent Builder) + GitHub repo + hosted URL on screen. |
+| Time | Scene | What to show | Branch B |
+|------|-------|--------------|----------|
+| 0:00–0:20 | Hook | Say **Catalog Greenlight** — programming chief needs weekly greenlight picks backed by evidence, not vibes. | — |
+| 0:20–0:45 | Dashboard stats | **https://catalog-greenlight.onrender.com** — catalog size, genre breakdown, latest revenue (ClickHouse via **mcp-clickhouse** MCP). | — |
+| 0:45–1:15 | Ingest | `/ingest` — “Midnight Signal”, Sci-Fi → Gemini enrichment → `/catalog` new row. | Gemini down: say “Ingest needs Gemini; skipping to Ask/Greenlight” → skip to Ask or Greenlight. |
+| 1:15–2:00 | Ask | `/ask` — “Which genre is under-represented in our catalog?” → 6-step timeline → SQL → evidence → grounded answer. | HTTP 429: note “If 429, record Ask after credits”; finish Greenlight + architecture, splice Ask later. |
+| 2:00–2:30 | Greenlight | **Greenlight this week** — three rec-cards + provenance. **Say aloud:** “ClickHouse measures. TypeScript scores. Gemini explains.” | — |
+| 2:30–3:00 | Architecture | Slide: `mcp-clickhouse` + `@google/genai` (Gemini API on Google Cloud — **not Agent Builder**) + GitHub + hosted URL. | — |
 
 Paste the YouTube link into `docs/submission/DEVPOST.md` as `TODO_YOUTUBE` when uploaded.
 

@@ -1,4 +1,4 @@
-import { IMcpConnector } from '@bas/core';
+import { IMcpConnector, escapeSqlLiteral } from '@bas/core';
 
 const SCHEMA_TTL_MS = 5 * 60 * 1000;
 
@@ -26,7 +26,7 @@ export async function discoverLiveSchema(mcp: IMcpConnector): Promise<string> {
       const colResult = await mcp.runQuery(`
         SELECT name, type
         FROM system.columns
-        WHERE database = 'media_catalog' AND table = '${table.replace(/'/g, "''")}'
+        WHERE database = 'media_catalog' AND table = '${escapeSqlLiteral(table)}'
         ORDER BY position
       `);
       const cols = colResult.rows

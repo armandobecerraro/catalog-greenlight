@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Locale, translate } from './translations';
 
-const STORAGE_KEY = 'cg-locale';
+export const STORAGE_KEY = 'cg-locale';
 
 interface LocaleContextValue {
   locale: Locale;
@@ -12,11 +12,13 @@ interface LocaleContextValue {
 
 const LocaleContext = createContext<LocaleContextValue | null>(null);
 
-function readInitialLocale(): Locale {
-  if (typeof window === 'undefined') return 'en';
-  const saved = localStorage.getItem(STORAGE_KEY);
+export function readInitialLocale(
+  storage: { getItem(key: string): string | null } | null | undefined = globalThis.localStorage,
+  language = navigator.language
+): Locale {
+  const saved = storage?.getItem(STORAGE_KEY);
   if (saved === 'en' || saved === 'es') return saved;
-  return navigator.language.toLowerCase().startsWith('es') ? 'es' : 'en';
+  return language.toLowerCase().startsWith('es') ? 'es' : 'en';
 }
 
 export function LocaleProvider({ children }: { children: ReactNode }) {

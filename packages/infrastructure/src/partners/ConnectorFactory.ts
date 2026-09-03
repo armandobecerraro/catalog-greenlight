@@ -1,51 +1,49 @@
-import { IConnector, IConnectorFactory, ConnectionConfig, IGeminiEnrichmentPort } from '@bas/core';
+import { IConnector, IConnectorFactory, ConnectionConfig, ISecretManager } from '@bas/core';
 import { McpClickHouseConnector } from './clickhouse/McpClickHouseConnector';
-import { GeminiEnrichmentAdapter } from '../gemini/GeminiEnrichmentAdapter';
-import { GeminiReasoningAdapter } from '../gemini/GeminiReasoningAdapter';
-import { resolveGeminiApiKey } from '../gemini/resolveGeminiApiKey';
+import { EnvSecretManager } from '../secrets/EnvSecretManager';
 
 export class ConnectorFactory implements IConnectorFactory {
   private static readonly connectors: Map<string, IConnector> = new Map();
   private static readonly registrations: Map<string, new () => IConnector> = new Map();
 
+  constructor(private readonly secrets: ISecretManager = new EnvSecretManager()) {
+    if (!ConnectorFactory.registrations.has('clickhouse')) {
+      ConnectorFactory.registerDefaults();
+    }
+  }
+
+  static registerDefaults(): void {
+    ConnectorFactory.registrations.set('clickhouse', McpClickHouseConnector);
+    ConnectorFactory.registrations.set('clickhouse-mcp', McpClickHouseConnector);
+  }
+
+  static resetForTests(): void {
+    ConnectorFactory.connectors.clear();
+    ConnectorFactory.registrations.clear();
+    ConnectorFactory.registerDefaults();
+  }
+
   async create(partner: string, config: ConnectionConfig): Promise<IConnector> {
-    const key = `${partner}-${JSON.stringify(config)}`;
+    const credentials =
+      Object.keys(config.credentials ?? {}).length > 0
+        ? config.credentials
+        : await this.secrets.getSecret(config.secretRef || partner);
+
+    const resolved: ConnectionConfig = { ...config, credentials };
+    const key = `${partner}-${JSON.stringify(resolved)}`;
     let connector = ConnectorFactory.connectors.get(key);
 
     if (!connector) {
-      switch (partner) {
-        case 'clickhouse':
-        case 'clickhouse-mcp':
-          connector = new McpClickHouseConnector();
-          break;
-        default: {
-          const RegisteredClass = ConnectorFactory.registrations.get(partner);
-          if (RegisteredClass) {
-            connector = new RegisteredClass();
-          } else {
-            throw new Error(`Unknown partner: ${partner}`);
-          }
-        }
+      const RegisteredClass = ConnectorFactory.registrations.get(partner);
+      if (!RegisteredClass) {
+        throw new Error(`Unknown partner: ${partner}`);
       }
+      connector = new RegisteredClass();
       ConnectorFactory.connectors.set(key, connector);
     }
 
-    await connector.connect(config);
+    await connector.connect(resolved);
     return connector;
-  }
-
-  createGeminiClient(): IGeminiEnrichmentPort {
-    const apiKey = resolveGeminiApiKey();
-    return new GeminiEnrichmentAdapter(apiKey);
-  }
-
-  createGeminiReasoningClient(): GeminiReasoningAdapter {
-    const apiKey = resolveGeminiApiKey();
-    return new GeminiReasoningAdapter(apiKey);
-  }
-
-  createGeminiAdapter(apiKey: string): GeminiEnrichmentAdapter {
-    return new GeminiEnrichmentAdapter(apiKey);
   }
 
   register(type: string, connectorClass: new () => IConnector): void {
@@ -53,22 +51,10 @@ export class ConnectorFactory implements IConnectorFactory {
   }
 }
 
-export function buildClickHouseConfig(): ConnectionConfig {
+export function buildClickHouseConfig(secrets: EnvSecretManager = new EnvSecretManager()): ConnectionConfig {
   return {
     partner: 'clickhouse',
     secretRef: 'local-dev',
-    credentials: {
-      host: process.env.CLICKHOUSE_HOST || 'localhost',
-      port: process.env.CLICKHOUSE_PORT || '8123',
-      username: process.env.CLICKHOUSE_USER || process.env.CLICKHOUSE_USERNAME || 'default',
-      password: process.env.CLICKHOUSE_PASSWORD || '',
-      database: process.env.CLICKHOUSE_DATABASE || 'media_catalog',
-      secure: process.env.CLICKHOUSE_SECURE || 'false',
-      allowWriteAccess: process.env.CLICKHOUSE_ALLOW_WRITE_ACCESS || 'true',
-      mcpCommand: process.env.MCP_COMMAND || 'uv',
-      mcpArgs:
-        process.env.MCP_ARGS ||
-        JSON.stringify(['run', '--with', 'mcp-clickhouse', '--python', '3.13', 'mcp-clickhouse'])
-    }
+    credentials: secrets.readClickHouse()
   };
 }

@@ -6,7 +6,7 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc",
-    "test": "jest",
+    "test": "jest --coverage",
     "test:integration": "jest --config jest.integration.config.js",
     "smoke:mcp": "ts-node scripts/mcp-smoke.ts",
     "lint": "eslint src --ext .ts",

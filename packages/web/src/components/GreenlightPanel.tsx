@@ -92,7 +92,7 @@ function phaseStatus(
   return 'pending';
 }
 
-function SkeletonBar({ width = '100%' }: { width?: string }) {
+function SkeletonBar({ width }: { width: string }) {
   return <span className="skeleton skeleton-bar" style={{ width }} aria-hidden="true" />;
 }
 
@@ -206,10 +206,9 @@ function RecCard({
   );
 }
 
-function WarningBanner({ title, message }: { title?: string; message: string }) {
+function WarningBanner({ message }: { message: string }) {
   return (
     <div className="warning-banner" role="alert">
-      {title && <strong>{title}</strong>}
       <p>{message}</p>
     </div>
   );
@@ -218,13 +217,17 @@ function WarningBanner({ title, message }: { title?: string; message: string }) 
 export function GreenlightPanel({
   greenlight,
   loading,
-  error
+  error,
+  collapseEvidenceDefault = false
 }: {
   greenlight: AgentRunResult | null;
   loading: boolean;
   error: unknown;
+  /** When true, SQL / analytics / timeline start collapsed behind “Show evidence”. */
+  collapseEvidenceDefault?: boolean;
 }) {
   const { t } = useLocale();
+  const [showEvidence, setShowEvidence] = useState(!collapseEvidenceDefault);
   const phase = useGreenlightPhase(loading);
   const queryRows = (greenlight?.queryRows ?? []) as Record<string, unknown>[];
   const analytics = useMemo(() => parseGreenlightAnalytics(greenlight), [greenlight]);
@@ -266,16 +269,8 @@ export function GreenlightPanel({
         <WarningBanner message={t('dashboard.greenlightFallbackNotice')} />
       )}
 
-      {!loading && greenlight && displayRecs.length > 0 && (
-        <GreenlightProvenanceHeader greenlight={greenlight} />
-      )}
-
-      {!loading && recommendations.length > 0 && !showPartialOnly && greenlight && (
-        <GreenlightRitualPanel greenlight={greenlight} />
-      )}
-
       {!loading && displayRecs.length > 0 && (
-        <div className="rec-grid">
+        <div className="rec-grid greenlight-rec-hero">
           {displayRecs.map((r, i) => (
             <RecCard
               key={`${r.title}-${i}`}
@@ -285,6 +280,14 @@ export function GreenlightPanel({
             />
           ))}
         </div>
+      )}
+
+      {!loading && greenlight && displayRecs.length > 0 && (
+        <GreenlightProvenanceHeader greenlight={greenlight} />
+      )}
+
+      {!loading && recommendations.length > 0 && !showPartialOnly && greenlight && (
+        <GreenlightRitualPanel greenlight={greenlight} />
       )}
 
       {!loading && displayRecs.length === 0 && !error && (
@@ -299,15 +302,27 @@ export function GreenlightPanel({
       )}
 
       {greenlight && !loading && (
-        <>
-          {analytics && <AnalyticsInsights analytics={analytics} />}
-          <McpSqlEvidence greenlight={greenlight} />
-          <p className="muted">
-            {t('dashboard.agentRun', { ms: greenlight.totalLatencyMs })} ·{' '}
-            <Link to="/ask">{t('dashboard.followUp')}</Link>
-          </p>
-          {greenlight.steps && <AgentTimeline steps={greenlight.steps} />}
-        </>
+        <div className="evidence-disclosure">
+          <button
+            type="button"
+            className="btn secondary evidence-toggle"
+            aria-expanded={showEvidence}
+            onClick={() => setShowEvidence(v => !v)}
+          >
+            {showEvidence ? t('dashboard.hideEvidence') : t('dashboard.showEvidence')}
+          </button>
+          {showEvidence && (
+            <>
+              {analytics && <AnalyticsInsights analytics={analytics} />}
+              <McpSqlEvidence greenlight={greenlight} />
+              <p className="muted">
+                {t('dashboard.agentRun', { ms: greenlight.totalLatencyMs })} ·{' '}
+                <Link to="/ask">{t('dashboard.followUp')}</Link>
+              </p>
+              {greenlight.steps && <AgentTimeline steps={greenlight.steps} />}
+            </>
+          )}
+        </div>
       )}
     </>
   );

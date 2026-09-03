@@ -1,7 +1,7 @@
 import { MediaContent } from '../domain/entities/MediaContent';
-import { IConnector } from '../ports/outbound/IConnector';
 import { IGeminiEnrichmentPort } from '../ports/outbound/IGeminiEnrichmentPort';
-import { QueryResult } from '../types';
+import { ICatalogRepository } from '../ports/outbound/ICatalogRepository';
+import { IDomainEventPublisher, DomainEventPublisher } from '../domain/events/DomainEventPublisher';
 
 export interface IMediaIngestionService {
   process(content: MediaContent): Promise<IngestionResult>;
@@ -17,8 +17,9 @@ export interface IngestionResult {
 
 export class MediaIngestionService implements IMediaIngestionService {
   constructor(
-    private readonly connector: IConnector,
-    private readonly geminiEnrichment: IGeminiEnrichmentPort
+    private readonly catalog: ICatalogRepository,
+    private readonly geminiEnrichment: IGeminiEnrichmentPort,
+    private readonly events: IDomainEventPublisher = new DomainEventPublisher()
   ) {}
 
   async process(content: MediaContent): Promise<IngestionResult> {
@@ -34,41 +35,18 @@ export class MediaIngestionService implements IMediaIngestionService {
 
     content.applyEnrichment(enrichment);
 
-    const releaseDate = content.releaseDate.toDateOnlyString();
-    const enrichmentJson = JSON.stringify(enrichment.toJSON()).replace(/'/g, "''");
-    const castArray = [...content.cast].map(c => `'${c.replace(/'/g, "''")}'`).join(', ');
+    const stored = await this.catalog.insert(content);
 
-    const query = `
-      INSERT INTO media_catalog.media_content (id, title, description, genre, release_date, cast, enrichment)
-      VALUES
-      (
-        '${this.escapeSql(content.id)}',
-        '${this.escapeSql(content.title)}',
-        '${this.escapeSql(content.description)}',
-        '${this.escapeSql(content.genre)}',
-        '${releaseDate}',
-        [${castArray}],
-        '${enrichmentJson}'
-      )
-    `;
-
-    const result: QueryResult = await this.connector.query({
-      partner: 'clickhouse',
-      query
-    });
-
-    const latencyMs = Date.now() - startTime;
+    for (const event of content.pullDomainEvents()) {
+      this.events.publish(event);
+    }
 
     return {
       success: true,
       contentId: content.id,
-      storedRows: result.metadata.rowCount,
-      partner: result.metadata.partner,
-      latencyMs
+      storedRows: stored.storedRows,
+      partner: stored.partner,
+      latencyMs: Date.now() - startTime
     };
-  }
-
-  private escapeSql(value: string): string {
-    return value.replace(/'/g, "''");
   }
 }

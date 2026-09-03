@@ -49,4 +49,47 @@ describe('FakeGeminiEnrichmentClient', () => {
     expect(result.summary).toContain('The Matrix');
     expect(result.tags).toContain('sci-fi');
   });
+
+  it('falls back for unknown genres and substring matches', async () => {
+    const unknown = await client.enrich({
+      title: 'Unknown Title',
+      description: 'x',
+      genre: 'Documentary',
+      releaseDate: '2020-01-01',
+      cast: ['A']
+    });
+    expect(unknown.summary).toContain('Unknown Title');
+    expect(unknown.summary.toLowerCase()).toMatch(/documentary/);
+
+    const nested = await client.enrich({
+      title: 'Night',
+      description: 'x',
+      genre: 'dark-horror-feature',
+      releaseDate: '2020-01-01',
+      cast: ['A']
+    });
+    expect(nested.tags).toContain('horror');
+  });
+
+  it('reuses existing tags and simulates latency outside tests', async () => {
+    const original = process.env.NODE_ENV;
+    process.env.NODE_ENV = 'production';
+    jest.useFakeTimers();
+    try {
+      const pending = client.enrich({
+        title: 'action extra',
+        description: 'x',
+        genre: 'Action',
+        releaseDate: '2020-01-01',
+        cast: ['A']
+      });
+      await jest.advanceTimersByTimeAsync(300);
+      const result = await pending;
+      expect(result.tags.filter(t => t === 'action')).toHaveLength(1);
+      expect(result.tags).toContain('extra');
+    } finally {
+      process.env.NODE_ENV = original;
+      jest.useRealTimers();
+    }
+  });
 });

@@ -7,7 +7,8 @@ import {
   pickTopCandidates,
   scoreFromAnalyticsById,
   SCORER_WEIGHTS,
-  isNearDuplicateTitle
+  isNearDuplicateTitle,
+  isSeedFillerTitle
 } from '../../src/greenlight/GreenlightScorer';
 
 /** Demo-story fixtures — mirrors seeded ClickHouse narrative. */
@@ -202,5 +203,147 @@ describe('GreenlightScorer', () => {
       }
     ]);
     expect(rows.map(r => r.title)).toEqual(['Crimen sin Fronteras: Bogotá']);
+  });
+
+  it('covers parser fallbacks, language gaps, wow clamp, and cannibal fill', () => {
+    expect(isSeedFillerTitle('')).toBe(true);
+    expect(isSeedFillerTitle('Catalog Extra 12')).toBe(true);
+    expect(isSeedFillerTitle('Winter Harbor', 'catalog title for demo seed')).toBe(true);
+    expect(isSeedFillerTitle('Two Words')).toBe(false);
+
+    const inventory = parseGenreInventory([
+      { genre: 'Drama', title_count: '4', revenue_4w: '10' },
+      { genre: null, title_count: {}, revenue_4w: undefined }
+    ]);
+    expect(inventory[0].title_count).toBe(4);
+    expect(inventory[1].revenue_4w).toBe(0);
+    expect(parseGenreInventory([{ title_count: 'nope', revenue_4w: 'x' }])[0].title_count).toBe(0);
+
+    expect(scoreFromAnalyticsById({}).top).toEqual([]);
+
+    const unknownGenre = scoreTitles(
+      [
+        {
+          title_id: 'u',
+          title: 'Unknown Genre Title',
+          genre: 'Western',
+          language: 'fr',
+          revenue_this_week: 1,
+          revenue_prior_week: 10,
+          wow_pct: -1,
+          views_this_week: 1
+        }
+      ],
+      [],
+      [],
+      [{ hole_type: 'language', dimension: 'es', gap_score: -2 }]
+    );
+    expect(unknownGenre[0].genre_gap).toBe(0);
+    expect(unknownGenre[0].language_gap).toBe(0);
+    expect(unknownGenre[0].wow_momentum).toBe(0);
+
+    const momentum = parseTitleMomentum([
+      { title: '   ', genre: 'Drama' },
+      {
+        title_id: 9,
+        title: 'Measured Title',
+        genre: 'Drama',
+        language: '',
+        revenue_this_week: '5',
+        revenue_prior_week: '2',
+        wow_pct: '1.6',
+        views_this_week: '3'
+      }
+    ]);
+    expect(momentum).toHaveLength(1);
+    expect(momentum[0].language).toBe('en');
+    expect(momentum[0].wow_pct).toBe(1.6);
+
+    expect(parseCannibalization([{ title_a: 'Same', title_b: 'Same', genre: 'Drama' }])).toEqual([]);
+    expect(isNearDuplicateTitle('', 'x')).toBe(false);
+    expect(isNearDuplicateTitle('abcdefghijklmnopXXX', 'abcdefghijklmnopYYY')).toBe(true);
+    expect(isNearDuplicateTitle('shadow protocol one', 'shadow protocol two')).toBe(true);
+    expect(isNearDuplicateTitle('abcdef hij klm xxxx', 'abcdef hij klm yyyy')).toBe(true);
+
+    const scored = scoreTitles(
+      [
+        {
+          title_id: 'a',
+          title: 'Alpha Drama',
+          genre: 'Drama',
+          language: 'es',
+          revenue_this_week: 100,
+          revenue_prior_week: 10,
+          wow_pct: 2,
+          views_this_week: 1
+        },
+        {
+          title_id: 'b',
+          title: 'Beta Drama',
+          genre: 'Drama',
+          language: 'en',
+          revenue_this_week: 90,
+          revenue_prior_week: 80,
+          wow_pct: 0.1,
+          views_this_week: 1
+        },
+        {
+          title_id: 'c',
+          title: 'Cannibal Comedy A',
+          genre: 'Comedy',
+          language: 'en',
+          revenue_this_week: 80,
+          revenue_prior_week: 70,
+          wow_pct: 0.1,
+          views_this_week: 1
+        },
+        {
+          title_id: 'd',
+          title: 'Cannibal Comedy B',
+          genre: 'Comedy',
+          language: 'en',
+          revenue_this_week: 70,
+          revenue_prior_week: 60,
+          wow_pct: 0.1,
+          views_this_week: 1
+        },
+        {
+          title_id: 'e',
+          title: 'Thriller Fill',
+          genre: 'Thriller',
+          language: 'en',
+          revenue_this_week: 60,
+          revenue_prior_week: 50,
+          wow_pct: 0.1,
+          views_this_week: 1
+        }
+      ],
+      [
+        { genre: 'Drama', title_count: 10, revenue_4w: 10 },
+        { genre: 'Comedy', title_count: 10, revenue_4w: 10 },
+        { genre: 'Thriller', title_count: 10, revenue_4w: 10 }
+      ],
+      parseCannibalization([
+        { title_a: 'Cannibal Comedy A', title_b: 'Cannibal Comedy B extra', genre: 'Comedy' }
+      ]),
+      parseSlateHoles([
+        { hole_type: 'language', dimension: 'es', gap_score: '0.8' },
+        { hole_type: 'genre', dimension: 'Drama', gap_score: 0.1 }
+      ])
+    );
+
+    const top = pickTopCandidates(scored, 3);
+    expect(top[0].title).toBe('Alpha Drama');
+    expect(top.map(t => t.genre).includes('Drama')).toBe(true);
+    expect(pickTopCandidates(scored).length).toBeGreaterThan(0);
+    expect(pickTopCandidates(scored, 1)).toHaveLength(1);
+
+    const onlyCannibals = pickTopCandidates(
+      scored.map(s => ({ ...s, in_cannibal_pair: true })),
+      3
+    );
+    expect(onlyCannibals).toHaveLength(3);
+
+    expect(pickTopCandidates([{ ...scored[0], title: '   ' }], 3)).toEqual([]);
   });
 });

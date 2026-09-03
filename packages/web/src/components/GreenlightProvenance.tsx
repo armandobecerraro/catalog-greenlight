@@ -76,7 +76,7 @@ export function RecProvenance({
   const fields = metricsForRec(rec, queryRows);
   const genreGap = fields.genre_gap ?? 0;
   const wowMomentum = fields.wow_momentum;
-  const cannibalPenalty = fields.cannibalization_penalty ?? (fields.in_cannibal_pair ? 1 : 0);
+  const cannibalPenalty = fields.cannibalization_penalty || 0;
   const genreContrib = SCORER_WEIGHTS.genre_gap * genreGap;
   const wowContrib =
     wowMomentum != null ? SCORER_WEIGHTS.wow_momentum * wowMomentum : undefined;

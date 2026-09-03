@@ -13,12 +13,12 @@
 
 ## Pre-recording
 
-- [ ] Confirm hosted app loads: https://catalog-greenlight.onrender.com
+- [ ] **Pre-warm Render:** open https://catalog-greenlight.onrender.com and wait **60–90 seconds** for cold start before recording
 - [ ] Health check: `GET https://catalog-greenlight.onrender.com/api/v1/health` → `ready: true`
+- [ ] **Fresh greenlight:** open `https://catalog-greenlight.onrender.com/api/v1/greenlight?refresh=1` once (bypasses 10-min cache)
 - [ ] **Gemini billing:** `/ask` and `/ingest` require a funded `GEMINI_API_KEY` on Render (HTTP 429 if credits depleted or rate-limited). Greenlight still returns 3 scorer picks when synthesis fails (timeout, 429, or quota); the UI shows a warning banner but metrics and ritual table remain visible.
-- [ ] Browser: English UI, 1920×1080 or 1280×720, zoom 100%, hide bookmarks bar
+- [ ] Browser: **UI language English**, **1920×1080** (or 1280×720), zoom 100%, **hide bookmarks bar**
 - [ ] Close unrelated tabs; mute notifications
-- [ ] Optional: force fresh greenlight before recording — open `https://catalog-greenlight.onrender.com/api/v1/greenlight?refresh=1` once (bypasses 10-min cache)
 - [ ] Prepare architecture slide (see § Architecture slide below)
 - [ ] Mic test; speak clearly; total runtime ≤ 3:00
 
@@ -28,36 +28,40 @@
 
 ## Shot list & timing
 
-| # | Time | Shot | Action on screen |
-|---|------|------|------------------|
-| 1 | 0:00–0:20 | Hook / title card | Title **Catalog Greenlight** + one-line problem (programming chief, weekly greenlight, needs evidence not vibes). |
-| 2 | 0:20–0:45 | Dashboard — live stats | Navigate to **/** — three stat cards: catalog size, genres tracked (top genres list), latest revenue ($, views, top title). Narrate: data comes from ClickHouse via MCP at runtime. |
-| 3 | 0:45–1:15 | Ingest → Catalog | `/ingest` — enter a short fictional title (e.g. “Midnight Signal”, genre Sci-Fi) → submit → show Gemini enrichment success → `/catalog` — scroll to confirm the new row. |
-| 4 | 1:15–2:00 | Ask — 6-step agent | `/ask` — use chip or type: *“Which genre is under-represented in our catalog?”* → Run → scroll: **Answer** (numbers in text) → **SQL** block → **Evidence** (query rows JSON) → **Agent timeline** — expand/walk INTENT → DISCOVER → PLAN_SQL → EXECUTE → SYNTHESIZE → AUDIT. |
-| 5 | 2:00–2:30 | Greenlight ritual + rec-cards | Back to **/** — **Greenlight this week**. Scroll top to bottom: **provenance header** (stack badge + scorer formula) → **Weekly programming ritual** table (3 ranked picks, export buttons) → three **rec-cards** with per-card **score provenance** (genre gap, WoW, cannibal dimensions). Point to metrics on each card: **Score**, **WoW**, **Genre gap**, **Cannibal pair**. Scroll to **ClickHouse analytics** panels (genre gap bars, WoW momentum, cannibal pairs table). **Say the pitch aloud.** Optionally scroll to greenlight agent timeline at the bottom. |
-| 6 | 2:30–3:00 | Architecture + CTA | Cut to slide (or split screen): stack diagram + URLs. End on hosted URL + GitHub. |
+| # | Time | Shot | Action on screen | Branch B |
+|---|------|------|------------------|----------|
+| 1 | 0:00–0:20 | Hook | Say **Catalog Greenlight** + programming-chief problem (weekly greenlight needs evidence, not vibes). | — |
+| 2 | 0:20–0:45 | Dashboard — live stats | Navigate to **/** — three stat cards: catalog size, genres tracked, latest revenue ($, views, top title). Narrate ClickHouse via MCP. | — |
+| 3 | 0:45–1:15 | Ingest → Catalog | `/ingest` — enter “Midnight Signal”, genre Sci-Fi → submit → Gemini enrichment success → `/catalog` — scroll to new row. | If Gemini down / ingest fails: say **exactly** “Ingest needs Gemini; skipping to Ask/Greenlight” → jump to shot 4 or 5. |
+| 4 | 1:15–2:00 | Ask — 6-step agent | `/ask` — chip or type *“Which genre is under-represented in our catalog?”* → Run → **Answer** → **SQL** → **Evidence** → **Agent timeline** (INTENT → DISCOVER → PLAN_SQL → EXECUTE → SYNTHESIZE → AUDIT). | If HTTP **429**: do **not** fake Ask on camera — note **“If 429, record Ask after credits”** and continue to shot 5; re-record Ask segment later. |
+| 5 | 2:00–2:30 | Greenlight — three cards + pitch | **/** — **Greenlight this week** → provenance header → weekly ritual table → **three rec-cards** (score, WoW, genre gap, cannibal). **Say pitch aloud.** | — |
+| 6 | 2:30–3:00 | Architecture + CTA | Slide: `mcp-clickhouse` + `@google/genai` + GitHub + hosted URL. **Not Agent Builder.** | — |
 
 **Total:** ≤ 3:00
 
 ---
 
-## Narration script (English)
+## Narration script (word-for-word, English)
 
-Read naturally; shorten pauses if over 3 minutes.
+Read exactly as written. Pause on screen actions; trim only dead air in post if over 3:00.
 
-> **[0:00]** “Catalog Greenlight helps a streaming programming chief decide what to push each week — with ClickHouse evidence, not generic AI guesses.”
+> **[0:00–0:20]** “**Catalog Greenlight** is built for a streaming programming chief who faces the same question every week: what should we greenlight next? The answer has to come from ClickHouse evidence — not vibes, not generic AI summaries.”
 >
-> **[0:20]** “Here’s the live app at catalog-greenlight on Render. The dashboard loads real catalog stats from ClickHouse through the official mcp-clickhouse MCP server — genre counts and latest weekly revenue.”
+> **[0:20–0:45]** “Here's the live app at **catalog-greenlight.onrender.com**. The dashboard loads three stat cards — total catalog size, genre breakdown, and latest weekly revenue with views and top title. Every number comes from ClickHouse through the **mcp-clickhouse** MCP server at runtime.”
 >
-> **[0:45]** “We can ingest a new title. Gemini enriches the metadata, and the row lands in ClickHouse via MCP INSERT. The catalog table confirms it’s persisted.”
+> **[0:45–1:15]** “On Ingest I add a fictional title — **Midnight Signal**, Sci-Fi — and submit. Gemini enriches the metadata, the API runs an MCP INSERT into ClickHouse, and on Catalog we scroll to confirm the new row is persisted.”
 >
-> **[1:15]** “On Ask, I pose a natural-language question. Watch the six-step agent: intent, schema discovery, SQL planning, execution, synthesis, and audit. Here’s the generated SQL, the result rows, and a grounded answer that cites the numbers.”
+> **Branch B (Gemini down / ingest fails):** say exactly — “**Ingest needs Gemini; skipping to Ask/Greenlight**” — then cut to `/ask` or `/` Greenlight.
 >
-> **[2:00]** “Greenlight this week ranks three titles with a transparent TypeScript scorer. The ritual table and provenance header show where each dimension comes from — opportunity score, week-over-week momentum, genre gap, and cannibalization — plus a Gemini narrative tied to query evidence.”
+> **[1:15–2:00]** “On Ask I use the chip: which genre is under-represented in our catalog? Watch the six-step agent timeline — intent, discover, plan SQL, execute, synthesize, and audit. Here's the SQL block, the evidence rows, and the answer — every claim tied to numbers from the query.”
 >
-> **[2:15]** **“ClickHouse measures. TypeScript scores. Gemini explains.”**
+> **Branch B (HTTP 429 on Ask):** do not narrate a failed Ask. Note for editor: **“If 429, record Ask after credits”** — finish Greenlight + architecture on this take; splice Ask later.
 >
-> **[2:30]** “Under the hood: mcp-clickhouse for analytics, the Gemini API via google/genai on Google Cloud — not Agent Builder — and a custom six-step AgentRunner. Try it at the link on screen, or clone the repo on GitHub.”
+> **[2:00–2:30]** “Back on the dashboard, **Greenlight this week** shows three ranked rec-cards. Each card exposes score provenance — opportunity score, week-over-week momentum, genre gap, and cannibal pair — plus a Gemini justification grounded in query evidence. **ClickHouse measures. TypeScript scores. Gemini explains.**”
+>
+> **[2:30–3:00]** “Under the hood: **mcp-clickhouse** for analytics, the Gemini API via **@google/genai** on Google Cloud — **not Agent Builder** — and a custom six-step AgentRunner in TypeScript. Try **catalog-greenlight.onrender.com**, or clone the repo on GitHub.”
+
+**SCRIPT_SECONDS_ESTIMATE:** ~165 s (~2:45) at clear pace with on-screen pauses; hard cap 3:00.
 
 ---
 
@@ -89,7 +93,7 @@ Read naturally; shorten pauses if over 3 minutes.
 
 **ClickHouse analytics** (below rec-cards): genre gap bars, WoW momentum top titles, cannibal pairs table.
 
-Formula (mention if time): `opportunity = 0.4×genre_gap + 0.4×wow − 0.2×cannibalization`
+Formula (mention if time): `opportunity = 0.4×genre_gap + 0.4×wow_momentum − 0.2×cannibalization_penalty + 0.05×language_gap`
 
 ### Ask page (`/ask`)
 
@@ -108,7 +112,7 @@ Formula (mention if time): `opportunity = 0.4×genre_gap + 0.4×wow − 0.2×can
 
 ## Architecture slide (final 30s)
 
-Suggested content (Keynote / Google Slides / figma — one slide):
+Suggested content (Keynote / Google Slides / Figma — one slide):
 
 ```
 Catalog Greenlight — architecture

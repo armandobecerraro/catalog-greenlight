@@ -1,10 +1,9 @@
-import { QueryRequest, QueryResult, StreamRequest, StreamChunk, ConnectionConfig } from '../../types';
+import { QueryRequest, QueryResult, ConnectionConfig } from '../../types';
 
 export interface IConnector {
   readonly name: string;
   connect(config: ConnectionConfig): Promise<void>;
   query(request: QueryRequest): Promise<QueryResult>;
-  stream(request: StreamRequest): AsyncIterable<StreamChunk>;
   disconnect(): Promise<void>;
 }
 

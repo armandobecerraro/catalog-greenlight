@@ -36,6 +36,21 @@ export const translations = {
       network: 'Could not reach the API. Check that the server is running.',
       generic: 'Something went wrong. Try again in a moment.'
     },
+    health: {
+      wakingTitle: 'Waking the demo on Render…',
+      wakingBody:
+        'Free tier spins down after inactivity. First load can take 60–90 seconds while ClickHouse MCP and the API start.',
+      retry: 'Check again',
+      starting: 'starting'
+    },
+    notFound: {
+      title: 'Page not found',
+      subtitle: 'That URL is not part of the Catalog Greenlight demo.',
+      heading: 'Unknown route',
+      body: 'Try the dashboard, catalog, or user guide. Greenlight picks live on the dashboard.',
+      dashboard: 'Dashboard',
+      apiHint: 'API routes like /api/v1/catalog/stats are not browser pages — use Dashboard or Catalog stats.'
+    },
     empty: {
       catalog: {
         title: 'No titles in the catalog yet',
@@ -51,6 +66,12 @@ export const translations = {
       title: 'Programming Dashboard',
       subtitle:
         'Live catalog stats from ClickHouse via MCP · Weekly greenlight picks from measured gaps and momentum',
+      subtitleHero: 'Weekly greenlight decision first — ClickHouse evidence, TypeScript scoring, Gemini narrative.',
+      trustPitch: 'ClickHouse measured · TypeScript scored · Gemini explained',
+      showSnapshot: 'Show catalog snapshot & signals',
+      hideSnapshot: 'Hide catalog snapshot',
+      showEvidence: 'Show evidence (SQL, analytics, timeline)',
+      hideEvidence: 'Hide evidence',
       liveStrip:
         'Live ClickHouse Cloud via official mcp-clickhouse — ClickHouse measures, TypeScript scores, Gemini explains.',
       liveClickhouse: 'ClickHouse {status}',
@@ -156,6 +177,7 @@ export const translations = {
     catalog: {
       title: 'Catalog',
       subtitle: '{count} titles in ClickHouse',
+      subtitleFiltered: '{shown} of {total} titles in ClickHouse (seed hidden)',
       filterPlaceholder: 'Filter by title or genre…',
       hidePadding: 'Hide seed filler (numbered demo titles)',
       loadError: 'Failed to load catalog',
@@ -163,6 +185,12 @@ export const translations = {
       colGenre: 'Genre',
       colRelease: 'Release',
       colCast: 'Cast'
+    },
+    catalogStats: {
+      title: 'Catalog stats',
+      subtitle: 'Live aggregates from ClickHouse via MCP',
+      backToCatalog: '← Catalog table',
+      backToDashboard: 'Dashboard'
     },
     ingest: {
       title: 'Ingest a title',
@@ -185,10 +213,14 @@ export const translations = {
       subtitle: 'Natural language → 6-step agent. Demo chips still query ClickHouse if Gemini is unavailable.',
       fallbackNotice:
         'Gemini planner/writer was unavailable. ClickHouse still ran via mcp-clickhouse — SQL and rows below are live.',
+      fallbackBadge: 'Narrative fallback — ClickHouse evidence still live',
+      ungroundedRecs: 'Recommendations from the agent were not grounded in catalog genres — see SQL and evidence rows above.',
+      filteredRecs: '{count} ungrounded recommendation(s) hidden from display.',
       billingHint: 'Greenlight on the dashboard still measures ClickHouse without Gemini.',
       billingHintCta: 'Open dashboard →',
       labelQuestion: 'Your question',
       running: 'Agent running…',
+      progressHint: 'Typical run is ~30 seconds (Gemini + ClickHouse). The demo is not frozen.',
       submit: 'Run agent',
       error: 'Agent failed',
       answer: 'Answer',
@@ -375,6 +407,21 @@ export const translations = {
       network: 'No se pudo conectar con la API. Comprueba que el servidor esté en ejecución.',
       generic: 'Algo salió mal. Inténtalo de nuevo en un momento.'
     },
+    health: {
+      wakingTitle: 'Despertando la demo en Render…',
+      wakingBody:
+        'El tier gratuito se apaga por inactividad. La primera carga puede tardar 60–90 s mientras arrancan MCP y la API.',
+      retry: 'Comprobar de nuevo',
+      starting: 'iniciando'
+    },
+    notFound: {
+      title: 'Página no encontrada',
+      subtitle: 'Esa URL no forma parte de la demo Catalog Greenlight.',
+      heading: 'Ruta desconocida',
+      body: 'Prueba el panel, el catálogo o la guía. Los picks de greenlight están en el panel.',
+      dashboard: 'Panel',
+      apiHint: 'Las rutas API como /api/v1/catalog/stats no son páginas del navegador — usa el panel o Catalog stats.'
+    },
     empty: {
       catalog: {
         title: 'Aún no hay títulos en el catálogo',
@@ -390,6 +437,13 @@ export const translations = {
       title: 'Panel de programación',
       subtitle:
         'Estadísticas del catálogo en vivo vía MCP · Greenlight semanal según huecos medidos y momentum',
+      subtitleHero:
+        'Primero la decisión semanal de greenlight — evidencia ClickHouse, puntuación TypeScript, narrativa Gemini.',
+      trustPitch: 'ClickHouse mide · TypeScript puntúa · Gemini explica',
+      showSnapshot: 'Mostrar snapshot del catálogo y señales',
+      hideSnapshot: 'Ocultar snapshot del catálogo',
+      showEvidence: 'Mostrar evidencia (SQL, analítica, línea de tiempo)',
+      hideEvidence: 'Ocultar evidencia',
       liveStrip:
         'ClickHouse Cloud en vivo vía mcp-clickhouse oficial — ClickHouse mide, TypeScript puntúa, Gemini explica.',
       liveClickhouse: 'ClickHouse {status}',
@@ -495,6 +549,7 @@ export const translations = {
     catalog: {
       title: 'Catálogo',
       subtitle: '{count} títulos en ClickHouse',
+      subtitleFiltered: '{shown} de {total} títulos en ClickHouse (relleno oculto)',
       filterPlaceholder: 'Filtrar por título o género…',
       hidePadding: 'Ocultar relleno del seed (títulos numerados)',
       loadError: 'No se pudo cargar el catálogo',
@@ -502,6 +557,12 @@ export const translations = {
       colGenre: 'Género',
       colRelease: 'Estreno',
       colCast: 'Reparto'
+    },
+    catalogStats: {
+      title: 'Estadísticas del catálogo',
+      subtitle: 'Agregados en vivo desde ClickHouse vía MCP',
+      backToCatalog: '← Tabla del catálogo',
+      backToDashboard: 'Panel'
     },
     ingest: {
       title: 'Ingresar un título',
@@ -525,10 +586,15 @@ export const translations = {
       subtitle: 'Lenguaje natural → agente de 6 pasos. Los chips de demo siguen consultando ClickHouse si Gemini no está disponible.',
       fallbackNotice:
         'El planificador/redactor Gemini no estuvo disponible. ClickHouse sí corrió vía mcp-clickhouse — el SQL y las filas de abajo son en vivo.',
+      fallbackBadge: 'Fallback narrativo — la evidencia ClickHouse sigue en vivo',
+      ungroundedRecs:
+        'Las recomendaciones del agente no estaban ancladas en géneros del catálogo — revisa SQL y filas de evidencia arriba.',
+      filteredRecs: '{count} recomendación(es) no anclada(s) oculta(s).',
       billingHint: 'El greenlight del panel sigue midiendo ClickHouse sin Gemini.',
       billingHintCta: 'Abrir panel →',
       labelQuestion: 'Tu pregunta',
       running: 'Ejecutando agente…',
+      progressHint: 'Una corrida típica tarda ~30 s (Gemini + ClickHouse). La demo no está congelada.',
       submit: 'Ejecutar agente',
       error: 'Falló el agente',
       answer: 'Respuesta',

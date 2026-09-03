@@ -17,7 +17,7 @@ test.describe('Catalog Greenlight hackathon UI (1280)', () => {
 
   test('catalog: dozens of rows', async ({ page }) => {
     await page.goto('/catalog');
-    await expect(page.getByText(/titles in ClickHouse/)).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByText(/\d+( of \d+)? titles in ClickHouse/)).toBeVisible({ timeout: 30_000 });
     const rows = page.locator('table tbody tr');
     await expect(rows.first()).toBeVisible({ timeout: catalogRowTimeout });
     const count = await rows.count();
@@ -57,12 +57,13 @@ test.describe('Catalog Greenlight hackathon UI (1280)', () => {
     expect(answerText).toMatch(/\d/);
   });
 
-  test('dashboard: stats load immediately', async ({ page }) => {
+  test('dashboard: stats load in catalog snapshot', async ({ page }) => {
     await page.goto('/');
+    await expect(page.getByText('Greenlight this week')).toBeVisible();
+    await page.getByRole('button', { name: /Show catalog snapshot/i }).click();
     await expect(page.getByText('Catalog size')).toBeVisible();
     const catalogStat = page.locator('.stat-value').first();
     await expect(catalogStat).not.toHaveText('0', { timeout: statsTimeout });
-    await expect(page.getByText('Greenlight this week')).toBeVisible();
   });
 
   test('dashboard: greenlight shows 3 titles from catalog evidence', async ({ page, request }) => {
@@ -78,6 +79,18 @@ test.describe('Catalog Greenlight hackathon UI (1280)', () => {
     for (const t of recTitles) {
       expect(catalogTitles.has(t)).toBe(true);
     }
+  });
+
+  test('legacy paths never show a blank screen', async ({ page }) => {
+    await page.goto('/greenlight');
+    await expect(page.getByText('Greenlight this week')).toBeVisible({ timeout: 60_000 });
+
+    await page.goto('/catalog/stats');
+    await expect(page.getByRole('heading', { name: 'Catalog stats' })).toBeVisible({ timeout: 60_000 });
+
+    await page.goto('/does-not-exist');
+    await expect(page.getByText(/Unknown route/i)).toBeVisible();
+    await expect(page.getByRole('navigation')).toBeVisible();
   });
 });
 
@@ -103,5 +116,17 @@ test.describe('Catalog Greenlight hackathon UI (390 mobile)', () => {
 
     await page.goto('/');
     await expect(page.getByText('Programming Dashboard')).toBeVisible({ timeout: 60_000 });
+  });
+
+  test('legacy paths never show a blank screen', async ({ page }) => {
+    await page.goto('/greenlight');
+    await expect(page.getByText('Greenlight this week')).toBeVisible({ timeout: 60_000 });
+
+    await page.goto('/catalog/stats');
+    await expect(page.getByRole('heading', { name: 'Catalog stats' })).toBeVisible({ timeout: 60_000 });
+
+    await page.goto('/does-not-exist');
+    await expect(page.getByText(/Unknown route/i)).toBeVisible();
+    await expect(page.getByRole('navigation')).toBeVisible();
   });
 });

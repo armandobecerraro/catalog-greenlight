@@ -612,7 +612,7 @@ describe('analytics export metrics extras', () => {
     expect(synthesizeStepError(null)).toBeUndefined();
     expect(resolveGreenlightErrorMessage(12, t).isRateLimit).toBe(false);
     expect(parseHttpError(503, '{"code":"clickhouse_waking","message":"boot"}').code).toBe('clickhouse_waking');
-    expect(parseHttpError(500, '{"error":"  " }').message).toMatch(/HTTP 500|  /);
+    expect(parseHttpError(500, '{"error":"  " }').message).toMatch(/HTTP 500| {2}/);
     expect(timeoutError().code).toBe('timeout');
     expect(formatApiError(t, 12)).toBe('errors.generic');
   });

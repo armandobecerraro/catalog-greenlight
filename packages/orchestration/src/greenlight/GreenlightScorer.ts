@@ -92,7 +92,7 @@ export function parseTitleMomentum(rows: Record<string, unknown>[]): TitleMoment
   return rows
     .filter(r => {
       const title = str(r, 'title').trim();
-      return title && !isSeedFillerTitle(title);
+      return Boolean(title);
     })
     .map(r => ({
       title_id: str(r, 'title_id'),
@@ -214,36 +214,51 @@ export function scoreTitles(
   });
 }
 
-/** At most one title per genre unless fewer than 3 genres in candidates. */
+/** At most one title per genre when the catalog has enough genres; filler titles may fill missing genres. */
 export function pickTopCandidates(
   scored: ScoredCandidate[],
-  limit = 3
+  limit = 3,
+  inventoryGenreCount?: number
 ): ScoredCandidate[] {
   const sorted = [...scored]
-    .filter(s => s.title.trim() && !isSeedFillerTitle(s.title))
+    .filter(s => s.title.trim())
     .sort((a, b) => b.opportunity_score - a.opportunity_score);
   const uniqueGenres = new Set(sorted.map(s => s.genre));
-  const enforceDiversity = uniqueGenres.size >= limit;
+  const enforceDiversity = (inventoryGenreCount ?? uniqueGenres.size) >= limit;
 
   const picked: ScoredCandidate[] = [];
   const usedGenres = new Set<string>();
+  const usedIds = new Set<string>();
 
-  for (const c of sorted) {
-    if (picked.length >= limit) break;
-    if (enforceDiversity && usedGenres.has(c.genre)) continue;
-    if (c.in_cannibal_pair) continue;
-    picked.push(c);
-    usedGenres.add(c.genre);
-  }
-
-  if (picked.length < limit) {
-    for (const c of sorted) {
+  const pickFrom = (
+    pool: ScoredCandidate[],
+    opts: { allowCannibal: boolean; allowFiller: boolean; allowDuplicateGenre: boolean }
+  ) => {
+    for (const c of pool) {
       if (picked.length >= limit) break;
-      if (picked.some(p => p.title_id === c.title_id)) continue;
-      if (enforceDiversity && usedGenres.has(c.genre)) continue;
+      if (usedIds.has(c.title_id)) continue;
+      if (!opts.allowFiller && isSeedFillerTitle(c.title)) continue;
+      if (!opts.allowCannibal && c.in_cannibal_pair) continue;
+      if (enforceDiversity && !opts.allowDuplicateGenre && usedGenres.has(c.genre)) continue;
       picked.push(c);
+      usedIds.add(c.title_id);
       usedGenres.add(c.genre);
     }
+  };
+
+  pickFrom(sorted, { allowCannibal: false, allowFiller: false, allowDuplicateGenre: false });
+  if (picked.length < limit) {
+    pickFrom(sorted, { allowCannibal: false, allowFiller: true, allowDuplicateGenre: false });
+  }
+  if (picked.length < limit && !enforceDiversity) {
+    pickFrom(sorted, { allowCannibal: false, allowFiller: true, allowDuplicateGenre: true });
+  }
+  if (picked.length < limit) {
+    pickFrom(sorted, {
+      allowCannibal: true,
+      allowFiller: true,
+      allowDuplicateGenre: !enforceDiversity
+    });
   }
 
   return picked.slice(0, limit);
@@ -272,6 +287,7 @@ export function scoreFromAnalyticsById(byId: Record<string, Record<string, unkno
   const cannibal = parseCannibalization(byId['C_cannibalization'] ?? []);
   const holes = parseSlateHoles(byId['D_slate_holes'] ?? []);
   const scored = scoreTitles(momentum, inventory, cannibal, holes);
-  const top = pickTopCandidates(scored, 3);
+  const inventoryGenreCount = inventory.filter(g => g.genre && g.title_count > 0).length;
+  const top = pickTopCandidates(scored, 3, inventoryGenreCount);
   return { scored, top, candidateRows: candidatesToQueryRows(top) };
 }

@@ -120,7 +120,7 @@ describe('GreenlightScorer', () => {
 
   it('picks top 3 with genre diversity and rejects cannibal titles when better options exist', () => {
     const scored = scoreTitles(DEMO_MOMENTUM, DEMO_INVENTORY, DEMO_CANNIBAL, DEMO_HOLES);
-    const top = pickTopCandidates(scored, 3);
+    const top = pickTopCandidates(scored, 3, 3);
     const titles = top.map(t => t.title);
 
     expect(titles).toContain('Crimen sin Fronteras: Bogotá');
@@ -177,13 +177,69 @@ describe('GreenlightScorer', () => {
       DEMO_CANNIBAL,
       DEMO_HOLES
     );
-    const top = pickTopCandidates(scored, 3);
+    const top = pickTopCandidates(scored, 3, DEMO_INVENTORY.length);
 
     expect(top).toHaveLength(3);
     expect(top.map(t => t.title)).toContain('Crimen sin Fronteras: Bogotá');
     expect(top.map(t => t.title)).toContain('Archive: Road 114');
     expect(top.map(t => t.title)).not.toContain('Archive: City 102');
     expect(new Set(top.map(t => t.genre)).size).toBe(3);
+  });
+
+  it('uses filler titles only to fill missing genres when the catalog has enough genres', () => {
+    const scored = scoreTitles(
+      [
+        {
+          title_id: 'breakout',
+          title: 'Crimen sin Fronteras: Bogotá',
+          genre: 'Thriller',
+          language: 'es',
+          revenue_this_week: 420,
+          revenue_prior_week: 180,
+          wow_pct: 0.32,
+          views_this_week: 85000
+        },
+        {
+          title_id: 'doc-1',
+          title: 'Archive: Road 114',
+          genre: 'Documentary',
+          language: 'en',
+          revenue_this_week: 300,
+          revenue_prior_week: 290,
+          wow_pct: 0.021,
+          views_this_week: 40000
+        },
+        {
+          title_id: 'doc-2',
+          title: 'Archive: City 102',
+          genre: 'Documentary',
+          language: 'en',
+          revenue_this_week: 280,
+          revenue_prior_week: 330,
+          wow_pct: -0.162,
+          views_this_week: 38000
+        },
+        {
+          title_id: 'comedy-filler',
+          title: 'Banter Echo 7',
+          genre: 'Comedy',
+          language: 'en',
+          revenue_this_week: 90,
+          revenue_prior_week: 95,
+          wow_pct: -0.05,
+          views_this_week: 12000
+        }
+      ],
+      DEMO_INVENTORY,
+      DEMO_CANNIBAL,
+      DEMO_HOLES
+    );
+    const top = pickTopCandidates(scored, 3, DEMO_INVENTORY.length);
+
+    expect(top).toHaveLength(3);
+    expect(new Set(top.map(t => t.genre)).size).toBe(3);
+    expect(top.map(t => t.title)).not.toContain('Archive: City 102');
+    expect(top.map(t => t.title)).toContain('Banter Echo 7');
   });
 
   it('scores full momentum rows — timeline slice must not change picks', () => {
@@ -236,7 +292,7 @@ describe('GreenlightScorer', () => {
     expect(isNearDuplicateTitle('Shadow Road 86', 'Crimen sin Fronteras: Bogotá')).toBe(false);
   });
 
-  it('drops numbered seed-generator titles from momentum', () => {
+  it('keeps seed-generator titles in momentum but prefers story titles for picks', () => {
     const rows = parseTitleMomentum([
       {
         title_id: 'story',
@@ -259,7 +315,14 @@ describe('GreenlightScorer', () => {
         views_this_week: 38000
       }
     ]);
-    expect(rows.map(r => r.title)).toEqual(['Crimen sin Fronteras: Bogotá']);
+    expect(rows.map(r => r.title)).toEqual([
+      'Crimen sin Fronteras: Bogotá',
+      'Fading Line 75'
+    ]);
+
+    const scored = scoreTitles(rows, DEMO_INVENTORY, [], DEMO_HOLES);
+    const top = pickTopCandidates(scored, 1);
+    expect(top[0]?.title).toBe('Crimen sin Fronteras: Bogotá');
   });
 
   it('covers parser fallbacks, language gaps, wow clamp, and cannibal fill', () => {
@@ -389,7 +452,7 @@ describe('GreenlightScorer', () => {
       ])
     );
 
-    const top = pickTopCandidates(scored, 3);
+    const top = pickTopCandidates(scored, 3, 3);
     expect(top[0].title).toBe('Alpha Drama');
     expect(top.map(t => t.genre).includes('Drama')).toBe(true);
     expect(pickTopCandidates(scored).length).toBeGreaterThan(0);

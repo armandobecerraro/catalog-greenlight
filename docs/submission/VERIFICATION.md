@@ -132,7 +132,7 @@ Unit test: `AgentRunner.test.ts` — PASS
 | Code + tests + MCP smoke | **YES** |
 | Public GitHub | **YES** |
 | Browser E2E (Playwright) | **YES** |
-| Hosted URL | **YES** — https://catalog-greenlight.onrender.com |
+| Hosted URL | **YES** — https://catalog-greenlight.onrender.com (judge smoke 2026-09-02: health, 200 titles, greenlight 3 picks, 3 asks grounded, SPA routes) |
 | YouTube video | **PENDING** (`TODO_YOUTUBE`) |
 | Devpost draft 1155720 submitted | **NO** — copy in `DEVPOST.md`; form not Submitted |
 | Gemini integration | **YES** — `@google/genai` on Google Cloud; **not** Agent Builder / ADK |

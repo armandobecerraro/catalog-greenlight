@@ -1,7 +1,7 @@
 # Hosted smoke verification — Catalog Greenlight
 
 **URL:** https://catalog-greenlight.onrender.com  
-**Verified:** 2026-09-02T20:10:00Z (Ask + Playwright re-run after GCP Gemini coupon)  
+**Verified:** 2026-09-02T23:01:00-05:00 (post-merge #5 + ready-gate fix `0da1cac`)  
 **Platform:** Render (free tier — cold start 60–90s pre-warm after spin-down)
 
 > **Keep-alive (opcional):** UptimeRobot o cron cada 5 min contra `/api/v1/health` evita spin-down; no requiere provisioning ni pago en tier free.
@@ -141,33 +141,36 @@ curl -sS --max-time 240 -X POST https://catalog-greenlight.onrender.com/api/v1/a
 | 6-step timeline | INTENT → DISCOVER → PLAN_SQL → EXECUTE → SYNTHESIZE → AUDIT, all `completed` |
 | Answer | Documentary is the most underserved slice: `gap_score` 0.074 (revenue share minus title share). Measured in ClickHouse via mcp-clickhouse. |
 | SQL | `D_slate_holes` (`WITH latest AS … gap_score`) via `mcp-clickhouse` `run_query` |
-| Recs | Documentary 0.074, Thriller 0.069, language `es` 0.013 |
+| Recs | Documentary 0.074, Thriller 0.069 (language holes like `es` are not shown as genre cards) |
 
-Gemini **credits are live** (no billing 429). PLAN_SQL/SYNTHESIZE still fall back if Gemini exceeds ~10s; ClickHouse evidence still returns.
+Gemini **credits are live** (no billing 429). PLAN_SQL/SYNTHESIZE still fall back if Gemini exceeds ~10s (`fallback: true`, ~31s); ClickHouse evidence still returns. Fallback SQL now **honors the brief**.
 
-**Ad-hoc prompts (after ask grounding fix):** comedy recommend → Comedy titles SQL (`mc.genre = 'Comedy'`); duration is **not** a `media_content` column so the answer must say so instead of pivoting to Animation inventory. “Which genre should we greenlight next based on recent revenue?” → `D_slate_holes` / `gap_score`, not the fewest-titles line. Language-code holes such as `es` are not shown as genre cards.
+**Live re-smoke 2026-09-02 ~23:01 local (PR #5 deployed):**
 
-**Re-smoke after deploy:**
+| Prompt | Result |
+|--------|--------|
+| Recommend a feel-good comedy under 2 hours | **PASS** — Comedy titles (e.g. Banter Echo 7); honest “no runtime column”; **not** Animation fewest-titles |
+| Which genre should we greenlight next based on recent revenue? | **PASS** — Documentary `gap_score` 0.074 (revenue share vs inventory); **not** canned Animation |
+| Which genre is under-represented in our catalog? | **PASS** — Documentary gap **0.074** + CTE SQL + rows |
 
 ```bash
 curl -sS --max-time 240 -X POST https://catalog-greenlight.onrender.com/api/v1/agent/ask \
   -H 'Content-Type: application/json' \
   -d '{"question":"Recommend a feel-good comedy under 2 hours"}'
-# expect HTTP 200, SQL with genre = 'Comedy', answer cites comedy titles (and says duration is not in schema)
-# must NOT contain “Animation has the fewest”
+# HTTP 200; SQL filters Comedy; answer cites comedy titles; duration not in schema
 
 curl -sS --max-time 240 -X POST https://catalog-greenlight.onrender.com/api/v1/agent/ask \
   -H 'Content-Type: application/json' \
   -d '{"question":"Which genre should we greenlight next based on recent revenue?"}'
-# expect HTTP 200, distinct answer (gap_score / recent revenue), not the Animation fewest-titles line
+# HTTP 200; gap_score / recent revenue (Documentary 0.074)
 
 curl -sS --max-time 240 -X POST https://catalog-greenlight.onrender.com/api/v1/agent/ask \
   -H 'Content-Type: application/json' \
   -d '{"question":"Which genre is under-represented in our catalog?"}'
-# expect HTTP 200, Documentary (or similar) gap_score grounded answer + CTE SQL + rows
+# HTTP 200; Documentary gap_score 0.074 + CTE SQL + rows
 
 curl -sS --max-time 180 'https://catalog-greenlight.onrender.com/api/v1/greenlight?refresh=1'
-# expect HTTP 200 and 3 recommendations
+# HTTP 200 and 3 recommendations (Bogotá 0.268)
 ```
 
 ---
@@ -191,7 +194,14 @@ open https://catalog-greenlight.onrender.com/catalog/stats
 open https://catalog-greenlight.onrender.com/does-not-exist
 ```
 
-**Re-smoke after deploy:** none of those three URLs may show a blank charcoal page.
+**Live re-smoke 2026-09-02 ~23:01 local — all PASS (no blank charcoal pages):**
+
+| URL | Result |
+|-----|--------|
+| `/greenlight` | Dashboard / greenlight content (not blank) |
+| `/catalog/stats` | Stats content (not blank) |
+| `/no-such-xyz-test` | **Page not found** + nav |
+
 
 ---
 
@@ -212,7 +222,8 @@ npm run test:e2e:hosted
 | Health endpoint | **YES** |
 | Stats (~200 titles) | **YES** |
 | Greenlight 3 picks + scores | **YES** (TypeScript scorer; Gemini memo timed out → fallback) |
-| Ask `/agent/ask` | **YES** — HTTP 200, no 429, SQL + 11 ClickHouse rows, 6 steps. Comedy/revenue briefs still need re-smoke after this PR deploys. |
-| SPA `/greenlight`, `/catalog/stats`, unknown | **FIX IN THIS PR** — must re-smoke after deploy (was blank black page) |
-| Playwright hosted | **YES** — 4/4 (pre-SPA tests); re-run after deploy |
+| Ask `/agent/ask` | **YES** — HTTP 200; comedy titles + no-runtime honesty; revenue + under-represented Documentary `gap_score` 0.074; `fallback: true` (~31s) is OK (Gemini timeout; ClickHouse SQL live) |
+| SPA `/greenlight`, `/catalog/stats`, unknown | **YES** — content / NotFound; no blank black pages |
+| Playwright hosted | **YES** — 4/4 (API + dashboard); SPA routes verified in browser smoke above |
+| Ready-gate after MCP init | **YES** — `0da1cac` (greenlight no longer stuck on 503 after health `ready: true`) |
 | Cold start tolerance | **YES** (~74s with 60s pre-warm) |

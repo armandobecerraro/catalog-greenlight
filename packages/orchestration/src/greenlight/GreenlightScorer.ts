@@ -240,7 +240,9 @@ export function pickTopCandidates(
     for (const c of sorted) {
       if (picked.length >= limit) break;
       if (picked.some(p => p.title_id === c.title_id)) continue;
+      if (enforceDiversity && usedGenres.has(c.genre)) continue;
       picked.push(c);
+      usedGenres.add(c.genre);
     }
   }
 

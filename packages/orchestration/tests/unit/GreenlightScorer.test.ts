@@ -129,6 +129,63 @@ describe('GreenlightScorer', () => {
     expect(new Set(top.map(t => t.genre)).size).toBe(3);
   });
 
+  it('backfill respects genre diversity when cannibal filtering leaves slots open', () => {
+    const scored = scoreTitles(
+      [
+        {
+          title_id: 'breakout',
+          title: 'Crimen sin Fronteras: Bogotá',
+          genre: 'Thriller',
+          language: 'es',
+          revenue_this_week: 420,
+          revenue_prior_week: 180,
+          wow_pct: 0.32,
+          views_this_week: 85000
+        },
+        {
+          title_id: 'doc-1',
+          title: 'Archive: Road 114',
+          genre: 'Documentary',
+          language: 'en',
+          revenue_this_week: 300,
+          revenue_prior_week: 290,
+          wow_pct: 0.021,
+          views_this_week: 40000
+        },
+        {
+          title_id: 'doc-2',
+          title: 'Archive: City 102',
+          genre: 'Documentary',
+          language: 'en',
+          revenue_this_week: 280,
+          revenue_prior_week: 330,
+          wow_pct: -0.162,
+          views_this_week: 38000
+        },
+        {
+          title_id: 'drama-fill',
+          title: 'Winter Harbor',
+          genre: 'Drama',
+          language: 'es',
+          revenue_this_week: 250,
+          revenue_prior_week: 200,
+          wow_pct: 0.25,
+          views_this_week: 38000
+        }
+      ],
+      DEMO_INVENTORY,
+      DEMO_CANNIBAL,
+      DEMO_HOLES
+    );
+    const top = pickTopCandidates(scored, 3);
+
+    expect(top).toHaveLength(3);
+    expect(top.map(t => t.title)).toContain('Crimen sin Fronteras: Bogotá');
+    expect(top.map(t => t.title)).toContain('Archive: Road 114');
+    expect(top.map(t => t.title)).not.toContain('Archive: City 102');
+    expect(new Set(top.map(t => t.genre)).size).toBe(3);
+  });
+
   it('scores full momentum rows — timeline slice must not change picks', () => {
     const filler = Array.from({ length: 22 }, (_, i) => ({
       title_id: `f${i}`,

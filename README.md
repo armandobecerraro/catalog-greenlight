@@ -12,7 +12,9 @@
 
 **Live demo:** https://catalog-greenlight.onrender.com
 
-**Demo video:** `TODO_YOUTUBE` — shot list and timing in `docs/submission/VIDEO_CHECKLIST.md` (record against the hosted URL only).
+[Live](https://catalog-greenlight.onrender.com) · [User guide / judges](https://catalog-greenlight.onrender.com/guia) · [GitHub](https://github.com/armandobecerraro/catalog-greenlight)
+
+**Demo video:** `TODO_YOUTUBE` — teleprompter + shot list in `docs/submission/VIDEO_CHECKLIST.md` (record against the hosted URL only).
 
 ## User documentation
 

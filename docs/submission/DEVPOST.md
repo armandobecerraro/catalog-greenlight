@@ -82,6 +82,8 @@ Gemini does **not** plan SQL for the greenlight path.
 - ~200-title seed catalog with 10 weeks of revenue; demo story surfaces LATAM breakout _Crimen sin Fronteras: Bogotá_, Thriller gap, and cannibal-pair penalty on _True Crime: Highway 101_
 - Agent runs audited via MCP INSERT into `agent_runs`
 
+**Remove ClickHouse and the product disappears.** Without ClickHouse there are no genre-gap or revenue-share measurements, no week-over-week title momentum, no cannibalization pairs, and nothing for the TypeScript scorer to rank. Postgres-or-SQLite “analytics” cannot replace those four measured MCP queries at demo fidelity. Gemini never invents the weekly slate; it only narrates scores that ClickHouse already produced.
+
 ## How we use Google Cloud AI (required)
 
 - **Gemini API on Google Cloud** via `@google/genai` — not Agent Builder, not ADK, not a no-code agent product

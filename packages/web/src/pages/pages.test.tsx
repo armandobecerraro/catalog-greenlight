@@ -253,7 +253,7 @@ describe("pages", () => {
     expect(await screen.findByText("ingest failed")).toBeInTheDocument();
   });
 
-  it("asks a question and renders SQL evidence plus timeline details", async () => {
+  it("asks a question and renders grounded badge plus collapsible SQL", async () => {
     wrap(<Ask />);
     fireEvent.change(screen.getByRole("textbox"), {
       target: { value: "Which genre is under-represented?" },
@@ -264,11 +264,62 @@ describe("pages", () => {
     );
     fireEvent.submit(screen.getByRole("button", { name: /Run agent/i }).closest("form")!);
     expect(await screen.findByText("Thriller is underserved.")).toBeInTheDocument();
+    expect(screen.getByText(/Measured in ClickHouse via mcp-clickhouse/i)).toBeInTheDocument();
+    expect(screen.queryByText(/No ClickHouse evidence returned/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/SQL executed/i).closest("summary")).toBeTruthy();
     fireEvent.click(
       screen
         .getAllByRole("button")
         .find((btn) => /show|ver|details|detalle/i.test(btn.textContent ?? ""))!,
     );
+  });
+
+  it("shows scary fallback badge only when Ask has no ClickHouse evidence", async () => {
+    mockedApi.ask.mockResolvedValueOnce({
+      ...askResult,
+      fallback: true,
+      sql: undefined,
+      queryRows: [],
+      answer: "I could not measure the catalog.",
+    });
+    wrap(<Ask />);
+    fireEvent.submit(screen.getByRole("button", { name: /Run agent/i }).closest("form")!);
+    expect(await screen.findByText(/No ClickHouse evidence returned/i)).toBeInTheDocument();
+    expect(screen.queryByText(/Measured in ClickHouse via mcp-clickhouse/i)).not.toBeInTheDocument();
+  });
+
+  it("omits status badges when Ask succeeds without fallback and without evidence flags", async () => {
+    mockedApi.ask.mockResolvedValueOnce({
+      ...askResult,
+      fallback: false,
+      sql: undefined,
+      queryRows: undefined,
+      answer: "Catalog looks balanced.",
+    });
+    wrap(<Ask />);
+    fireEvent.submit(screen.getByRole("button", { name: /Run agent/i }).closest("form")!);
+    expect(await screen.findByText("Catalog looks balanced.")).toBeInTheDocument();
+    expect(screen.queryByText(/Measured in ClickHouse via mcp-clickhouse/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/No ClickHouse evidence returned/i)).not.toBeInTheDocument();
+  });
+
+  it("highlights gap_score above the fold when evidence rows include it", async () => {
+    mockedApi.ask.mockResolvedValueOnce({
+      ...askResult,
+      fallback: true,
+      answer: "Documentary is the most underserved slice.",
+      queryRows: [
+        { hole_type: "genre", dimension: "Documentary", gap_score: 0.074 },
+        { hole_type: "genre", genre: "Thriller", gap_score: 0.05 },
+      ],
+    });
+    wrap(<Ask />);
+    fireEvent.submit(screen.getByRole("button", { name: /Run agent/i }).closest("form")!);
+    expect(await screen.findByTestId("ask-gap-highlight")).toHaveTextContent(
+      /Documentary: gap_score 0.074/,
+    );
+    expect(screen.getByText(/Measured in ClickHouse via mcp-clickhouse/i)).toBeInTheDocument();
+    expect(screen.getByText(/Gemini planner\/writer was unavailable/i)).toBeInTheDocument();
   });
 
   it("renders greenlight provenance on Ask results", async () => {
@@ -313,7 +364,7 @@ describe("pages", () => {
       expect(screen.getByRole("status")).toHaveTextContent(/Classify intent/i);
       expect(screen.getByText(/not frozen/i)).toBeInTheDocument();
       act(() => {
-        vi.advanceTimersByTime(5_400);
+        vi.advanceTimersByTime(3_600);
       });
       const discover = screen.getAllByText("Discover schema / analytics");
       expect(discover.some((el) => el.closest("li")?.classList.contains("is-active"))).toBe(true);
@@ -359,6 +410,10 @@ describe("pages", () => {
     expect(screen.getByText(/Competitive wedge/i)).toBeInTheDocument();
     expect(screen.getByText(/vs Chloe Greenlight/i)).toBeInTheDocument();
     expect(screen.getByText(/vs Flashframe/i)).toBeInTheDocument();
+    expect(screen.getByText(/this product disappears/i)).toBeInTheDocument();
+    expect(screen.getByText(/Hosted benchmarks/i)).toBeInTheDocument();
+    expect(screen.getByText(/~11 s/i)).toBeInTheDocument();
+    expect(screen.getByText(/ready: true before opening \/ask/i)).toBeInTheDocument();
     expect(screen.getAllByText(/A_genre_inventory/).length).toBeGreaterThan(0);
     await vi.waitFor(() => {
       expect(screen.queryByText(/mcp-clickhouse and the API wake/i)).not.toBeInTheDocument();

@@ -94,6 +94,12 @@ That curls `/api/v1/health` then `/api/v1/greenlight` (cached; use `?refresh=1` 
 
 Optional ping every 5–10 min (UptimeRobot / cron) against `GET /api/v1/health` reduces spin-down during the judging window. Do **not** hammer `?refresh=1` on a timer — that re-runs four MCP queries + Gemini.
 
+```cron
+*/7 * * * * BASE_URL=https://catalog-greenlight.onrender.com bash /path/to/repo/scripts/keepalive-smoke.sh >>/tmp/cg-keepalive.log 2>&1
+```
+
+Judges: warm until `ready: true` before `/ask` or `greenlight?refresh=1` (see `/judge` checklist).
+
 ### Judging-week checklist
 
 - [ ] Render service awake (or a keep-alive ping) through **7 Oct 2026**

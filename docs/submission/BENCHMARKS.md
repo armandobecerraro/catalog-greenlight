@@ -24,7 +24,14 @@ These numbers are **honest** samples, not synthetic marketing. Latency includes 
 | Health `ready: true` | **60–90 s** total |
 | First greenlight after wake | **+30–40 s** on top |
 
-**Mitigation:** `bash scripts/keepalive-smoke.sh` or UptimeRobot every 5–10 min on `/api/v1/health` only.
+**Mitigation:** `bash scripts/keepalive-smoke.sh` or UptimeRobot / cron every 5–10 min on `/api/v1/health` only.
+
+```cron
+# Example: every 7 minutes (UTC) — health keep-alive during judging week
+*/7 * * * * BASE_URL=https://catalog-greenlight.onrender.com bash /path/to/catalog-greenlight/scripts/keepalive-smoke.sh >>/tmp/cg-keepalive.log 2>&1
+```
+
+Do **not** schedule `greenlight?refresh=1` on a timer (wastes ClickHouse + Gemini quota).
 
 ## Greenlight correctness (post diversity fix)
 

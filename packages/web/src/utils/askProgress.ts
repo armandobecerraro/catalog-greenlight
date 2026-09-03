@@ -9,7 +9,8 @@ export const ASK_PROGRESS_STEPS = [
 
 export type AskProgressStep = (typeof ASK_PROGRESS_STEPS)[number];
 
-export const ASK_PROGRESS_STEP_MS = 5_000;
+/** Advance ~every 3.5s so a ~30–35s Ask run walks INTENT→AUDIT before completion. */
+export const ASK_PROGRESS_STEP_MS = 3_500;
 
 export function askStepFromElapsed(
   elapsedMs: number,

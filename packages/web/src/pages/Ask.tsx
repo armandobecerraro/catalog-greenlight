@@ -9,6 +9,7 @@ import { translations } from '../i18n/translations';
 import { formatApiError, ApiError } from '../utils/apiErrors';
 import { filterRecommendations } from '../utils/recommendationGuards';
 import { ASK_PROGRESS_STEPS, askStepFromElapsed, askStepStatus } from '../utils/askProgress';
+import { gapScoreHighlight, hasClickHouseEvidence } from '../utils/askEvidence';
 
 export default function Ask() {
   const { locale, t } = useLocale();
@@ -33,7 +34,7 @@ export default function Ask() {
       return;
     }
     const started = Date.now();
-    const id = window.setInterval(() => setElapsed(Date.now() - started), 400);
+    const id = window.setInterval(() => setElapsed(Date.now() - started), 250);
     return () => window.clearInterval(id);
   }, [loading]);
 
@@ -42,6 +43,7 @@ export default function Ask() {
     setLoading(true);
     setError('');
     setBillingHint(false);
+    setResult(null);
     try {
       const r = await api.ask(question);
       setResult(r);
@@ -56,6 +58,8 @@ export default function Ask() {
   const groundedRecs = result ? filterRecommendations(result.recommendations) : [];
   const droppedRecCount =
     result?.recommendations != null ? result.recommendations.length - groundedRecs.length : 0;
+  const measured = result ? hasClickHouseEvidence(result) : false;
+  const gapHighlight = result ? gapScoreHighlight(result) : null;
 
   return (
     <>
@@ -90,32 +94,44 @@ export default function Ask() {
 
       {result && (
         <>
-          {result.fallback && (
+          {measured ? (
+            <div className="grounded-badge" role="status">
+              {t('ask.groundedBadge')}
+            </div>
+          ) : result.fallback ? (
             <div className="fallback-badge" role="status">
               {t('ask.fallbackBadge')}
             </div>
-          )}
+          ) : null}
 
-          <Card>
+          <Card className="ask-answer-card">
             <h3>{t('ask.answer')}</h3>
+            {gapHighlight && (
+              <p className="ask-gap-highlight" data-testid="ask-gap-highlight">
+                {gapHighlight}
+              </p>
+            )}
             <p className="answer">{result.answer}</p>
             <p className="muted">
               {t('ask.intent')}: {result.intent} · {result.totalLatencyMs}ms · model {result.model}
             </p>
+            {result.fallback && measured && (
+              <p className="muted small">{t('ask.fallbackNotice')}</p>
+            )}
           </Card>
-
-          {result.sql && (
-            <Card>
-              <h3>{t('ask.sqlTitle')}</h3>
-              <pre className="sql-block">{result.sql}</pre>
-            </Card>
-          )}
 
           {result.queryRows && result.queryRows.length > 0 && (
             <Card>
               <h3>{t('ask.evidenceTitle', { count: result.queryRows.length })}</h3>
               <DataTable rows={result.queryRows as Record<string, unknown>[]} maxRows={20} />
             </Card>
+          )}
+
+          {result.sql && (
+            <details className="ask-sql-details">
+              <summary>{t('ask.sqlTitle')}</summary>
+              <pre className="sql-block">{result.sql}</pre>
+            </details>
           )}
 
           <Card>
@@ -173,7 +189,7 @@ function AskProgress({ elapsed }: { elapsed: number }) {
   const { t } = useLocale();
   const current = askStepFromElapsed(elapsed);
   const seconds = Math.floor(elapsed / 1000);
-  const progressPct = Math.min(95, Math.round((elapsed / 60_000) * 100));
+  const progressPct = Math.min(95, Math.round((elapsed / 45_000) * 100));
 
   return (
     <Card className="ask-progress-card">

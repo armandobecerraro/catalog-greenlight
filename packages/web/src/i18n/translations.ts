@@ -77,6 +77,8 @@ export const translations = {
       linkGreenlightApi: "Greenlight API (?refresh=1)",
       verifyTitle: "How to verify in 2 minutes",
       verifyWarm: "Warm Render:",
+      verifyWarmBeforeAsk:
+        "wait until ready: true before opening /ask or hitting greenlight?refresh=1.",
       verifyGreenlight: "Confirm three scored picks:",
       verifyAsk:
         "Open /ask and run the chip “Which genre is under-represented in our catalog?” — the answer should cite a ClickHouse gap_score (Documentary in the demo seed).",
@@ -86,9 +88,16 @@ export const translations = {
       vsFlashframe:
         "We use ClickHouse for catalog economics and programming risk (genre gaps, WoW momentum, cannibalization) — not photosensitivity QC (Flashframe).",
       slatePreviewTitle: "Live weekly slate (measured scores)",
+      benchmarksTitle: "Hosted benchmarks (honest p50)",
+      benchmarksCaption:
+        "Measured 2026-09-03 on Render free tier + ClickHouse Cloud (warm). See docs/submission/BENCHMARKS.md.",
+      benchmarksEndpoint: "Endpoint",
+      benchmarksP50: "p50",
+      keepaliveNote:
+        "Judging week: keep the free tier warm with cron every 5–10 min — BASE_URL=https://catalog-greenlight.onrender.com bash scripts/keepalive-smoke.sh (health only; do not spam ?refresh=1).",
       downloadJson: "Download jury evidence JSON",
       downloaded: "Downloaded",
-      removeTitle: "Remove ClickHouse and this weekly greenlight cannot measure",
+      removeTitle: "Remove ClickHouse / mcp-clickhouse and this product disappears",
       removeBody:
         "Remove ClickHouse / mcp-clickhouse and the weekly greenlight cannot measure genre gaps, WoW momentum, cannibalization pairs, or slate holes at runtime — those four MCP SELECTs plus audit inserts disappear; a TypeScript scorer with no measured inputs is useless. Gemini only synthesizes narrative (and NL→SQL on /ask).",
       qInventory: "genre gaps (title share vs revenue share)",
@@ -275,7 +284,8 @@ export const translations = {
         "Natural language → 6-step agent. Demo chips still query ClickHouse if Gemini is unavailable.",
       fallbackNotice:
         "Gemini planner/writer was unavailable. ClickHouse still ran via mcp-clickhouse — SQL and rows below are live.",
-      fallbackBadge: "Narrative fallback — ClickHouse evidence still live",
+      fallbackBadge: "No ClickHouse evidence returned — narrative fallback only",
+      groundedBadge: "Measured in ClickHouse via mcp-clickhouse — grounded answer",
       ungroundedRecs:
         "Recommendations from the agent were not grounded in catalog genres — see SQL and evidence rows above.",
       filteredRecs: "{count} ungrounded recommendation(s) hidden from display.",
@@ -521,6 +531,8 @@ export const translations = {
       linkGreenlightApi: "API Greenlight (?refresh=1)",
       verifyTitle: "Cómo verificar en 2 minutos",
       verifyWarm: "Despierta Render:",
+      verifyWarmBeforeAsk:
+        "espera ready: true antes de abrir /ask o llamar greenlight?refresh=1.",
       verifyGreenlight: "Confirma tres picks puntuados:",
       verifyAsk:
         "Abre /ask y ejecuta el chip “Which genre is under-represented in our catalog?” — la respuesta debe citar un gap_score de ClickHouse (Documentary en el seed de demo).",
@@ -530,9 +542,16 @@ export const translations = {
       vsFlashframe:
         "Usamos ClickHouse para economía de catálogo y riesgo de programación (gaps, WoW, canibalización) — no QC de fotosensibilidad (Flashframe).",
       slatePreviewTitle: "Slate semanal en vivo (scores medidos)",
+      benchmarksTitle: "Benchmarks hosted (p50 honestos)",
+      benchmarksCaption:
+        "Medidos 2026-09-03 en Render free tier + ClickHouse Cloud (warm). Ver docs/submission/BENCHMARKS.md.",
+      benchmarksEndpoint: "Endpoint",
+      benchmarksP50: "p50",
+      keepaliveNote:
+        "Semana de judging: mantén el free tier despierto con cron cada 5–10 min — BASE_URL=https://catalog-greenlight.onrender.com bash scripts/keepalive-smoke.sh (solo health; no spamees ?refresh=1).",
       downloadJson: "Descargar JSON de evidencia para el jurado",
       downloaded: "Descargado",
-      removeTitle: "Sin ClickHouse este greenlight semanal no puede medir",
+      removeTitle: "Sin ClickHouse / mcp-clickhouse este producto desaparece",
       removeBody:
         "Quita ClickHouse / mcp-clickhouse y el greenlight semanal no puede medir huecos de género, momentum WoW, pares de canibalización ni huecos de slate en runtime — desaparecen esos cuatro SELECT MCP y los INSERT de auditoría; un scorer TypeScript sin entradas medidas no sirve. Gemini solo sintetiza narrativa (y NL→SQL en /ask).",
       qInventory: "huecos de género (cuota de títulos vs cuota de ingresos)",
@@ -724,7 +743,8 @@ export const translations = {
         "Lenguaje natural → agente de 6 pasos. Los chips de demo siguen consultando ClickHouse si Gemini no está disponible.",
       fallbackNotice:
         "El planificador/redactor Gemini no estuvo disponible. ClickHouse sí corrió vía mcp-clickhouse — el SQL y las filas de abajo son en vivo.",
-      fallbackBadge: "Fallback narrativo — la evidencia ClickHouse sigue en vivo",
+      fallbackBadge: "Sin evidencia ClickHouse — solo fallback narrativo",
+      groundedBadge: "Medido en ClickHouse vía mcp-clickhouse — respuesta anclada",
       ungroundedRecs:
         "Las recomendaciones del agente no estaban ancladas en géneros del catálogo — revisa SQL y filas de evidencia arriba.",
       filteredRecs: "{count} recomendación(es) no anclada(s) oculta(s).",
@@ -733,7 +753,8 @@ export const translations = {
       labelQuestion: "Tu pregunta",
       running: "Ejecutando agente…",
       progressHint:
-        "Una corrida típica tarda ~30 s (Gemini + ClickHouse). La demo no está congelada.",
+        "Una corrida típica tarda ~30–60 s (Gemini + ClickHouse). La demo no está congelada.",
+      progressElapsed: "{seconds}s transcurridos — el agente consulta ClickHouse vía mcp-clickhouse",
       submit: "Ejecutar agente",
       error: "Falló el agente",
       answer: "Respuesta",

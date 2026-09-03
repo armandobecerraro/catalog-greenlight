@@ -75,7 +75,7 @@ describe('GreenlightPanel', () => {
     wrap(<GreenlightPanel greenlight={run} loading={false} error={null} />);
     expect(screen.getAllByText('Crimen sin Fronteras: Bogotá').length).toBeGreaterThan(0);
     expect(screen.getAllByText('0.268').length).toBeGreaterThan(0);
-    expect(screen.getByText(/Gemini did not invent the ranking/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/Gemini did not invent the ranking/i).length).toBeGreaterThan(0);
     expect(screen.getByText(/MCP: A_genre_inventory/i)).toBeInTheDocument();
     const sqlToggle = screen.queryByRole('button', { name: /A_genre_inventory/i });
     if (sqlToggle) fireEvent.click(sqlToggle);

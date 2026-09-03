@@ -12,7 +12,7 @@ describe('askProgress', () => {
     expect(askStepFromElapsed(-1)).toBe('INTENT');
   });
 
-  it('advances one step every 5s and clamps at AUDIT', () => {
+  it('advances one step every ASK_PROGRESS_STEP_MS and clamps at AUDIT', () => {
     expect(askStepFromElapsed(ASK_PROGRESS_STEP_MS - 1)).toBe('INTENT');
     expect(askStepFromElapsed(ASK_PROGRESS_STEP_MS)).toBe('DISCOVER');
     expect(askStepFromElapsed(ASK_PROGRESS_STEP_MS * 5)).toBe('AUDIT');

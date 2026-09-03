@@ -278,16 +278,21 @@ export function GreenlightPanel({
       )}
 
       {!loading && displayRecs.length > 0 && (
-        <div className="rec-grid greenlight-rec-hero">
-          {displayRecs.map((r, i) => (
-            <RecCard
-              key={`${r.title}-${i}`}
-              rec={r}
-              queryRows={queryRows}
-              narrativePending={showPartialOnly}
-            />
-          ))}
-        </div>
+        <>
+          <p className="slate-attribution greenlight-hero-attribution">
+            {t('greenlight.clickhouseAttribution')}
+          </p>
+          <div className="rec-grid greenlight-rec-hero">
+            {displayRecs.map((r, i) => (
+              <RecCard
+                key={`${r.title}-${i}`}
+                rec={r}
+                queryRows={queryRows}
+                narrativePending={showPartialOnly}
+              />
+            ))}
+          </div>
+        </>
       )}
 
       {!loading && greenlight && displayRecs.length > 0 && recommendations.length > 0 && (

@@ -97,20 +97,55 @@ export default function Judge() {
         </ul>
       </Card>
 
-      <Card className="judge-arch">
-        <h3>{t("judge.archTitle")}</h3>
-        <ul className="judge-arch-list">
+      <Card className="judge-remove">
+        <h3>{t("judge.removeTitle")}</h3>
+        <p>{t("judge.removeBody")}</p>
+        <ul>
           <li>
-            <strong>mcp-clickhouse</strong> — {t("judge.archMcp")}
+            <code>A_genre_inventory</code> — {t("judge.qInventory")}
           </li>
           <li>
-            <strong>TypeScript scorer</strong> — {t("judge.archScorer")}
+            <code>B_title_momentum</code> — {t("judge.qMomentum")}
           </li>
           <li>
-            <strong>@google/genai</strong> — {t("judge.archGemini")}
+            <code>C_cannibalization</code> — {t("judge.qCannibal")}
+          </li>
+          <li>
+            <code>D_slate_holes</code> — {t("judge.qHoles")}
           </li>
         </ul>
-        <p className="judge-scorer-note">{t("judge.scorerNote")}</p>
+        <p className="muted small">
+          {t("judge.codePointers")}: <code>McpClickHouseConnector.ts</code>,{" "}
+          <code>GreenlightScorer.ts</code>, <code>AgentRunner.ts</code>
+        </p>
+      </Card>
+
+      <Card className="judge-benchmarks">
+        <h3>{t("judge.benchmarksTitle")}</h3>
+        <p className="muted small">{t("judge.benchmarksCaption")}</p>
+        <table className="judge-benchmarks-table">
+          <thead>
+            <tr>
+              <th>{t("judge.benchmarksEndpoint")}</th>
+              <th>{t("judge.benchmarksP50")}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>GET /api/v1/greenlight (cached)</td>
+              <td>~11 s</td>
+            </tr>
+            <tr>
+              <td>GET /api/v1/greenlight?refresh=1</td>
+              <td>~37 s</td>
+            </tr>
+            <tr>
+              <td>POST /api/v1/agent/ask</td>
+              <td>~33 s</td>
+            </tr>
+          </tbody>
+        </table>
+        <p className="muted small">{t("judge.keepaliveNote")}</p>
       </Card>
 
       {recommendations.length > 0 && greenlight && (
@@ -141,6 +176,22 @@ export default function Judge() {
         </Card>
       )}
 
+      <Card className="judge-arch">
+        <h3>{t("judge.archTitle")}</h3>
+        <ul className="judge-arch-list">
+          <li>
+            <strong>mcp-clickhouse</strong> — {t("judge.archMcp")}
+          </li>
+          <li>
+            <strong>TypeScript scorer</strong> — {t("judge.archScorer")}
+          </li>
+          <li>
+            <strong>@google/genai</strong> — {t("judge.archGemini")}
+          </li>
+        </ul>
+        <p className="judge-scorer-note">{t("judge.scorerNote")}</p>
+      </Card>
+
       <Card>
         <h3>{t("judge.linksTitle")}</h3>
         <p className="judge-links">
@@ -161,35 +212,14 @@ export default function Judge() {
         <ol className="judge-checklist">
           <li>
             {t("judge.verifyWarm")} <code>GET {HEALTH_JSON}</code> → <code>ready: true</code>
+            {" — "}
+            {t("judge.verifyWarmBeforeAsk")}
           </li>
           <li>
             {t("judge.verifyGreenlight")} <code>GET {GREENLIGHT_REFRESH}</code>
           </li>
           <li>{t("judge.verifyAsk")}</li>
         </ol>
-      </Card>
-
-      <Card>
-        <h3>{t("judge.removeTitle")}</h3>
-        <p>{t("judge.removeBody")}</p>
-        <ul>
-          <li>
-            <code>A_genre_inventory</code> — {t("judge.qInventory")}
-          </li>
-          <li>
-            <code>B_title_momentum</code> — {t("judge.qMomentum")}
-          </li>
-          <li>
-            <code>C_cannibalization</code> — {t("judge.qCannibal")}
-          </li>
-          <li>
-            <code>D_slate_holes</code> — {t("judge.qHoles")}
-          </li>
-        </ul>
-        <p className="muted small">
-          {t("judge.codePointers")}: <code>McpClickHouseConnector.ts</code>,{" "}
-          <code>GreenlightScorer.ts</code>, <code>AgentRunner.ts</code>
-        </p>
       </Card>
 
       <Card>

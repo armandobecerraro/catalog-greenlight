@@ -3,9 +3,18 @@ import { useLocale } from '../i18n/LocaleContext';
 import {
   metricsForRec,
   SCORER_WEIGHTS,
-  scorerFormulaText
+  scorerFormulaText,
+  formatPct,
+  isSeedFillerTitle
 } from '../utils/greenlightMetrics';
 import { synthesizeStepError, usedScorerFallback } from '../utils/greenlightUx';
+
+export const MCP_QUERY_IDS = [
+  'A_genre_inventory',
+  'B_title_momentum',
+  'C_cannibalization',
+  'D_slate_holes'
+] as const;
 
 export function GreenlightStackBadge() {
   const { t } = useLocale();
@@ -38,7 +47,55 @@ function formatNum(value: number | undefined, digits = 3): string {
   return value.toFixed(digits);
 }
 
-function formatPct(value: number | undefined): string {
+/** Compact measured-fields strip for first-viewport judges (<60s). */
+export function RecProvenanceStrip({
+  rec,
+  queryRows
+}: {
+  rec: Recommendation;
+  queryRows: Record<string, unknown>[];
+}) {
+  const { t } = useLocale();
+  const fields = metricsForRec(rec, queryRows);
+
+  return (
+    <div className="rec-provenance-strip" aria-label={t('greenlight.stripAria')}>
+      <span className="strip-chip" title={t('dashboard.metricScore')}>
+        <span className="strip-label">score</span>
+        <strong>{formatNum(fields.opportunity_score)}</strong>
+      </span>
+      <span className="strip-chip" title={t('dashboard.metricGenreGap')}>
+        <span className="strip-label">genre_gap</span>
+        <strong>{formatNum(fields.genre_gap)}</strong>
+      </span>
+      <span className="strip-chip" title={t('dashboard.metricWow')}>
+        <span className="strip-label">wow_pct</span>
+        <strong>{formatPct(fields.wow_pct)}</strong>
+      </span>
+      <span className="strip-chip" title={t('dashboard.metricCannibal')}>
+        <span className="strip-label">cannibal</span>
+        <strong>
+          {fields.in_cannibal_pair ? t('dashboard.metricYes') : t('dashboard.metricNo')}
+        </strong>
+      </span>
+      <span className="strip-mcp" title={t('greenlight.stripMcpTitle')}>
+        MCP: {MCP_QUERY_IDS.join(' · ')}
+      </span>
+    </div>
+  );
+}
+
+export function FillerDepthBadge({ title }: { title: string }) {
+  const { t } = useLocale();
+  if (!isSeedFillerTitle(title)) return null;
+  return (
+    <span className="badge filler-depth-badge" title={t('greenlight.fillerHint')}>
+      {t('greenlight.fillerBadge')}
+    </span>
+  );
+}
+
+function formatPctLocal(value: number | undefined): string {
   if (value == null) return '—';
   return `${(value * 100).toFixed(1)}%`;
 }
@@ -96,8 +153,8 @@ export function RecProvenance({
           dimension="wow_momentum"
           rawValue={
             wowMomentum != null
-              ? `${formatNum(wowMomentum)} (wow_pct ${formatPct(fields.wow_pct)})`
-              : `wow_pct ${formatPct(fields.wow_pct)}`
+              ? `${formatNum(wowMomentum)} (wow_pct ${formatPctLocal(fields.wow_pct)})`
+              : `wow_pct ${formatPctLocal(fields.wow_pct)}`
           }
           queryId="B_title_momentum"
           contribution={wowContrib != null ? `+${formatNum(wowContrib)}` : '—'}

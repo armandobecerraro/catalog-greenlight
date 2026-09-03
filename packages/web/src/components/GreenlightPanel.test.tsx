@@ -75,6 +75,8 @@ describe('GreenlightPanel', () => {
     wrap(<GreenlightPanel greenlight={run} loading={false} error={null} />);
     expect(screen.getAllByText('Crimen sin Fronteras: Bogotá').length).toBeGreaterThan(0);
     expect(screen.getAllByText('0.268').length).toBeGreaterThan(0);
+    expect(screen.getByText(/Gemini did not invent the ranking/i)).toBeInTheDocument();
+    expect(screen.getByText(/MCP: A_genre_inventory/i)).toBeInTheDocument();
     const sqlToggle = screen.queryByRole('button', { name: /A_genre_inventory/i });
     if (sqlToggle) fireEvent.click(sqlToggle);
     screen.getAllByRole('button').forEach(btn => {
@@ -137,5 +139,30 @@ describe('GreenlightPanel', () => {
     expect(screen.getByText(/ClickHouse analytics|Analítica ClickHouse/i)).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /Hide evidence/i }));
     expect(screen.queryByText(/ClickHouse analytics|Analítica ClickHouse/i)).not.toBeInTheDocument();
+  });
+
+  it('labels catalog depth-fill picks', () => {
+    wrap(
+      <GreenlightPanel
+        greenlight={{
+          ...run,
+          recommendations: [
+            {
+              title: 'Fading Line 75',
+              genre: 'Drama',
+              justification: 'depth fill',
+              evidence: 'gap',
+              opportunity_score: 0.11,
+              wow_pct: 0.02,
+              genre_gap: 0.05,
+              in_cannibal_pair: false
+            }
+          ]
+        }}
+        loading={false}
+        error={null}
+      />
+    );
+    expect(screen.getAllByText(/catalog depth fill/i).length).toBeGreaterThan(0);
   });
 });

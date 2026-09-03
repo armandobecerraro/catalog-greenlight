@@ -77,8 +77,9 @@ export default function Ask() {
             {loading ? t('ask.running') : t('ask.submit')}
           </button>
         </form>
-        {loading && <AskProgress elapsed={elapsed} />}
       </Card>
+
+      {loading && <AskProgress elapsed={elapsed} />}
 
       {error && <ErrorBanner message={error} />}
       {billingHint && (
@@ -171,22 +172,30 @@ export default function Ask() {
 function AskProgress({ elapsed }: { elapsed: number }) {
   const { t } = useLocale();
   const current = askStepFromElapsed(elapsed);
+  const seconds = Math.floor(elapsed / 1000);
+  const progressPct = Math.min(95, Math.round((elapsed / 60_000) * 100));
 
   return (
-    <div className="greenlight-progress ask-progress" role="status" aria-live="polite">
-      <p className="greenlight-progress-lead">{t(`steps.${current}`)}</p>
-      <ol className="greenlight-progress-steps">
-        {ASK_PROGRESS_STEPS.map(step => {
-          const status = askStepStatus(step, current);
-          return (
-            <li key={step} className={`greenlight-progress-step is-${status}`}>
-              <span className="greenlight-progress-dot" aria-hidden="true" />
-              <span>{t(`steps.${step}`)}</span>
-            </li>
-          );
-        })}
-      </ol>
-      <p className="muted greenlight-progress-hint">{t('ask.progressHint')}</p>
-    </div>
+    <Card className="ask-progress-card">
+      <div className="greenlight-progress ask-progress" role="status" aria-live="polite">
+        <p className="greenlight-progress-lead">{t(`steps.${current}`)}</p>
+        <p className="ask-progress-elapsed">{t('ask.progressElapsed', { seconds: String(seconds) })}</p>
+        <div className="ask-progress-bar" aria-hidden="true">
+          <div className="ask-progress-bar-fill" style={{ width: `${progressPct}%` }} />
+        </div>
+        <ol className="greenlight-progress-steps">
+          {ASK_PROGRESS_STEPS.map(step => {
+            const status = askStepStatus(step, current);
+            return (
+              <li key={step} className={`greenlight-progress-step is-${status}`}>
+                <span className="greenlight-progress-dot" aria-hidden="true" />
+                <span>{t(`steps.${step}`)}</span>
+              </li>
+            );
+          })}
+        </ol>
+        <p className="muted greenlight-progress-hint">{t('ask.progressHint')}</p>
+      </div>
+    </Card>
   );
 }

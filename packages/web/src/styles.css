@@ -798,6 +798,145 @@ th {
   margin: 1rem 0;
 }
 
+.rec-provenance-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.5rem;
+  align-items: center;
+  margin-bottom: 0.65rem;
+  padding: 0.45rem 0.55rem;
+  background: #0a0c10;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.strip-chip {
+  display: inline-flex;
+  gap: 0.25rem;
+  align-items: baseline;
+  padding: 0.15rem 0.4rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+
+.strip-chip .strip-label {
+  color: var(--muted);
+}
+
+.strip-chip strong {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.strip-mcp {
+  color: var(--muted);
+  font-size: 0.68rem;
+  flex: 1 1 100%;
+}
+
+.rec-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: center;
+  margin: 0.35rem 0 0.5rem;
+}
+
+.badge.filler-depth-badge {
+  background: #2a2418;
+  border: 1px solid #5a4a20;
+  color: #e8c547;
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.rec-provenance-details {
+  margin-top: 0.5rem;
+  font-size: 0.85rem;
+}
+
+.rec-provenance-details summary {
+  cursor: pointer;
+  color: var(--muted);
+}
+
+.slate-bar {
+  margin: 1rem 0;
+  padding: 0.85rem 1rem;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.slate-attribution {
+  margin: 0 0 0.65rem;
+  font-size: 0.9rem;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.slate-bar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.slate-bar-label {
+  margin-right: auto;
+}
+
+.ask-progress-card {
+  margin-top: 1rem;
+}
+
+.ask-progress-elapsed {
+  margin: 0.25rem 0 0.5rem;
+  font-size: 0.85rem;
+  color: var(--accent);
+}
+
+.ask-progress-bar {
+  height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+  margin: 0.5rem 0 0.75rem;
+  overflow: hidden;
+}
+
+.ask-progress-bar-fill {
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.4s ease;
+}
+
+.judge-wedge-list {
+  margin: 0.5rem 0 0;
+  padding-left: 1.2rem;
+}
+
+.judge-wedge-list li {
+  margin-bottom: 0.5rem;
+}
+
+.judge-rec-grid {
+  margin-top: 0.75rem;
+}
+
+.judge-export-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.rec-metrics-compact {
+  grid-template-columns: 1fr;
+}
+
 .rec-card {
   background: var(--surface-2);
   border: 1px solid var(--border);

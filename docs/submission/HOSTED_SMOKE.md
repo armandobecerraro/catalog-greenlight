@@ -227,3 +227,4 @@ npm run test:e2e:hosted
 | Playwright hosted | **YES** — 4/4 (API + dashboard); SPA routes verified in browser smoke above |
 | Ready-gate after MCP init | **YES** — `0da1cac` (greenlight no longer stuck on 503 after health `ready: true`) |
 | Cold start tolerance | **YES** (~74s with 60s pre-warm) |
+| Hosted benchmarks doc | **YES** — `docs/submission/BENCHMARKS.md` (honest warm/cold timings) |

@@ -4,7 +4,8 @@ import type { AgentRunResult, Recommendation } from '../api';
 import AnalyticsInsights from './AnalyticsInsights';
 import { AgentTimeline } from './AgentTimeline';
 import { GreenlightRitualPanel } from './GreenlightRitualPanel';
-import { GreenlightProvenanceHeader, RecProvenance } from './GreenlightProvenance';
+import { GreenlightProvenanceHeader, RecProvenance, RecProvenanceStrip, FillerDepthBadge } from './GreenlightProvenance';
+import { GreenlightSlateBar } from './GreenlightSlateBar';
 import { McpSqlEvidence } from './McpSqlEvidence';
 import { ErrorBanner, EmptyState } from './Layout';
 import { useLocale } from '../i18n/LocaleContext';
@@ -186,10 +187,17 @@ function RecCard({
 
   return (
     <article className="rec-card">
+      <RecProvenanceStrip rec={rec} queryRows={queryRows} />
       <h4>{rec.title}</h4>
-      {rec.genre && <span className="genre-pill">{rec.genre}</span>}
+      <div className="rec-card-meta">
+        {rec.genre && <span className="genre-pill">{rec.genre}</span>}
+        <FillerDepthBadge title={rec.title} />
+      </div>
       <RecMetrics metrics={metrics} t={t} />
-      <RecProvenance rec={rec} queryRows={queryRows} />
+      <details className="rec-provenance-details">
+        <summary>{t('greenlight.provenanceTitle')}</summary>
+        <RecProvenance rec={rec} queryRows={queryRows} />
+      </details>
       {narrativePending && !hasNarrative ? (
         <p className="rec-narrative-pending muted">{t('dashboard.greenlightPartialNarrative')}</p>
       ) : (
@@ -280,6 +288,10 @@ export function GreenlightPanel({
             />
           ))}
         </div>
+      )}
+
+      {!loading && greenlight && displayRecs.length > 0 && recommendations.length > 0 && (
+        <GreenlightSlateBar greenlight={greenlight} />
       )}
 
       {!loading && greenlight && displayRecs.length > 0 && (

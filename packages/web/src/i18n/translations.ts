@@ -80,6 +80,14 @@ export const translations = {
       verifyGreenlight: "Confirm three scored picks:",
       verifyAsk:
         "Open /ask and run the chip “Which genre is under-represented in our catalog?” — the answer should cite a ClickHouse gap_score (Documentary in the demo seed).",
+      wedgeTitle: "Competitive wedge (ClickHouse track)",
+      vsChloe:
+        "We greenlight a catalog slate for a streaming programming chief — not screenplay→film production (Chloe Greenlight).",
+      vsFlashframe:
+        "We use ClickHouse for catalog economics and programming risk (genre gaps, WoW momentum, cannibalization) — not photosensitivity QC (Flashframe).",
+      slatePreviewTitle: "Live weekly slate (measured scores)",
+      downloadJson: "Download jury evidence JSON",
+      downloaded: "Downloaded",
       removeTitle: "Remove ClickHouse and this weekly greenlight cannot measure",
       removeBody:
         "Remove ClickHouse / mcp-clickhouse and the weekly greenlight cannot measure genre gaps, WoW momentum, cannibalization pairs, or slate holes at runtime — those four MCP SELECTs plus audit inserts disappear; a TypeScript scorer with no measured inputs is useless. Gemini only synthesizes narrative (and NL→SQL on /ask).",
@@ -219,6 +227,13 @@ export const translations = {
       fallbackBadge: "Measured scores — Gemini memo optional",
       provenanceTitle: "Score provenance (MCP query dimensions)",
       fromQuery: "← {query}",
+      stripAria: "Measured score fields from ClickHouse via mcp-clickhouse",
+      stripMcpTitle: "Four fixed MCP SELECTs at greenlight runtime",
+      clickhouseAttribution:
+        "These numbers come from ClickHouse via mcp-clickhouse — Gemini did not invent the ranking.",
+      fillerBadge: "catalog depth fill",
+      fillerHint:
+        "Genre-diversity backfill from catalog depth — scored in ClickHouse, not a story title.",
     },
     catalog: {
       title: "Catalog",
@@ -268,7 +283,8 @@ export const translations = {
       billingHintCta: "Open dashboard →",
       labelQuestion: "Your question",
       running: "Agent running…",
-      progressHint: "Typical run is ~30 seconds (Gemini + ClickHouse). The demo is not frozen.",
+      progressHint: "Typical run is ~30–60 seconds (Gemini + ClickHouse). The demo is not frozen.",
+      progressElapsed: "{seconds}s elapsed — agent is querying ClickHouse via mcp-clickhouse",
       submit: "Run agent",
       error: "Agent failed",
       answer: "Answer",
@@ -508,6 +524,14 @@ export const translations = {
       verifyGreenlight: "Confirma tres picks puntuados:",
       verifyAsk:
         "Abre /ask y ejecuta el chip “Which genre is under-represented in our catalog?” — la respuesta debe citar un gap_score de ClickHouse (Documentary en el seed de demo).",
+      wedgeTitle: "Cuña competitiva (track ClickHouse)",
+      vsChloe:
+        "Greenlighteamos un slate de catálogo para un jefe de programación — no producción guion→película (Chloe Greenlight).",
+      vsFlashframe:
+        "Usamos ClickHouse para economía de catálogo y riesgo de programación (gaps, WoW, canibalización) — no QC de fotosensibilidad (Flashframe).",
+      slatePreviewTitle: "Slate semanal en vivo (scores medidos)",
+      downloadJson: "Descargar JSON de evidencia para el jurado",
+      downloaded: "Descargado",
       removeTitle: "Sin ClickHouse este greenlight semanal no puede medir",
       removeBody:
         "Quita ClickHouse / mcp-clickhouse y el greenlight semanal no puede medir huecos de género, momentum WoW, pares de canibalización ni huecos de slate en runtime — desaparecen esos cuatro SELECT MCP y los INSERT de auditoría; un scorer TypeScript sin entradas medidas no sirve. Gemini solo sintetiza narrativa (y NL→SQL en /ask).",
@@ -651,6 +675,13 @@ export const translations = {
       fallbackBadge: "Puntuación medida — memo Gemini opcional",
       provenanceTitle: "Procedencia del score (dimensiones MCP)",
       fromQuery: "← {query}",
+      stripAria: "Campos medidos desde ClickHouse vía mcp-clickhouse",
+      stripMcpTitle: "Cuatro SELECT MCP fijos en runtime del greenlight",
+      clickhouseAttribution:
+        "Estos números vienen de ClickHouse vía mcp-clickhouse — Gemini no inventó el ranking.",
+      fillerBadge: "relleno de catálogo",
+      fillerHint:
+        "Relleno de diversidad de género desde profundidad del catálogo — medido en ClickHouse.",
     },
     catalog: {
       title: "Catálogo",

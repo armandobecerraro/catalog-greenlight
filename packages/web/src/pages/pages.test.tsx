@@ -11,6 +11,7 @@ import Guide from "./Guide";
 import { HealthBanner } from "../components/HealthBanner";
 import { api } from "../api";
 import { ApiError } from "../utils/apiErrors";
+import * as juryEvidence from "../utils/juryEvidence";
 import type { AgentRunResult } from "../api";
 
 vi.mock("../api", () => ({
@@ -355,10 +356,33 @@ describe("pages", () => {
     expect(screen.getAllByText(/Gemini does not plan greenlight SQL/i).length).toBeGreaterThan(0);
     expect(screen.getAllByRole("link", { name: "For judges" }).length).toBeGreaterThan(0);
     expect(screen.getByText(/How to verify in 2 minutes/i)).toBeInTheDocument();
-    expect(screen.getByText(/A_genre_inventory/)).toBeInTheDocument();
+    expect(screen.getByText(/Competitive wedge/i)).toBeInTheDocument();
+    expect(screen.getByText(/vs Chloe Greenlight/i)).toBeInTheDocument();
+    expect(screen.getByText(/vs Flashframe/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/A_genre_inventory/).length).toBeGreaterThan(0);
     await vi.waitFor(() => {
       expect(screen.queryByText(/mcp-clickhouse and the API wake/i)).not.toBeInTheDocument();
     });
+  });
+
+  it("shows judge slate preview with em dash when score is missing", async () => {
+    mockedApi.getGreenlight.mockResolvedValue({
+      intent: "greenlight",
+      answer: "memo",
+      recommendations: [{ title: "No Score Title", genre: "Drama", justification: "", evidence: "" }],
+      queryRows: [],
+      steps: [],
+      totalLatencyMs: 1,
+      model: "gemini-test",
+    });
+    wrap(<App />, "/judge");
+    expect(
+      await screen.findByRole("heading", { level: 2, name: /For judges/i }),
+    ).toBeInTheDocument();
+    await vi.waitFor(() => {
+      expect(screen.getByText("No Score Title")).toBeInTheDocument();
+    });
+    expect(screen.getAllByText("—").length).toBeGreaterThan(0);
   });
 
   it("copies jury evidence JSON from /judge", async () => {
@@ -379,6 +403,22 @@ describe("pages", () => {
     expect(JSON.parse(writeText.mock.calls[0][0] as string).intent).toBe("greenlight");
   });
 
+  it("downloads jury evidence JSON from /judge", async () => {
+    const downloadSpy = vi.spyOn(juryEvidence, "downloadJuryEvidence").mockReturnValue(true);
+
+    wrap(<App />, "/judge");
+    expect(
+      await screen.findByRole("heading", { level: 2, name: /For judges/i }),
+    ).toBeInTheDocument();
+    await vi.waitFor(() => {
+      expect(screen.queryByText(/Waiting for a greenlight response/i)).not.toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByRole("button", { name: /Download jury evidence JSON/i }));
+    expect(downloadSpy).toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: /Downloaded/i })).toBeInTheDocument();
+    downloadSpy.mockRestore();
+  });
+
   it("handles /judge clipboard failure", async () => {
     Object.assign(navigator, {
       clipboard: { writeText: vi.fn().mockRejectedValue(new Error("denied")) },
@@ -396,8 +436,10 @@ describe("pages", () => {
 
   it("shows /judge cold-start copy when health is waking", async () => {
     mockedApi.health.mockResolvedValue({ status: "starting", ready: false, partners: {} });
+    mockedApi.getGreenlight.mockResolvedValue({ intent: "greenlight", recommendations: [], steps: [], totalLatencyMs: 1, model: "x", answer: "" });
     wrap(<App />, "/judge");
     expect(await screen.findByText(/mcp-clickhouse and the API wake/i)).toBeInTheDocument();
+    expect(screen.queryByText(/Live weekly slate/i)).not.toBeInTheDocument();
   });
 
   it("shows /judge cold-start copy when health fails and no-ops JSON export", async () => {

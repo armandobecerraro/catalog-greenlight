@@ -7,6 +7,8 @@ import { DataTable } from './DataTable';
 import { AgentTimeline } from './AgentTimeline';
 import { StepOutput } from './StepOutput';
 import { Card, EmptyState, ErrorBanner, Loading, PageHeader } from './Layout';
+import { GreenlightSlateBar } from './GreenlightSlateBar';
+import type { AgentRunResult } from '../api';
 
 function wrap(ui: ReactElement) {
   return render(
@@ -100,5 +102,37 @@ describe('AgentTimeline and StepOutput', () => {
     );
     expect(screen.getByText('plain')).toBeInTheDocument();
     expect(screen.getByText('3')).toBeInTheDocument();
+  });
+});
+
+describe('GreenlightSlateBar', () => {
+  const run: AgentRunResult = {
+    intent: 'greenlight',
+    answer: 'memo',
+    recommendations: [{ title: 'A', genre: 'Thriller', justification: 'j', evidence: 'e' }],
+    steps: [],
+    totalLatencyMs: 1,
+    model: 'x'
+  };
+
+  it('renders export actions when recommendations exist', () => {
+    wrap(<GreenlightSlateBar greenlight={run} />);
+    expect(screen.getByText(/Gemini did not invent the ranking/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Export CSV/i })).toBeInTheDocument();
+  });
+
+  it('renders nothing without titled recommendations', () => {
+    wrap(<GreenlightSlateBar greenlight={{ ...run, recommendations: [{ title: '  ', genre: 'Drama', justification: '', evidence: '' }] }} />);
+    expect(screen.queryByText(/Gemini did not invent the ranking/i)).not.toBeInTheDocument();
+  });
+
+  it('renders nothing for an empty recommendations list', () => {
+    wrap(<GreenlightSlateBar greenlight={{ ...run, recommendations: [] }} />);
+    expect(screen.queryByText(/Gemini did not invent the ranking/i)).not.toBeInTheDocument();
+  });
+
+  it('renders nothing when recommendations are undefined', () => {
+    wrap(<GreenlightSlateBar greenlight={{ ...run, recommendations: undefined }} />);
+    expect(screen.queryByText(/Gemini did not invent the ranking/i)).not.toBeInTheDocument();
   });
 });

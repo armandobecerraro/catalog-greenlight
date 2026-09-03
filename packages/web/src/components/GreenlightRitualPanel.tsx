@@ -3,7 +3,8 @@ import { useLocale } from '../i18n/LocaleContext';
 import {
   extractCannibalPairs,
   formatPct,
-  metricsForRec
+  metricsForRec,
+  isSeedFillerTitle
 } from '../utils/greenlightMetrics';
 import { contrafactualPairs, exportWeeklySlate } from '../utils/greenlightExport';
 
@@ -82,6 +83,11 @@ export function GreenlightRitualPanel({ greenlight }: { greenlight: AgentRunResu
                   <td>{i + 1}</td>
                   <td>
                     <strong>{rec.title}</strong>
+                    {isSeedFillerTitle(rec.title) && (
+                      <span className="badge filler-depth-badge slate-filler-badge">
+                        catalog depth fill
+                      </span>
+                    )}
                     <p className="muted small slate-justification">{rec.justification}</p>
                   </td>
                   <td>

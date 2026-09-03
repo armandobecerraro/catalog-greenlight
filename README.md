@@ -41,6 +41,10 @@ Remove ClickHouse / `mcp-clickhouse` and the weekly greenlight cannot measure ge
 
 **Demo video:** `TODO_YOUTUBE` — teleprompter + shot list in `docs/submission/VIDEO_CHECKLIST.md` (record against the hosted URL only). Render free tier sleeps — wait 60–90s for `ready: true` before recording.
 
+**Hosted benchmarks:** honest latency samples in [`docs/submission/BENCHMARKS.md`](./docs/submission/BENCHMARKS.md). Judging-week keep-alive: `bash scripts/keepalive-smoke.sh`.
+
+> **GitHub About (manual):** set description to *ClickHouse-track hackathon app — weekly catalog greenlight with mcp-clickhouse + TypeScript scorer* and Website to https://catalog-greenlight.onrender.com
+
 ## User documentation
 
 | Document                                         | Language | Description                                                     |

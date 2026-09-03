@@ -1,6 +1,6 @@
-import { Link, NavLink, Outlet } from 'react-router-dom';
-import { HealthBanner } from './HealthBanner';
-import { LanguageToggle, useLocale } from '../i18n/LocaleContext';
+import { Link, NavLink, Outlet } from "react-router-dom";
+import { HealthBanner } from "./HealthBanner";
+import { LanguageToggle, useLocale } from "../i18n/LocaleContext";
 
 export function Layout() {
   const { t } = useLocale();
@@ -13,18 +13,19 @@ export function Layout() {
           <span className="brand-mark">CG</span>
           <div>
             <h1>Catalog Greenlight</h1>
-            <p>{t('brand.tagline')}</p>
+            <p>{t("brand.tagline")}</p>
           </div>
         </Link>
         <div className="topbar-actions">
           <nav className="nav">
             <NavLink to="/" end>
-              {t('nav.dashboard')}
+              {t("nav.dashboard")}
             </NavLink>
-            <NavLink to="/catalog">{t('nav.catalog')}</NavLink>
-            <NavLink to="/ingest">{t('nav.ingest')}</NavLink>
-            <NavLink to="/ask">{t('nav.ask')}</NavLink>
-            <NavLink to="/guia">{t('nav.about')}</NavLink>
+            <NavLink to="/catalog">{t("nav.catalog")}</NavLink>
+            <NavLink to="/ingest">{t("nav.ingest")}</NavLink>
+            <NavLink to="/ask">{t("nav.ask")}</NavLink>
+            <NavLink to="/judge">{t("nav.judge")}</NavLink>
+            <NavLink to="/guia">{t("nav.about")}</NavLink>
           </nav>
           <LanguageToggle />
         </div>
@@ -33,7 +34,9 @@ export function Layout() {
         <Outlet />
       </main>
       <footer className="footer">
-        {t('footer')} · <Link to="/guia">{t('footerGuide')}</Link>
+        {t("footer")} · <Link to="/judge">{t("footerJudge")}</Link>
+        {" · "}
+        <Link to="/guia">{t("footerGuide")}</Link>
       </footer>
     </div>
   );
@@ -50,8 +53,8 @@ export function PageHeader({ title, subtitle }: { title: string; subtitle?: stri
 
 export function Card({
   children,
-  className = '',
-  id
+  className = "",
+  id,
 }: {
   children: React.ReactNode;
   className?: string;
@@ -71,7 +74,7 @@ export function ErrorBanner({ message }: { message: string }) {
 export function EmptyState({
   title,
   body,
-  action
+  action,
 }: {
   title: string;
   body: string;
@@ -88,9 +91,9 @@ export function EmptyState({
 
 export function Loading() {
   const { t } = useLocale();
-  return <div className="loading">{t('common.loading')}</div>;
+  return <div className="loading">{t("common.loading")}</div>;
 }
 
-export { AgentTimeline } from './AgentTimeline';
+export { AgentTimeline } from "./AgentTimeline";
 
 export { Link };

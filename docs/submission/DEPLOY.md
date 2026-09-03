@@ -79,9 +79,25 @@ curl -s https://catalog-greenlight.onrender.com/api/v1/catalog/stats | jq .
 curl -s 'https://catalog-greenlight.onrender.com/api/v1/greenlight?refresh=1' | jq .
 ```
 
-## Keep-alive checklist
+## Keep-alive through judging (~23 Sep – 7 Oct 2026)
 
-- [ ] Render/Cloud Run service not sleeping (upgrade plan if free tier sleeps)
-- [ ] ClickHouse Cloud credits active through Oct 7
-- [ ] `GEMINI_API_KEY` quota sufficient
-- [ ] Re-run seed if catalog empty after redeploy
+Render **free** spins down after idle (~15 min). First request then takes **60–90s**. ClickHouse Cloud **trial credits may expire** before Oct 7 — if health is `ready: false` with MCP errors, check the Cloud service first.
+
+Credential-free smoke (no secrets):
+
+```bash
+bash scripts/keepalive-smoke.sh
+# or: BASE_URL=https://catalog-greenlight.onrender.com bash scripts/keepalive-smoke.sh
+```
+
+That curls `/api/v1/health` then `/api/v1/greenlight` (cached; use `?refresh=1` only when you need a fresh scorer run).
+
+Optional ping every 5–10 min (UptimeRobot / cron) against `GET /api/v1/health` reduces spin-down during the judging window. Do **not** hammer `?refresh=1` on a timer — that re-runs four MCP queries + Gemini.
+
+### Judging-week checklist
+
+- [ ] Render service awake (or a keep-alive ping) through **7 Oct 2026**
+- [ ] ClickHouse Cloud trial / credits active through **7 Oct 2026** (renew or export if the trial ends earlier)
+- [ ] `GEMINI_API_KEY` quota sufficient (`/ask` and ingest need it; greenlight still returns 3 scorer picks on 429)
+- [ ] Re-run `deployment/scripts/seed-remote.sh` if catalog empty after redeploy
+- [ ] `/judge` still loads (SPA) after each Render deploy

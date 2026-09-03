@@ -6,27 +6,27 @@ Paste these fields into https://agentic-cinema.devpost.com/ (draft **1155720**, 
 
 ## Devpost fields (copy-paste)
 
-| Field | Value |
-|-------|-------|
-| **Draft** | 1155720 |
-| **Track** | ClickHouse |
-| **Project name** | Catalog Greenlight |
-| **Tagline** | ClickHouse measures. TypeScript scores. Gemini explains. |
-| **Built with** | ClickHouse, mcp-clickhouse, Google Gemini API (`@google/genai`), MCP, TypeScript, React, Docker |
-| **Link to demo** | https://catalog-greenlight.onrender.com |
-| **Link to GitHub** | https://github.com/armandobecerraro/catalog-greenlight |
-| **What it does** | Web app for a streaming **programming chief**: four parallel MCP SELECTs measure the catalog; a transparent TypeScript scorer ranks three weekly greenlight picks; Gemini (`@google/genai` on Google Cloud — **not** Agent Builder / ADK) writes the narrative only. Catalog Q&A uses Gemini for NL→SQL. |
+| Field              | Value                                                                                                                                                                                                                                                                                                    |
+| ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Draft**          | 1155720                                                                                                                                                                                                                                                                                                  |
+| **Track**          | ClickHouse                                                                                                                                                                                                                                                                                               |
+| **Project name**   | Catalog Greenlight                                                                                                                                                                                                                                                                                       |
+| **Tagline**        | ClickHouse measures. TypeScript scores. Gemini explains.                                                                                                                                                                                                                                                 |
+| **Built with**     | ClickHouse, mcp-clickhouse, Google Gemini API (`@google/genai`), MCP, TypeScript, React, Docker                                                                                                                                                                                                          |
+| **Link to demo**   | https://catalog-greenlight.onrender.com                                                                                                                                                                                                                                                                  |
+| **Link to GitHub** | https://github.com/armandobecerraro/catalog-greenlight                                                                                                                                                                                                                                                   |
+| **What it does**   | Web app for a streaming **programming chief**: four parallel MCP SELECTs measure the catalog; a transparent TypeScript scorer ranks three weekly greenlight picks; Gemini (`@google/genai` on Google Cloud — **not** Agent Builder / ADK) writes the narrative only. Catalog Q&A uses Gemini for NL→SQL. |
 
 ---
 
 ## vs Chloe (same hackathon)
 
-| | **Catalog Greenlight** (this project) | **Chloe** (competing entry) |
-|---|--------------------------------------|----------------------------|
-| **User** | Streaming **programming chief** | Filmmaker / writer |
-| **Output** | Weekly **catalog slate** — three titles to push | Screenplay → film production |
-| **Analytics** | Four fixed MCP SELECTs + **TypeScript scorer** | Different stack / workflow |
-| **Gemini role** | Narrative synthesis only (greenlight); NL→SQL on `/ask` | Production-oriented agent |
+|                 | **Catalog Greenlight** (this project)                   | **Chloe** (competing entry)  |
+| --------------- | ------------------------------------------------------- | ---------------------------- |
+| **User**        | Streaming **programming chief**                         | Filmmaker / writer           |
+| **Output**      | Weekly **catalog slate** — three titles to push         | Screenplay → film production |
+| **Analytics**   | Four fixed MCP SELECTs + **TypeScript scorer**          | Different stack / workflow   |
+| **Gemini role** | Narrative synthesis only (greenlight); NL→SQL on `/ask` | Production-oriented agent    |
 
 ---
 
@@ -116,3 +116,25 @@ Armando Becerra Rodríguez
 ## License
 
 MIT
+
+---
+
+## Impact (paste into Devpost)
+
+**Catalog Greenlight** is for a streaming **programming chief**, not a filmmaker. Each week that user must pick a **catalog slate** — three titles to push — from measured catalog economics, not from LLM vibes.
+
+**Remove ClickHouse / mcp-clickhouse and the weekly greenlight cannot measure genre gaps, WoW momentum, cannibalization pairs, or slate holes at runtime** — those four MCP SELECTs (`A_genre_inventory`, `B_title_momentum`, `C_cannibalization`, `D_slate_holes`) plus audit inserts disappear; a TypeScript scorer with no measured inputs is useless. Gemini never invents the slate; it only narrates scores ClickHouse already produced.
+
+This is a different job than Chloe (screenplay → film) and a different ClickHouse story than Flashframe (sliding-window QC that Gemini _judges_). We keep ranking in TypeScript so a judge can audit the formula when Gemini is down.
+
+Live: https://catalog-greenlight.onrender.com/judge
+
+## Tech Implementation (paste into Devpost)
+
+Runtime ClickHouse **only** via official **mcp-clickhouse** (`McpClickHouseConnector.ts` → `run_query`). Google AI **only** via `@google/genai` (`GoogleGenAI` + `generateContent`) — not Agent Builder, ADK, OpenAI, Anthropic, or LangChain.
+
+**Greenlight path:** four fixed MCP SELECTs in parallel → deterministic TypeScript scorer (`GreenlightScorer.ts`: `opportunity = 0.4×genre_gap + 0.4×wow_momentum − 0.2×cannibalization_penalty + 0.05×language_gap`, genre diversity) → Gemini narrative with 10s timeout (429/error → three scorer picks, HTTP 200). Gemini does **not** plan greenlight SQL.
+
+**Ask path:** Gemini classifies intent and writes NL→SQL; MCP executes; answers are grounded in returned rows.
+
+**Pitch:** ClickHouse measures. TypeScript scores. Gemini explains.

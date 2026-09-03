@@ -2,12 +2,12 @@
 
 **Target:** ≤ 3 minutes, **English** narration, recorded against the **hosted app** (not localhost).
 
-| Item | Value |
-|------|-------|
-| **Hosted URL** | https://catalog-greenlight.onrender.com |
-| **Devpost draft** | 1155720 |
-| **YouTube** | `TODO_YOUTUBE` — paste link into `DEVPOST.md` after upload |
-| **Pitch line** | “ClickHouse measures. TypeScript scores. Gemini explains.” |
+| Item              | Value                                                      |
+| ----------------- | ---------------------------------------------------------- |
+| **Hosted URL**    | https://catalog-greenlight.onrender.com                    |
+| **Devpost draft** | 1155720                                                    |
+| **YouTube**       | `TODO_YOUTUBE` — paste link into `DEVPOST.md` after upload |
+| **Pitch line**    | “ClickHouse measures. TypeScript scores. Gemini explains.” |
 
 ---
 
@@ -26,20 +26,20 @@
 
 ---
 
-## Shot list & timing (record this order)
+## Shot list & timing (winning order — validated on live smoke)
 
-The live dashboard puts **Greenlight this week** above the fold. Do **not** open with collapsed stats. Skip Ingest unless you have spare time (Branch B).
+Do **not** open with Ingest. Skip Ingest unless you have spare time.
 
-| # | Time | Shot | Action on screen | Branch B |
-|---|------|------|------------------|----------|
-| 1 | 0:00–0:18 | Hook | Browser already on **/** (English). Say the programming-chief problem, then the pitch once. | — |
-| 2 | 0:18–1:05 | Greenlight hero | Three rec-cards. Point at Score / WoW / Genre gap. Click **Show evidence** — SQL + analytics. Name **mcp-clickhouse** and the TypeScript scorer. | — |
-| 3 | 1:05–1:50 | Ask | `/ask` — chip *“Which genre is under-represented in our catalog?”* → Run → Answer (Documentary `gap_score`) → **SQL** → **Evidence** → 6-step timeline. | If HTTP **429**: skip Ask, stay on Greenlight; splice Ask later. |
-| 4 | 1:50–2:25 | Architecture slide | One slide: 4 MCP SELECTs → scorer → Gemini narrative. **Remove ClickHouse** line. **Not Agent Builder.** | — |
-| 5 | 2:25–2:50 | CTA | Hosted URL + GitHub on screen ≥ 5 seconds. | — |
-| — | optional | Ingest | Only if shots 1–5 are under 2:20. | If Gemini fails: “Ingest needs Gemini; skipping.” |
+| #   | Time      | Shot                     | Action on screen                                                                                                                                                                                                                   | Branch B                                                         |
+| --- | --------- | ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| 1   | 0:00–0:18 | Warm Render              | Browser already on hosted **/** (English). Health banner gone / `ready: true`. Say the programming-chief problem, then the pitch once.                                                                                             | If still waking: wait, do not record the spinner.                |
+| 2   | 0:18–1:05 | `/` stats + Greenlight   | Optional **Show catalog snapshot** (size / genres / revenue), then the **three rec-cards**. Point at Score / WoW / Genre gap. Click **Show evidence**. Name **mcp-clickhouse** and the TypeScript scorer. **Say the pitch aloud.** | —                                                                |
+| 3   | 1:05–1:50 | `/ask` under-represented | Chip _“Which genre is under-represented in our catalog?”_ → Run → Documentary `gap_score` → **SQL** → **Evidence** → 6-step timeline.                                                                                              | If HTTP **429**: skip Ask, stay on Greenlight; splice Ask later. |
+| 3b  | optional  | Comedy ask               | Chip about comedy titles — grounded Comedy rows + honest no-runtime note (no invented `duration`).                                                                                                                                 | Skip if over time.                                               |
+| 4   | 1:50–2:25 | Architecture slide       | mcp-clickhouse + TypeScript scorer + `@google/genai`. **Not Agent Builder / ADK.** **Remove ClickHouse** line. Optional flash of `/judge`.                                                                                         | —                                                                |
+| 5   | 2:25–2:50 | CTA                      | Hosted URL + GitHub on screen ≥ 5 seconds.                                                                                                                                                                                         | —                                                                |
 
-**Total:** ≤ 3:00 (target ~2:50).
+**Total:** ≤ 3:00 (target ~2:50). **TODO_YOUTUBE blocks Devpost Submit.**
 
 ---
 
@@ -49,7 +49,7 @@ Pause while the UI loads. If you go over 3:00, cut Ingest (already optional) and
 
 > **[0:00–0:18]** “**Catalog Greenlight** is for a streaming programming chief. Every week you have to pick a catalog slate — three titles to push — and the answer has to come from measured data, not vibes. **ClickHouse measures. TypeScript scores. Gemini explains.**”
 
-> **[0:18–1:05]** “This is the live app at **catalog-greenlight.onrender.com**. Greenlight this week is three ranked titles. ClickHouse ran four analytics queries through **mcp-clickhouse**: genre inventory, week-over-week momentum, cannibalization, and slate holes. A **TypeScript scorer** — not Gemini — computed opportunity score. Gemini only writes the prose. If Gemini times out, the three picks and the numbers stay.”
+> **[0:18–1:05]** “This is the live app at **catalog-greenlight.onrender.com**. Catalog stats come from ClickHouse. Greenlight this week is three ranked titles. ClickHouse ran four analytics queries through **mcp-clickhouse**: genre inventory, week-over-week momentum, cannibalization, and slate holes. A **TypeScript scorer** — not Gemini — computed opportunity score. Gemini only writes the prose. If Gemini times out, the three picks and the numbers stay.”
 
 > **[1:05–1:50]** “On Ask: which genre is under-represented in our catalog? Watch the six-step agent — intent, discover, plan SQL, execute, synthesize, audit. The SQL is a ClickHouse CTE. The answer cites **gap_score** — revenue share minus title share — from live rows. That is not a chatbot inventing a genre.”
 
@@ -77,15 +77,15 @@ Pause while the UI loads. If you go over 3:00, cut Ingest (already optional) and
 
 **Rec-cards** — per card:
 
-| UI label | Field | Notes |
-|----------|-------|-------|
-| Score | `opportunity_score` | 3 decimal places |
-| WoW | `wow_pct` | Shown as % |
-| Genre gap | `genre_gap` | 3 decimal places |
-| Cannibal pair | `in_cannibal_pair` | yes / no |
-| Body | `justification` | Gemini narrative |
-| Evidence | `evidence` | Tied to query data |
-| Provenance | score dimensions | Genre gap / WoW / cannibal from MCP queries A–D |
+| UI label      | Field               | Notes                                           |
+| ------------- | ------------------- | ----------------------------------------------- |
+| Score         | `opportunity_score` | 3 decimal places                                |
+| WoW           | `wow_pct`           | Shown as %                                      |
+| Genre gap     | `genre_gap`         | 3 decimal places                                |
+| Cannibal pair | `in_cannibal_pair`  | yes / no                                        |
+| Body          | `justification`     | Gemini narrative                                |
+| Evidence      | `evidence`          | Tied to query data                              |
+| Provenance    | score dimensions    | Genre gap / WoW / cannibal from MCP queries A–D |
 
 **ClickHouse analytics** (below rec-cards): genre gap bars, WoW momentum top titles, cannibal pairs table.
 
@@ -93,7 +93,7 @@ Formula (mention if time): `opportunity = 0.4×genre_gap + 0.4×wow_momentum −
 
 ### Ask page (`/ask`)
 
-1. Question chip: *“Which genre is under-represented in our catalog?”*
+1. Question chip: _“Which genre is under-represented in our catalog?”_
 2. Answer paragraph with numeric claims
 3. **SQL** `<pre>` block
 4. **Evidence (N rows)** JSON preview

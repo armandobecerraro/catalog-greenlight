@@ -2,19 +2,44 @@
 
 **Agentic Cinema Hackathon — ClickHouse Track**
 
+[![Live Demo](https://img.shields.io/badge/Live-Demo-F5C518?style=flat-square)](https://catalog-greenlight.onrender.com)
+[![CI](https://github.com/armandobecerraro/catalog-greenlight/actions/workflows/ci.yml/badge.svg)](https://github.com/armandobecerraro/catalog-greenlight/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
+[![ClickHouse MCP](https://img.shields.io/badge/ClickHouse-mcp--clickhouse-FAFF69?style=flat-square)](https://github.com/ClickHouse/mcp-clickhouse)
+[![Gemini](https://img.shields.io/badge/Gemini-%40google%2Fgenai-4285F4?style=flat-square)](https://ai.google.dev/)
+[![Devpost](https://img.shields.io/badge/Devpost-1155720-003E54?style=flat-square)](https://agentic-cinema.devpost.com/)
+
 > **ClickHouse measures. TypeScript scores. Gemini explains.**
+
+**Live demo:** https://catalog-greenlight.onrender.com · **[For judges](https://catalog-greenlight.onrender.com/judge)** · [User guide](https://catalog-greenlight.onrender.com/guia) · [GitHub](https://github.com/armandobecerraro/catalog-greenlight)
 
 **Catalog Greenlight** is a web product for a streaming **programming chief** at a small Latin/US streaming studio. Each week it greenlights three titles in a **catalog slate**: four fixed MCP SELECTs at runtime, a transparent **TypeScript scorer** (`GreenlightScorer.ts`) ranks candidates and enforces genre diversity, and **Gemini** (`@google/genai` on Google Cloud — **not** Agent Builder / ADK) writes the narrative only — it does not plan greenlight SQL. If Gemini synthesis fails, times out, or returns 429, the dashboard still shows three scorer picks. Catalog Q&A on `/ask` uses Gemini for intent and NL→SQL.
 
-**Not Chloe:** the competing **Chloe** entry targets screenplay→film production; **Catalog Greenlight** targets weekly catalog programming decisions backed by ClickHouse analytics.
+**Not Chloe:** Chloe (same hackathon) is a filmmaker production agent (screenplay → film). Catalog Greenlight is a **programming-chief** tool — weekly catalog slate, four MCP SELECTs, TypeScript scorer. Different user, output, and ClickHouse job.
+
+## Submission blockers (Devpost)
+
+These two items **block Devpost Submit**. They are out of scope for code PRs — check them off only after the human steps are done.
+
+- [ ] **TODO_YOUTUBE** — English ≤3 min video of the **live** demo (**blocks Submit**). Teleprompter: `docs/submission/VIDEO_CHECKLIST.md`.
+- [ ] Devpost draft [1155720](https://agentic-cinema.devpost.com/) → **Submit** (paste `docs/submission/DEVPOST.md`).
+
+## Remove ClickHouse and the weekly greenlight cannot measure
+
+Remove ClickHouse / `mcp-clickhouse` and the weekly greenlight cannot measure genre gaps, WoW momentum, cannibalization pairs, or slate holes at runtime — those four MCP SELECTs plus audit inserts disappear; a TypeScript scorer with no measured inputs is useless.
+
+| Query id            | What it measures                                        |
+| ------------------- | ------------------------------------------------------- |
+| `A_genre_inventory` | Genre mix: title counts vs 4-week revenue               |
+| `B_title_momentum`  | Week-over-week title revenue (`wow_pct`)                |
+| `C_cannibalization` | Near-duplicate title pairs that split the same audience |
+| `D_slate_holes`     | Genre and language holes (`gap_score`)                  |
+
+**Code paths:** `McpClickHouseConnector.ts` (official MCP `run_query` only) → `GreenlightAnalyst` / `AgentRunner.ts` (DISCOVER the four SELECTs, AUDIT inserts) → `GreenlightScorer.ts` (TypeScript ranking). Gemini (`@google/genai`) only synthesizes the memo and, on `/ask`, plans NL→SQL. It does **not** plan greenlight SQL.
 
 **Repository:** https://github.com/armandobecerraro/catalog-greenlight
 
-**Live demo:** https://catalog-greenlight.onrender.com
-
-[Live](https://catalog-greenlight.onrender.com) · [User guide / judges](https://catalog-greenlight.onrender.com/guia) · [GitHub](https://github.com/armandobecerraro/catalog-greenlight)
-
-**Demo video:** `TODO_YOUTUBE` — teleprompter + shot list in `docs/submission/VIDEO_CHECKLIST.md` (record against the hosted URL only).
+**Demo video:** `TODO_YOUTUBE` — teleprompter + shot list in `docs/submission/VIDEO_CHECKLIST.md` (record against the hosted URL only). Render free tier sleeps — wait 60–90s for `ready: true` before recording.
 
 ## User documentation
 
@@ -55,14 +80,15 @@ npm run dev
 
 `npm run dev` loads repo-root `.env` automatically (`loadRepoEnv` in `@bas/infrastructure`).
 
-| Route      | Description                                                  |
-| ---------- | ------------------------------------------------------------ |
-| `/`        | Dashboard — MCP stats + Greenlight this week                 |
-| `/catalog` | Full catalog table                                           |
-| `/ingest`  | Ingest form → Gemini enrich → MCP INSERT                     |
-| `/ask`     | NL questions with 6-step agent timeline + SQL evidence       |
-| `/about`   | Redirects to `/guia`                                         |
-| `/guia`    | **User guide** — what the app does and how to use it (EN/ES) |
+| Route      | Description                                                     |
+| ---------- | --------------------------------------------------------------- |
+| `/`        | Dashboard — MCP stats + Greenlight this week                    |
+| `/judge`   | **For judges** — pitch, architecture, 2-minute verify checklist |
+| `/catalog` | Full catalog table                                              |
+| `/ingest`  | Ingest form → Gemini enrich → MCP INSERT                        |
+| `/ask`     | NL questions with 6-step agent timeline + SQL evidence          |
+| `/about`   | Redirects to `/guia`                                            |
+| `/guia`    | **User guide** — what the app does and how to use it (EN/ES)    |
 
 **Do not** run `npm run demo` on this path — that script starts local Docker ClickHouse and is for Path B.
 
@@ -213,18 +239,18 @@ deployment/docker/         ClickHouse, seed SQL, prod compose
 
 ## 3-minute demo video script (English)
 
-**Record against the hosted app only** — https://catalog-greenlight.onrender.com (not localhost). Pre-warm Render 60–90 s; hit `?refresh=1` before rolling. Full word-for-word script, shot list, branches, and checklist: `docs/submission/VIDEO_CHECKLIST.md`.
+**Record against the hosted app only** — https://catalog-greenlight.onrender.com (not localhost). Pre-warm Render 60–90 s until `/api/v1/health` is `ready: true`; hit `?refresh=1` before rolling. Full word-for-word script: `docs/submission/VIDEO_CHECKLIST.md`.
 
-| Time | Scene | What to show | Branch B |
-|------|-------|--------------|----------|
-| 0:00–0:20 | Hook | Say **Catalog Greenlight** — programming chief needs weekly greenlight picks backed by evidence, not vibes. | — |
-| 0:20–0:45 | Dashboard stats | **https://catalog-greenlight.onrender.com** — catalog size, genre breakdown, latest revenue (ClickHouse via **mcp-clickhouse** MCP). | — |
-| 0:45–1:15 | Ingest | `/ingest` — “Midnight Signal”, Sci-Fi → Gemini enrichment → `/catalog` new row. | Gemini down: say “Ingest needs Gemini; skipping to Ask/Greenlight” → skip to Ask or Greenlight. |
-| 1:15–2:00 | Ask | `/ask` — “Which genre is under-represented in our catalog?” → 6-step timeline → SQL → evidence → grounded answer. | HTTP 429: note “If 429, record Ask after credits”; finish Greenlight + architecture, splice Ask later. |
-| 2:00–2:30 | Greenlight | **Greenlight this week** — three rec-cards + provenance. **Say aloud:** “ClickHouse measures. TypeScript scores. Gemini explains.” | — |
-| 2:30–3:00 | Architecture | Slide: `mcp-clickhouse` + `@google/genai` (Gemini API on Google Cloud — **not Agent Builder**) + GitHub + hosted URL. | — |
+| Time      | Scene          | What to show                                                                                                       | Branch B                          |
+| --------- | -------------- | ------------------------------------------------------------------------------------------------------------------ | --------------------------------- |
+| 0:00–0:20 | Warm + hook    | Health ready. Say the programming-chief problem, then **ClickHouse measures. TypeScript scores. Gemini explains.** | —                                 |
+| 0:20–1:05 | `/` Greenlight | Stats snapshot (optional) + **three rec-cards**. Name mcp-clickhouse and the TypeScript scorer.                    | —                                 |
+| 1:05–1:50 | `/ask`         | Chip _“Which genre is under-represented in our catalog?”_ → Documentary `gap_score`.                               | HTTP 429: skip Ask, splice later. |
+| —         | optional       | Comedy ask (grounded Comedy titles + honest no-runtime note).                                                      | Skip if over time.                |
+| 1:50–2:25 | Architecture   | Slide: mcp-clickhouse + TS scorer + `@google/genai` — **not Agent Builder**. Remove ClickHouse line.               | —                                 |
+| 2:25–2:50 | CTA            | Hosted URL + GitHub ≥ 5 seconds. `/judge` if time.                                                                 | —                                 |
 
-Paste the YouTube link into `docs/submission/DEVPOST.md` as `TODO_YOUTUBE` when uploaded.
+Paste the YouTube link into `docs/submission/DEVPOST.md` as `TODO_YOUTUBE` when uploaded. **This checkbox blocks Submit.**
 
 ## License
 

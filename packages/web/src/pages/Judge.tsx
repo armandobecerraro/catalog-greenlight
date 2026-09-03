@@ -1,0 +1,147 @@
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import { api, AgentRunResult, HealthStatus } from "../api";
+import { PageHeader, Card } from "../components/Layout";
+import { TrustStrip } from "../components/TrustStrip";
+import { useLocale } from "../i18n/LocaleContext";
+import { juryEvidencePayload } from "../utils/juryEvidence";
+
+const HEALTH_JSON = "/api/v1/health";
+const GREENLIGHT_REFRESH = "/api/v1/greenlight?refresh=1";
+
+export default function Judge() {
+  const { t } = useLocale();
+  const [health, setHealth] = useState<HealthStatus | null>(null);
+  const [healthFailed, setHealthFailed] = useState(false);
+  const [greenlight, setGreenlight] = useState<AgentRunResult | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [copyFailed, setCopyFailed] = useState(false);
+
+  useEffect(() => {
+    api
+      .health()
+      .then((h) => {
+        setHealth(h);
+        setHealthFailed(false);
+      })
+      .catch(() => {
+        setHealthFailed(true);
+        setHealth(null);
+      });
+    api
+      .getGreenlight()
+      .then(setGreenlight)
+      .catch(() => setGreenlight(null));
+  }, []);
+
+  async function onCopyEvidence() {
+    const payload = juryEvidencePayload(greenlight);
+    if (!payload) return;
+    try {
+      await navigator.clipboard.writeText(JSON.stringify(payload, null, 2));
+      setCopied(true);
+      setCopyFailed(false);
+    } catch {
+      setCopyFailed(true);
+      setCopied(false);
+    }
+  }
+
+  const waking = healthFailed || health == null || !health.ready;
+
+  return (
+    <div className="judge-page">
+      <PageHeader title={t("judge.title")} subtitle={t("judge.subtitle")} />
+
+      <p className="judge-pitch" role="doc-subtitle">
+        {t("judge.pitch")}
+      </p>
+      <p className="muted">{t("judge.icp")}</p>
+
+      {waking && (
+        <p className="judge-wake muted" role="status">
+          {t("judge.coldStart")}
+        </p>
+      )}
+
+      <TrustStrip health={health} />
+
+      <Card className="judge-arch">
+        <h3>{t("judge.archTitle")}</h3>
+        <ul className="judge-arch-list">
+          <li>
+            <strong>mcp-clickhouse</strong> — {t("judge.archMcp")}
+          </li>
+          <li>
+            <strong>TypeScript scorer</strong> — {t("judge.archScorer")}
+          </li>
+          <li>
+            <strong>@google/genai</strong> — {t("judge.archGemini")}
+          </li>
+        </ul>
+        <p className="judge-scorer-note">{t("judge.scorerNote")}</p>
+      </Card>
+
+      <Card>
+        <h3>{t("judge.linksTitle")}</h3>
+        <p className="judge-links">
+          <Link to="/">{t("judge.linkDashboard")}</Link>
+          {" · "}
+          <Link to="/#greenlight">{t("judge.linkGreenlight")}</Link>
+          {" · "}
+          <Link to="/ask">{t("judge.linkAsk")}</Link>
+          {" · "}
+          <a href={HEALTH_JSON}>{t("judge.linkHealth")}</a>
+          {" · "}
+          <a href={GREENLIGHT_REFRESH}>{t("judge.linkGreenlightApi")}</a>
+        </p>
+      </Card>
+
+      <Card>
+        <h3>{t("judge.verifyTitle")}</h3>
+        <ol className="judge-checklist">
+          <li>
+            {t("judge.verifyWarm")} <code>GET {HEALTH_JSON}</code> → <code>ready: true</code>
+          </li>
+          <li>
+            {t("judge.verifyGreenlight")} <code>GET {GREENLIGHT_REFRESH}</code>
+          </li>
+          <li>{t("judge.verifyAsk")}</li>
+        </ol>
+      </Card>
+
+      <Card>
+        <h3>{t("judge.removeTitle")}</h3>
+        <p>{t("judge.removeBody")}</p>
+        <ul>
+          <li>
+            <code>A_genre_inventory</code> — {t("judge.qInventory")}
+          </li>
+          <li>
+            <code>B_title_momentum</code> — {t("judge.qMomentum")}
+          </li>
+          <li>
+            <code>C_cannibalization</code> — {t("judge.qCannibal")}
+          </li>
+          <li>
+            <code>D_slate_holes</code> — {t("judge.qHoles")}
+          </li>
+        </ul>
+        <p className="muted small">
+          {t("judge.codePointers")}: <code>McpClickHouseConnector.ts</code>,{" "}
+          <code>GreenlightScorer.ts</code>, <code>AgentRunner.ts</code>
+        </p>
+      </Card>
+
+      <Card>
+        <h3>{t("judge.exportTitle")}</h3>
+        <p className="muted">{t("judge.exportBody")}</p>
+        {!greenlight && <p className="muted small">{t("judge.waitingGreenlight")}</p>}
+        <button type="button" className="btn secondary" onClick={() => void onCopyEvidence()}>
+          {copied ? t("judge.copied") : t("judge.copyJson")}
+        </button>
+        {copyFailed && <p className="muted small">{t("judge.copyFailed")}</p>}
+      </Card>
+    </div>
+  );
+}

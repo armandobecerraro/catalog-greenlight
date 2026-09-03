@@ -24,6 +24,7 @@
     "test:e2e": "npm run test:e2e --workspace=@bas/web",
     "test:e2e:hosted": "npm run test:e2e:hosted --workspace=@bas/web",
     "deploy:infra": "bash scripts/deploy.sh",
+    "keepalive:smoke": "bash scripts/keepalive-smoke.sh",
     "setup": "bash scripts/setup.sh"
   },
   "devDependencies": {
@@ -43,12 +44,13 @@
     "npm": ">=9.0.0"
   },
   "keywords": [
-    "agentic-ai",
+    "clickhouse",
+    "mcp",
     "gemini",
+    "hackathon",
+    "agentic-ai",
     "google-cloud",
     "media-entertainment",
-    "hackathon",
-    "mcp",
     "enterprise"
   ],
   "author": "Blockbuster Agentic Studio Team",

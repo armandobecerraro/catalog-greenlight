@@ -13,17 +13,17 @@
 
 ## Stage One checklist (official rules)
 
-| Requirement | Status | Evidence |
-|-------------|--------|----------|
-| Public hosted web URL | **PASS** | https://catalog-greenlight.onrender.com — `GET /api/v1/health` → `ready: true` (verified 2026-09-01). Also in `docs/submission/DEVPOST.md`. |
-| Video ≤3 min EN (YouTube/Vimeo), product working | **PENDING** | `DEVPOST.md` line 40: `TODO_YOUTUBE`. No YouTube/Vimeo link yet. |
-| Public repo + OSI license visible | **PASS** | GitHub URL above. Root `LICENSE` = MIT. |
-| Google Cloud AI imported AND called at runtime | **PASS** | `@google/genai` in `packages/infrastructure/package.json`. `generateContent.ts`: `GoogleGenAI`, `ai.models.generateContent`. Adapters: `GeminiEnrichmentAdapter.ts`, `GeminiReasoningAdapter.ts`. |
-| ClickHouse via official MCP `mcp-clickhouse` at runtime | **PASS** | `McpClickHouseConnector.ts`: spawns `uv run --with mcp-clickhouse --python 3.13 mcp-clickhouse`; `Client.callTool` → `run_query`, `list_databases`, `list_tables`. No `@clickhouse/client` in `packages/*/package.json`. |
-| Web / mobile platform | **PASS** | React + Vite UI: `packages/web` — routes `/`, `/catalog`, `/ingest`, `/ask`, `/guia` (`/about` → `/guia`). |
-| New project in contest period | **UNKNOWN** (not verified in repo) | Assumed hackathon build; no creation date in LICENSE (copyright 2026). |
-| No LangChain / OpenAI / Anthropic in runtime | **PASS** | No imports/deps in `packages/*`; only UI disclaimer strings in `packages/web/src/i18n/translations.ts`. |
-| Devpost form + ClickHouse track | **PENDING** | Draft 1155720; hosted URL ready; video (`TODO_YOUTUBE`) and final Devpost submit still outstanding — form **not** marked Submitted. |
+| Requirement                                             | Status      | Evidence                                                                                                                                                                                                                 |
+| ------------------------------------------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Public hosted web URL                                   | **PASS**    | https://catalog-greenlight.onrender.com — `GET /api/v1/health` → `ready: true` (verified 2026-09-01). Also in `docs/submission/DEVPOST.md`.                                                                              |
+| Video ≤3 min EN (YouTube/Vimeo), product working        | **PENDING** | `DEVPOST.md` line 40: `TODO_YOUTUBE`. No YouTube/Vimeo link yet.                                                                                                                                                         |
+| Public repo + OSI license visible                       | **PASS**    | GitHub URL above. Root `LICENSE` = MIT.                                                                                                                                                                                  |
+| Google Cloud AI imported AND called at runtime          | **PASS**    | `@google/genai` in `packages/infrastructure/package.json`. `generateContent.ts`: `GoogleGenAI`, `ai.models.generateContent`. Adapters: `GeminiEnrichmentAdapter.ts`, `GeminiReasoningAdapter.ts`.                        |
+| ClickHouse via official MCP `mcp-clickhouse` at runtime | **PASS**    | `McpClickHouseConnector.ts`: spawns `uv run --with mcp-clickhouse --python 3.13 mcp-clickhouse`; `Client.callTool` → `run_query`, `list_databases`, `list_tables`. No `@clickhouse/client` in `packages/*/package.json`. |
+| Web / mobile platform                                   | **PASS**    | React + Vite UI: `packages/web` — routes `/`, `/judge`, `/catalog`, `/ingest`, `/ask`, `/guia` (`/about` → `/guia`).                                                                                                     |
+| New project in contest period                           | **PASS**    | Public GitHub repo created **2026-08-26** (contest period). Root `LICENSE` = MIT.                                                                                                                                        |
+| No LangChain / OpenAI / Anthropic in runtime            | **PASS**    | No imports/deps in `packages/*`; only UI disclaimer strings in `packages/web/src/i18n/translations.ts`.                                                                                                                  |
+| Devpost form + ClickHouse track                         | **PENDING** | Draft 1155720; hosted URL ready; video (`TODO_YOUTUBE`) and final Devpost submit still outstanding — form **not** marked Submitted.                                                                                      |
 
 ---
 
@@ -76,6 +76,32 @@ INTENT → DISCOVER → PLAN_SQL → EXECUTE → SYNTHESIZE → AUDIT
 
 ---
 
+## Remove ClickHouse and the weekly greenlight cannot measure
+
+**Claim (accurate):** Remove ClickHouse / `mcp-clickhouse` and the weekly greenlight cannot measure genre gaps, WoW momentum, cannibalization pairs, or slate holes at runtime — those four MCP SELECTs plus audit inserts disappear; a TypeScript scorer with no measured inputs is useless.
+
+| Query id            | File                                                         | What disappears without ClickHouse                      |
+| ------------------- | ------------------------------------------------------------ | ------------------------------------------------------- |
+| `A_genre_inventory` | `packages/orchestration/src/greenlight/greenlightQueries.ts` | Genre mix: title counts vs 4-week revenue               |
+| `B_title_momentum`  | same                                                         | Week-over-week title revenue (`wow_pct`)                |
+| `C_cannibalization` | same                                                         | Near-duplicate title pairs that split the same audience |
+| `D_slate_holes`     | same                                                         | Genre and language holes (`gap_score`)                  |
+
+**Code paths judges can open:**
+
+| Layer                | Path                                                                                                                                |
+| -------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| MCP runtime          | `packages/infrastructure/src/partners/clickhouse/McpClickHouseConnector.ts` — official `mcp-clickhouse` `run_query` / `list_*` only |
+| Four SELECTs + AUDIT | `packages/orchestration/src/greenlight/GreenlightAnalyst.ts` + `packages/orchestration/src/agents/AgentRunner.ts`                   |
+| Ranking              | `packages/orchestration/src/greenlight/GreenlightScorer.ts` — TypeScript; Gemini does **not** plan this SQL                         |
+| Gemini               | `@google/genai` — greenlight **narrative** only; `/ask` intent + NL→SQL                                                             |
+
+**Contrast with Flashframe (same track, different product):** Flashframe’s wedge is sliding-window SQL that Gemini then _judges_. Ours is four catalog-slate SELECTs that TypeScript _scores_; Gemini only _explains_. User = streaming **programming chief**, not photosensitivity QC.
+
+Same claim appears on `/judge`, README, and the Devpost Impact/Tech paste in `DEVPOST.md`.
+
+---
+
 ## ClickHouse schema & data
 
 **Schema** (`deployment/docker/init-schema.sql`):
@@ -110,13 +136,14 @@ INTENT → DISCOVER → PLAN_SQL → EXECUTE → SYNTHESIZE → AUDIT
 
 ## UI surfaces
 
-| Route | File | Behavior |
-|-------|------|----------|
-| `/` | `Dashboard.tsx` + `GreenlightPanel.tsx` | Stats + greenlight in parallel (1–3 min cold). Greenlight UI: provenance header (formula + stack badge), **Weekly programming ritual** table (export CSV/JSON), 3 rec-cards with per-card score provenance, ClickHouse analytics panels (genre gap, WoW momentum, cannibal pairs), agent timeline |
-| `/catalog` | `Catalog.tsx` | Table + filter |
-| `/ingest` | `Ingest.tsx` | Form; requires cast (validation) |
-| `/ask` | `Ask.tsx` | NL question + timeline |
-| `/guia` | `Guide.tsx` | User guide (EN/ES); `/about` redirects here |
+| Route      | File                                    | Behavior                                                                                                                                                                                                                                                                                          |
+| ---------- | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/`        | `Dashboard.tsx` + `GreenlightPanel.tsx` | Stats + greenlight in parallel (1–3 min cold). Greenlight UI: provenance header (formula + stack badge), **Weekly programming ritual** table (export CSV/JSON), 3 rec-cards with per-card score provenance, ClickHouse analytics panels (genre gap, WoW momentum, cannibal pairs), agent timeline |
+| `/catalog` | `Catalog.tsx`                           | Table + filter                                                                                                                                                                                                                                                                                    |
+| `/ingest`  | `Ingest.tsx`                            | Form; requires cast (validation)                                                                                                                                                                                                                                                                  |
+| `/ask`     | `Ask.tsx`                               | NL question + timeline                                                                                                                                                                                                                                                                            |
+| `/judge`   | `Judge.tsx`                             | Judge landing: pitch, architecture strip, 2-minute verify checklist, Remove ClickHouse, jury-evidence JSON export. English primary; EN/ES toggle.                                                                                                                                                 |
+| `/guia`    | `Guide.tsx`                             | User guide (EN/ES); `/about` redirects here                                                                                                                                                                                                                                                       |
 
 **Playwright E2E** (`packages/web/e2e/hackathon.spec.ts`, log `docs/submission/playwright-output.txt`):
 
@@ -144,14 +171,14 @@ INTENT → DISCOVER → PLAN_SQL → EXECUTE → SYNTHESIZE → AUDIT
 
 ## README vs reality
 
-| Claim | Match? |
-|-------|--------|
-| GitHub URL `armandobecerraro/catalog-greenlight` | YES |
-| Path A: Cloud 8443 + `npm run dev` | YES in README |
-| `@google/genai` not `@google/generative-ai` | YES in code |
-| `gemini-flash-latest` default | YES `generateContent.ts`, `.env.example` |
-| `.env.example` defaults localhost **8123** | YES — judges must edit for Cloud |
-| Hosted demo | YES — https://catalog-greenlight.onrender.com |
+| Claim                                            | Match?                                        |
+| ------------------------------------------------ | --------------------------------------------- |
+| GitHub URL `armandobecerraro/catalog-greenlight` | YES                                           |
+| Path A: Cloud 8443 + `npm run dev`               | YES in README                                 |
+| `@google/genai` not `@google/generative-ai`      | YES in code                                   |
+| `gemini-flash-latest` default                    | YES `generateContent.ts`, `.env.example`      |
+| `.env.example` defaults localhost **8123**       | YES — judges must edit for Cloud              |
+| Hosted demo                                      | YES — https://catalog-greenlight.onrender.com |
 
 ---
 
@@ -169,14 +196,14 @@ INTENT → DISCOVER → PLAN_SQL → EXECUTE → SYNTHESIZE → AUDIT
 
 ## File index for quick judge navigation
 
-| Topic | Path |
-|-------|------|
-| Gemini SDK | `packages/infrastructure/src/gemini/generateContent.ts` |
-| MCP ClickHouse | `packages/infrastructure/src/partners/clickhouse/McpClickHouseConnector.ts` |
-| Agent | `packages/orchestration/src/agents/AgentRunner.ts` |
-| Greenlight scorer | `packages/orchestration/src/greenlight/GreenlightScorer.ts` |
-| API + greenlight | `packages/api/src/index.ts` |
-| SQL guard | `packages/core/src/utils/sqlValidation.ts` |
-| Web API client | `packages/web/src/api.ts` |
-| E2E | `packages/web/e2e/hackathon.spec.ts` |
-| Submission copy | `docs/submission/DEVPOST.md` |
+| Topic             | Path                                                                        |
+| ----------------- | --------------------------------------------------------------------------- |
+| Gemini SDK        | `packages/infrastructure/src/gemini/generateContent.ts`                     |
+| MCP ClickHouse    | `packages/infrastructure/src/partners/clickhouse/McpClickHouseConnector.ts` |
+| Agent             | `packages/orchestration/src/agents/AgentRunner.ts`                          |
+| Greenlight scorer | `packages/orchestration/src/greenlight/GreenlightScorer.ts`                 |
+| API + greenlight  | `packages/api/src/index.ts`                                                 |
+| SQL guard         | `packages/core/src/utils/sqlValidation.ts`                                  |
+| Web API client    | `packages/web/src/api.ts`                                                   |
+| E2E               | `packages/web/e2e/hackathon.spec.ts`                                        |
+| Submission copy   | `docs/submission/DEVPOST.md`                                                |

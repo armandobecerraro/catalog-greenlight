@@ -1,6 +1,6 @@
 import type { ReactElement } from 'react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { LocaleProvider } from '../i18n/LocaleContext';
 import App from '../App';
@@ -163,9 +163,11 @@ describe('pages', () => {
   it('lists catalog titles, filters them, and can show padding', async () => {
     wrap(<Catalog />);
     expect(await screen.findByText('Crimen sin Fronteras: Bogotá')).toBeInTheDocument();
+    expect(screen.getByText(/1 of 2 titles in ClickHouse \(seed hidden\)/)).toBeInTheDocument();
     expect(screen.queryByText('Fading Line 75')).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('checkbox'));
     expect(screen.getByText('Fading Line 75')).toBeInTheDocument();
+    expect(screen.getByText(/2 titles in ClickHouse/)).toBeInTheDocument();
     fireEvent.change(screen.getByPlaceholderText(/Filter by title or genre/i), { target: { value: 'thriller' } });
     expect(screen.getByText('Crimen sin Fronteras: Bogotá')).toBeInTheDocument();
     expect(screen.queryByText('Fading Line 75')).not.toBeInTheDocument();
@@ -232,7 +234,28 @@ describe('pages', () => {
     mockedApi.ask.mockRejectedValueOnce(new ApiError('gemini_billing', 'quota'));
     wrap(<Ask />);
     fireEvent.submit(screen.getByRole('button', { name: /Run agent/i }).closest('form')!);
-    expect(await screen.findByText(/quota|billing|Gemini/i)).toBeInTheDocument();
+    expect(await screen.findByText(/credits are exhausted or rate-limited/i)).toBeInTheDocument();
+  });
+
+  it('shows ask progress while the agent is running', () => {
+    vi.useFakeTimers();
+    mockedApi.ask.mockReturnValue(new Promise(() => undefined));
+    const view = wrap(<Ask />);
+    try {
+      act(() => {
+        fireEvent.submit(screen.getByRole('button', { name: /Run agent/i }).closest('form')!);
+      });
+      expect(screen.getByRole('status')).toHaveTextContent(/Classify intent/i);
+      expect(screen.getByText(/not frozen/i)).toBeInTheDocument();
+      act(() => {
+        vi.advanceTimersByTime(5_400);
+      });
+      const discover = screen.getAllByText('Discover schema / analytics');
+      expect(discover.some(el => el.closest('li')?.classList.contains('is-active'))).toBe(true);
+    } finally {
+      view.unmount();
+      vi.useRealTimers();
+    }
   });
 
   it('renders the judge guide and redirects /about', async () => {

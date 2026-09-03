@@ -16,6 +16,10 @@ export default function NotFound() {
             <>
               <Link to="/">{t('notFound.dashboard')}</Link>
               {' · '}
+              <Link to="/catalog">{t('nav.catalog')}</Link>
+              {' · '}
+              <Link to="/ask">{t('nav.ask')}</Link>
+              {' · '}
               <Link to="/guia">{t('nav.about')}</Link>
             </>
           }

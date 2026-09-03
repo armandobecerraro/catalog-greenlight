@@ -76,4 +76,20 @@ test.describe('Hosted smoke — catalog-greenlight.onrender.com', () => {
       expect(catalogTitles.has(t)).toBe(true);
     }
   });
+
+  test('SPA: /greenlight, /catalog/stats, and unknown paths are never blank', async ({ page }) => {
+    test.setTimeout(greenlightTimeout + 60_000);
+    await page.goto('/does-not-exist');
+    await expect(page.getByText(/Unknown route/i)).toBeVisible();
+    await expect(page.getByRole('navigation')).toBeVisible();
+
+    await page.goto('/catalog/stats');
+    await expect(page.getByRole('heading', { name: 'Catalog stats' })).toBeVisible({
+      timeout: statsTimeout
+    });
+    await expect(page.locator('.stat-value').first()).not.toHaveText('0', { timeout: statsTimeout });
+
+    await page.goto('/greenlight');
+    await expect(page.getByText('Greenlight this week')).toBeVisible({ timeout: greenlightTimeout });
+  });
 });

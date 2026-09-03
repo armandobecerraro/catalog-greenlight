@@ -30,6 +30,10 @@ export default function Catalog() {
       e.genre.toLowerCase().includes(filter.toLowerCase())
     );
   });
+  const subtitle =
+    hidePadding && filtered.length < entries.length
+      ? t('catalog.subtitleFiltered', { shown: filtered.length, total: entries.length })
+      : t('catalog.subtitle', { count: filtered.length });
 
   if (loading) {
     return (
@@ -68,7 +72,7 @@ export default function Catalog() {
 
   return (
     <>
-      <PageHeader title={t('catalog.title')} subtitle={t('catalog.subtitle', { count: filtered.length })} />
+      <PageHeader title={t('catalog.title')} subtitle={subtitle} />
       <Card>
         <div className="catalog-toolbar">
           <input

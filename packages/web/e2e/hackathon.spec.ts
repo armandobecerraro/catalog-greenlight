@@ -17,7 +17,7 @@ test.describe('Catalog Greenlight hackathon UI (1280)', () => {
 
   test('catalog: dozens of rows', async ({ page }) => {
     await page.goto('/catalog');
-    await expect(page.getByText(/titles in ClickHouse/)).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByText(/\d+( of \d+)? titles in ClickHouse/)).toBeVisible({ timeout: 30_000 });
     const rows = page.locator('table tbody tr');
     await expect(rows.first()).toBeVisible({ timeout: catalogRowTimeout });
     const count = await rows.count();
@@ -80,6 +80,18 @@ test.describe('Catalog Greenlight hackathon UI (1280)', () => {
       expect(catalogTitles.has(t)).toBe(true);
     }
   });
+
+  test('legacy paths never show a blank screen', async ({ page }) => {
+    await page.goto('/greenlight');
+    await expect(page.getByText('Greenlight this week')).toBeVisible({ timeout: 60_000 });
+
+    await page.goto('/catalog/stats');
+    await expect(page.getByRole('heading', { name: 'Catalog stats' })).toBeVisible({ timeout: 60_000 });
+
+    await page.goto('/does-not-exist');
+    await expect(page.getByText(/Unknown route/i)).toBeVisible();
+    await expect(page.getByRole('navigation')).toBeVisible();
+  });
 });
 
 test.describe('Catalog Greenlight hackathon UI (390 mobile)', () => {
@@ -115,5 +127,6 @@ test.describe('Catalog Greenlight hackathon UI (390 mobile)', () => {
 
     await page.goto('/does-not-exist');
     await expect(page.getByText(/Unknown route/i)).toBeVisible();
+    await expect(page.getByRole('navigation')).toBeVisible();
   });
 });

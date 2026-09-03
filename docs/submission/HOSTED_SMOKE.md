@@ -145,7 +145,7 @@ curl -sS --max-time 240 -X POST https://catalog-greenlight.onrender.com/api/v1/a
 
 Gemini **credits are live** (no billing 429). PLAN_SQL/SYNTHESIZE still fall back if Gemini exceeds ~10s; ClickHouse evidence still returns.
 
-**Ad-hoc prompts (after ask grounding fix):** comedy recommend → Comedy titles SQL (`mc.genre = 'Comedy'`); duration is **not** a `media_content` column so the answer must say so instead of pivoting to Animation inventory. “Which genre should we greenlight next based on recent revenue?” → `D_slate_holes` / `gap_score`, not the fewest-titles line.
+**Ad-hoc prompts (after ask grounding fix):** comedy recommend → Comedy titles SQL (`mc.genre = 'Comedy'`); duration is **not** a `media_content` column so the answer must say so instead of pivoting to Animation inventory. “Which genre should we greenlight next based on recent revenue?” → `D_slate_holes` / `gap_score`, not the fewest-titles line. Language-code holes such as `es` are not shown as genre cards.
 
 **Re-smoke after deploy:**
 
@@ -154,11 +154,17 @@ curl -sS --max-time 240 -X POST https://catalog-greenlight.onrender.com/api/v1/a
   -H 'Content-Type: application/json' \
   -d '{"question":"Recommend a feel-good comedy under 2 hours"}'
 # expect HTTP 200, SQL with genre = 'Comedy', answer cites comedy titles (and says duration is not in schema)
+# must NOT contain “Animation has the fewest”
 
 curl -sS --max-time 240 -X POST https://catalog-greenlight.onrender.com/api/v1/agent/ask \
   -H 'Content-Type: application/json' \
   -d '{"question":"Which genre should we greenlight next based on recent revenue?"}'
 # expect HTTP 200, distinct answer (gap_score / recent revenue), not the Animation fewest-titles line
+
+curl -sS --max-time 240 -X POST https://catalog-greenlight.onrender.com/api/v1/agent/ask \
+  -H 'Content-Type: application/json' \
+  -d '{"question":"Which genre is under-represented in our catalog?"}'
+# expect HTTP 200, Documentary (or similar) gap_score grounded answer + CTE SQL + rows
 
 curl -sS --max-time 180 'https://catalog-greenlight.onrender.com/api/v1/greenlight?refresh=1'
 # expect HTTP 200 and 3 recommendations
@@ -166,7 +172,30 @@ curl -sS --max-time 180 'https://catalog-greenlight.onrender.com/api/v1/greenlig
 
 ---
 
-## 5. Playwright hosted smoke
+## 5. SPA routes — no blank black pages
+
+Hosted HTML is the SPA shell for every path (HTTP 200). The client router must never render an empty `<main>`.
+
+| URL | Expected |
+|-----|----------|
+| `/greenlight` | Redirect → `/#greenlight` (dashboard hero + 3 picks) |
+| `/catalog/stats` | Catalog stats page (size / genres / revenue) |
+| `/does-not-exist` (any unknown) | NotFound (“Unknown route”) + header nav |
+| `/`, `/ask`, `/catalog`, `/ingest`, `/guia` | Unchanged working pages |
+| `/about`, `/judge` | Redirect → `/guia` |
+
+```bash
+# Browser (not curl — SPA routing is client-side)
+open https://catalog-greenlight.onrender.com/greenlight
+open https://catalog-greenlight.onrender.com/catalog/stats
+open https://catalog-greenlight.onrender.com/does-not-exist
+```
+
+**Re-smoke after deploy:** none of those three URLs may show a blank charcoal page.
+
+---
+
+## 6. Playwright hosted smoke
 
 ```bash
 npm run test:e2e:hosted
@@ -176,13 +205,14 @@ npm run test:e2e:hosted
 
 ---
 
-## 6. Summary
+## 7. Summary
 
 | Category | Hosted ready? |
 |----------|---------------|
 | Health endpoint | **YES** |
 | Stats (~200 titles) | **YES** |
 | Greenlight 3 picks + scores | **YES** (TypeScript scorer; Gemini memo timed out → fallback) |
-| Ask `/agent/ask` | **YES** — HTTP 200, no 429, SQL + 11 ClickHouse rows, 6 steps |
-| Playwright hosted | **YES** — 4/4 |
+| Ask `/agent/ask` | **YES** — HTTP 200, no 429, SQL + 11 ClickHouse rows, 6 steps. Comedy/revenue briefs still need re-smoke after this PR deploys. |
+| SPA `/greenlight`, `/catalog/stats`, unknown | **FIX IN THIS PR** — must re-smoke after deploy (was blank black page) |
+| Playwright hosted | **YES** — 4/4 (pre-SPA tests); re-run after deploy |
 | Cold start tolerance | **YES** (~74s with 60s pre-warm) |

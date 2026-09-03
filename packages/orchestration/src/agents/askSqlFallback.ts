@@ -315,15 +315,35 @@ export function synthesizeFromRows(
   }
 
   if (hasGap) {
-    const genreRows = rows.filter(
-      r => str(r, 'hole_type') === 'genre' || str(r, 'genre') || str(r, 'dimension')
-    );
+    const genreRows = rows.filter(r => {
+      const hole = str(r, 'hole_type');
+      if (hole === 'language') return false;
+      return hole === 'genre' || Boolean(str(r, 'genre') || str(r, 'dimension'));
+    });
     const ranked = [...genreRows].sort((a, b) => num(b, 'gap_score') - num(a, 'gap_score'));
+    if (ranked.length === 0) {
+      const langRows = rows.filter(r => str(r, 'hole_type') === 'language');
+      if (langRows.length === 0) {
+        return {
+          answer: `ClickHouse returned ${rows.length} gap row(s) but no genre slice. Gemini writer unavailable — the table below is the evidence.`,
+          recommendations: []
+        };
+      }
+      const topLang = [...langRows].sort((a, b) => num(b, 'gap_score') - num(a, 'gap_score'))[0];
+      const lang = str(topLang, 'dimension') || 'unknown';
+      return {
+        answer: `Language “${lang}” is the largest language gap (gap_score ${num(topLang, 'gap_score').toFixed(3)}). It is a language code, not a catalog genre. Measured in ClickHouse via mcp-clickhouse.`,
+        recommendations: []
+      };
+    }
     const top = ranked[0];
     const dim = str(top, 'dimension', 'genre');
     const gap = num(top, 'gap_score');
+    const lead = isRevenueGenreBrief(userPrompt)
+      ? `${dim || 'This genre'} is the strongest next-genre pick from recent revenue vs inventory`
+      : `${dim || 'This genre'} is the most underserved slice`;
     return {
-      answer: `${dim || 'This genre'} is the strongest next-genre pick from recent revenue vs inventory: gap_score ${gap.toFixed(3)} (revenue share minus title share). Measured in ClickHouse via mcp-clickhouse.`,
+      answer: `${lead}: gap_score ${gap.toFixed(3)} (revenue share minus title share). Measured in ClickHouse via mcp-clickhouse.`,
       recommendations: ranked.slice(0, 3).map(r => ({
         title: str(r, 'dimension', 'genre') || 'genre',
         genre: str(r, 'dimension', 'genre'),

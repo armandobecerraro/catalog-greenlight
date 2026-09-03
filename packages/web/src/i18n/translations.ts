@@ -177,6 +177,7 @@ export const translations = {
     catalog: {
       title: 'Catalog',
       subtitle: '{count} titles in ClickHouse',
+      subtitleFiltered: '{shown} of {total} titles in ClickHouse (seed hidden)',
       filterPlaceholder: 'Filter by title or genre…',
       hidePadding: 'Hide seed filler (numbered demo titles)',
       loadError: 'Failed to load catalog',
@@ -219,6 +220,7 @@ export const translations = {
       billingHintCta: 'Open dashboard →',
       labelQuestion: 'Your question',
       running: 'Agent running…',
+      progressHint: 'Typical run is ~30 seconds (Gemini + ClickHouse). The demo is not frozen.',
       submit: 'Run agent',
       error: 'Agent failed',
       answer: 'Answer',
@@ -547,6 +549,7 @@ export const translations = {
     catalog: {
       title: 'Catálogo',
       subtitle: '{count} títulos en ClickHouse',
+      subtitleFiltered: '{shown} de {total} títulos en ClickHouse (relleno oculto)',
       filterPlaceholder: 'Filtrar por título o género…',
       hidePadding: 'Ocultar relleno del seed (títulos numerados)',
       loadError: 'No se pudo cargar el catálogo',
@@ -591,6 +594,7 @@ export const translations = {
       billingHintCta: 'Abrir panel →',
       labelQuestion: 'Tu pregunta',
       running: 'Ejecutando agente…',
+      progressHint: 'Una corrida típica tarda ~30 s (Gemini + ClickHouse). La demo no está congelada.',
       submit: 'Ejecutar agente',
       error: 'Falló el agente',
       answer: 'Respuesta',

@@ -183,6 +183,7 @@ describe('askSqlFallback', () => {
     ]);
     expect(revenue.answer).toMatch(/Thriller/);
     expect(revenue.answer).toMatch(/gap_score/);
+    expect(revenue.answer).toMatch(/recent revenue/);
     expect(revenue.answer).not.toMatch(/fewest titles/);
     expect(revenue.answer).not.toBe(comedy.answer);
     expect(revenue.recommendations[0].title).toBe('Thriller');
@@ -190,11 +191,15 @@ describe('askSqlFallback', () => {
 
   it('synthesizes an underserved-genre answer from gap_score rows', () => {
     const { answer, recommendations } = synthesizeFromRows('Which genre is under-represented?', [
-      { hole_type: 'genre', dimension: 'Thriller', gap_score: 0.07, title_share: 0.07, revenue_share: 0.14 },
-      { hole_type: 'genre', dimension: 'Comedy', gap_score: -0.08, title_share: 0.26, revenue_share: 0.18 }
+      { hole_type: 'genre', dimension: 'Documentary', gap_score: 0.074, title_share: 0.07, revenue_share: 0.14 },
+      { hole_type: 'genre', dimension: 'Thriller', gap_score: 0.069, title_share: 0.08, revenue_share: 0.15 },
+      { hole_type: 'language', dimension: 'es', gap_score: 0.013, title_share: 0.2, revenue_share: 0.21 }
     ]);
-    expect(answer).toMatch(/Thriller/);
-    expect(recommendations[0].title).toBe('Thriller');
+    expect(answer).toMatch(/Documentary/);
+    expect(answer).toMatch(/underserved/);
+    expect(answer).toMatch(/0\.074/);
+    expect(recommendations.map(r => r.title)).toEqual(['Documentary', 'Thriller']);
+    expect(recommendations.find(r => r.title === 'es')).toBeUndefined();
   });
 
   it('parses string metrics and remaining row shapes', () => {
@@ -222,11 +227,27 @@ describe('askSqlFallback', () => {
     const gapByGenre = synthesizeFromRows('gap', [{ genre: 'Thriller', gap_score: '0.2' }]);
     expect(gapByGenre.recommendations[0].title).toBe('Thriller');
 
-    const gapByHoleOnly = synthesizeFromRows('gap', [{ hole_type: 'language', dimension: 'es' }]);
-    expect(gapByHoleOnly.recommendations[0].title).toBe('es');
+    const gapByHoleOnly = synthesizeFromRows('gap', [
+      { hole_type: 'language', dimension: 'es', gap_score: 0.01 },
+      { hole_type: 'language', dimension: 'pt', gap_score: 0.004 }
+    ]);
+    expect(gapByHoleOnly.recommendations).toEqual([]);
+    expect(gapByHoleOnly.answer).toMatch(/language code/i);
+    expect(gapByHoleOnly.answer).toMatch(/“es”/);
+
+    const unnamedLanguage = synthesizeFromRows('gap', [{ hole_type: 'language', gap_score: 0.02 }]);
+    expect(unnamedLanguage.answer).toMatch(/unknown/);
+
+    const noGenreSlice = synthesizeFromRows('gap', [{ hole_type: 'other', gap_score: 0.3 }]);
+    expect(noGenreSlice.answer).toMatch(/no genre slice/);
+    expect(noGenreSlice.recommendations).toEqual([]);
 
     const emptyDim = synthesizeFromRows('gap', [{ hole_type: 'genre', gap_score: 0 }]);
-    expect(emptyDim.answer).toMatch(/This genre/);
+    expect(emptyDim.answer).toMatch(/This genre is the most underserved/);
+
+    const emptyRevenueDim = synthesizeFromRows(REVENUE_BRIEF, [{ hole_type: 'genre', gap_score: 0.05 }]);
+    expect(emptyRevenueDim.answer).toMatch(/This genre is the strongest next-genre pick/);
+    expect(emptyRevenueDim.answer).toMatch(/recent revenue/);
 
     const generic = synthesizeFromRows('other', [{ title: '', extra: 1 }, { title: 'E' }]);
     expect(generic.recommendations[0].title).toBe('E');

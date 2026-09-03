@@ -8,6 +8,7 @@ import { useLocale } from '../i18n/LocaleContext';
 import { translations } from '../i18n/translations';
 import { formatApiError, ApiError } from '../utils/apiErrors';
 import { filterRecommendations } from '../utils/recommendationGuards';
+import { ASK_PROGRESS_STEPS, askStepFromElapsed, askStepStatus } from '../utils/askProgress';
 
 export default function Ask() {
   const { locale, t } = useLocale();
@@ -17,6 +18,7 @@ export default function Ask() {
   const [error, setError] = useState('');
   const [billingHint, setBillingHint] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [elapsed, setElapsed] = useState(0);
 
   useEffect(() => {
     setQuestion(translations[locale].ask.suggestions[0]);
@@ -24,6 +26,16 @@ export default function Ask() {
     setError('');
     setBillingHint(false);
   }, [locale]);
+
+  useEffect(() => {
+    if (!loading) {
+      setElapsed(0);
+      return;
+    }
+    const started = Date.now();
+    const id = window.setInterval(() => setElapsed(Date.now() - started), 400);
+    return () => window.clearInterval(id);
+  }, [loading]);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -65,6 +77,7 @@ export default function Ask() {
             {loading ? t('ask.running') : t('ask.submit')}
           </button>
         </form>
+        {loading && <AskProgress elapsed={elapsed} />}
       </Card>
 
       {error && <ErrorBanner message={error} />}
@@ -152,5 +165,28 @@ export default function Ask() {
         </>
       )}
     </>
+  );
+}
+
+function AskProgress({ elapsed }: { elapsed: number }) {
+  const { t } = useLocale();
+  const current = askStepFromElapsed(elapsed);
+
+  return (
+    <div className="greenlight-progress ask-progress" role="status" aria-live="polite">
+      <p className="greenlight-progress-lead">{t(`steps.${current}`)}</p>
+      <ol className="greenlight-progress-steps">
+        {ASK_PROGRESS_STEPS.map(step => {
+          const status = askStepStatus(step, current);
+          return (
+            <li key={step} className={`greenlight-progress-step is-${status}`}>
+              <span className="greenlight-progress-dot" aria-hidden="true" />
+              <span>{t(`steps.${step}`)}</span>
+            </li>
+          );
+        })}
+      </ol>
+      <p className="muted greenlight-progress-hint">{t('ask.progressHint')}</p>
+    </div>
   );
 }

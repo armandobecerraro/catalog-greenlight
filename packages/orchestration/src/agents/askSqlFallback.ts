@@ -2,7 +2,8 @@ import { AgentIntent, GreenlightRecommendation } from '@bas/core';
 import {
   GREENLIGHT_QUERY_A_GENRE_INVENTORY,
   GREENLIGHT_QUERY_B_TITLE_MOMENTUM,
-  GREENLIGHT_QUERY_D_SLATE_HOLES
+  GREENLIGHT_QUERY_D_SLATE_HOLES,
+  SQL_EXCLUDE_SEED_FILLER_TITLES
 } from '../greenlight/greenlightQueries';
 
 export interface AskSqlFallbackPlan {
@@ -42,8 +43,7 @@ SELECT
 FROM media_catalog.title_revenue AS tr
 INNER JOIN media_catalog.media_content AS mc ON mc.id = tr.title_id
 WHERE tr.week_start = (SELECT max(week_start) FROM media_catalog.title_revenue)
-  AND mc.title != ''
-  AND mc.title NOT LIKE 'Catalog Extra%'
+  AND ${SQL_EXCLUDE_SEED_FILLER_TITLES}
 ORDER BY tr.revenue_usd DESC
 LIMIT 10
 `.trim();
@@ -59,8 +59,7 @@ INNER JOIN media_catalog.title_revenue AS tr
   ON tr.title_id = mc.id
  AND tr.week_start = (SELECT max(week_start) FROM media_catalog.title_revenue)
 WHERE mc.genre = 'Sci-Fi'
-  AND mc.title != ''
-  AND mc.title NOT LIKE 'Catalog Extra%'
+  AND ${SQL_EXCLUDE_SEED_FILLER_TITLES}
 ORDER BY tr.revenue_usd DESC
 LIMIT 8
 `.trim();
@@ -124,8 +123,7 @@ LEFT JOIN media_catalog.title_revenue AS tr
   ON tr.title_id = mc.id
  AND tr.week_start = (SELECT max(week_start) FROM media_catalog.title_revenue)
 WHERE mc.genre = '${genre}'
-  AND mc.title != ''
-  AND mc.title NOT LIKE 'Catalog Extra%'
+  AND ${SQL_EXCLUDE_SEED_FILLER_TITLES}
 ORDER BY coalesce(tr.revenue_usd, 0) DESC, mc.title ASC
 LIMIT 12
 `.trim();

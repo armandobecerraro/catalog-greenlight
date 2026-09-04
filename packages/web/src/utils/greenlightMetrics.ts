@@ -102,9 +102,11 @@ export function isSeedFillerTitle(title: string, description?: string): boolean 
 }
 
 export function formatCast(cast: string[]): string {
-  const names = cast.map(c => c.trim()).filter(Boolean);
+  const names = cast
+    .map(c => c.trim())
+    .filter(Boolean)
+    .filter(n => !/^Actor( [A-Z])?$/i.test(n));
   if (names.length === 0) return '—';
-  if (names.every(n => /^Actor [A-Z]$/i.test(n))) return '—';
   return names.slice(0, 3).join(', ');
 }
 

@@ -40,7 +40,7 @@ Paste these fields into https://agentic-cinema.devpost.com/ (draft **1155720**, 
 
 ## Elevator pitch (short description)
 
-**Catalog Greenlight** is a web app for a streaming **programming chief**. Each week it greenlights three titles in a **catalog slate** because **ClickHouse measured** genre gaps, week-over-week revenue momentum, cannibalization, and language holes — not because Gemini improvised. Four fixed MCP analytics queries run in parallel at runtime; a deterministic **TypeScript scorer** ranks candidates (`opportunity = 0.4×genre_gap + 0.4×wow_momentum − 0.2×cannibalization_penalty + 0.05×language_gap`; see `GreenlightScorer.ts`) and enforces genre diversity. Gemini (`@google/genai` on Google Cloud — **not** Agent Builder / ADK) writes the narrative only. If synthesis fails, times out (10s), or hits 429/quota, the dashboard still returns three scorer picks with measured `opportunity_score`, `wow_pct`, and `genre_gap`.
+**Catalog Greenlight** is a web app for a streaming **programming chief**. Each week it greenlights three titles in a **catalog slate** because **ClickHouse measured** genre gaps, week-over-week revenue momentum, cannibalization, and language holes — not because Gemini improvised. Four fixed MCP analytics queries run in parallel at runtime; a deterministic **TypeScript scorer** ranks candidates (`opportunity = 0.4×genre_gap + 0.4×wow_momentum − 0.2×cannibalization_penalty + 0.05×language_gap`; see `GreenlightScorer.ts`) and enforces genre diversity. Gemini (`@google/genai` on Google Cloud — **not** Agent Builder / ADK) writes the narrative only. If synthesis fails, times out (25s), or hits 429/quota, the dashboard still returns three scorer picks with measured `opportunity_score`, `wow_pct`, and `genre_gap`.
 
 ## Built with
 
@@ -70,7 +70,7 @@ https://github.com/armandobecerraro/catalog-greenlight
 1. **Dashboard** — live catalog stats from ClickHouse via MCP, plus **Greenlight this week**: provenance header (scorer formula), weekly programming ritual table (export CSV/JSON), three rec-cards with per-card score provenance, ClickHouse analytics panels, and Gemini narrative
 2. **Ingest** — add a title; Gemini enriches summary/tags; MCP INSERT persists it
 3. **Ask the catalog** — natural language → 6-step agent timeline → Gemini-planned SQL → result rows → grounded recommendations
-4. **Greenlight pipeline** — four parallel MCP SELECTs → TypeScript scorer → Gemini synthesis (10s timeout; scorer fallback on failure, timeout, or 429)
+4. **Greenlight pipeline** — four parallel MCP SELECTs → TypeScript scorer → Gemini synthesis (25s timeout; scorer fallback on failure, timeout, or 429)
 
 Gemini does **not** plan SQL for the greenlight path.
 
@@ -92,7 +92,7 @@ Gemini does **not** plan SQL for the greenlight path.
 - **Catalog Q&A** — `GeminiReasoningAdapter.ts` classifies intent, generates SQL, synthesizes answers
 - **Greenlight** — same adapter's `synthesizeGreenlight` writes executive narrative from scorer candidate rows only; scoring is TypeScript, not Gemini
 - Fails fast if `GEMINI_API_KEY` is missing (no silent fake in API/demo/web)
-- Synthesis bounded to 10s (`GREENLIGHT_SYNTHESIZE_TIMEOUT_MS`); timeout, API error, or **429/quota** → three scorer recommendations still returned (HTTP 200; SYNTHESIZE step completes with `fallback: true`)
+- Synthesis bounded to 25s (`GREENLIGHT_SYNTHESIZE_TIMEOUT_MS`); timeout, API error, or **429/quota** → three scorer recommendations still returned (HTTP 200; SYNTHESIZE step completes with `fallback: true`)
 
 ## Try it yourself
 
@@ -133,7 +133,7 @@ Live: https://catalog-greenlight.onrender.com/judge
 
 Runtime ClickHouse **only** via official **mcp-clickhouse** (`McpClickHouseConnector.ts` → `run_query`). Google AI **only** via `@google/genai` (`GoogleGenAI` + `generateContent`) — not Agent Builder, ADK, OpenAI, Anthropic, or LangChain.
 
-**Greenlight path:** four fixed MCP SELECTs in parallel → deterministic TypeScript scorer (`GreenlightScorer.ts`: `opportunity = 0.4×genre_gap + 0.4×wow_momentum − 0.2×cannibalization_penalty + 0.05×language_gap`, genre diversity) → Gemini narrative with 10s timeout (429/error → three scorer picks, HTTP 200). Gemini does **not** plan greenlight SQL.
+**Greenlight path:** four fixed MCP SELECTs in parallel → deterministic TypeScript scorer (`GreenlightScorer.ts`: `opportunity = 0.4×genre_gap + 0.4×wow_momentum − 0.2×cannibalization_penalty + 0.05×language_gap`, genre diversity) → Gemini narrative with 25s timeout (429/error → three scorer picks, HTTP 200). Gemini does **not** plan greenlight SQL.
 
 **Ask path:** Gemini classifies intent and writes NL→SQL; MCP executes; answers are grounded in returned rows.
 

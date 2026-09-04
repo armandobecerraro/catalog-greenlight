@@ -105,8 +105,12 @@ describe('McpCatalogRepository', () => {
       }
       if (sql.includes('arrayJoin')) {
         return {
-          rows: [{ name: 'Actor A', count: 2 }],
-          metadata: { rowCount: 1, latencyMs: 1, partner: 'clickhouse' }
+          rows: [
+            { name: 'Actor A', count: 2 },
+            { name: 'Gael García Bernal', count: 1 },
+            { name: 'Karla Souza', count: 1 }
+          ],
+          metadata: { rowCount: 3, latencyMs: 1, partner: 'clickhouse' }
         };
       }
       if (sql.includes('title_revenue')) {

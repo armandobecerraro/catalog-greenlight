@@ -13,8 +13,8 @@ These numbers are **honest** samples, not synthetic marketing. Latency includes 
 | `GET /api/v1/health` | 5 | **<1 s** | **<1 s** | `ready: true`, partners connected |
 | `GET /api/v1/catalog/stats` | 3 | **~28 s** | **~30 s** | ~200 titles, genre mix |
 | `GET /api/v1/greenlight` (cached) | 3 | **~11 s** | **~12 s** | 10 min server cache |
-| `GET /api/v1/greenlight?refresh=1` | 3 | **~37 s** | **~43 s** | 4 parallel MCP SELECTs + TS scorer + Gemini (10s cap) |
-| `POST /api/v1/agent/ask` (judge chip) | 3 | **~33 s** | **~46 s** | 6-step agent; `fallback: true` when Gemini >10s |
+| `GET /api/v1/greenlight?refresh=1` | 3 | **~37 s** | **~43 s** | 4 parallel MCP SELECTs + TS scorer + Gemini (25s cap) |
+| `POST /api/v1/agent/ask` (judge chip) | 3 | **~33 s** | **~46 s** | 6-step agent; `fallback: true` when Gemini planner slow |
 
 ## Cold start (Render spin-down)
 

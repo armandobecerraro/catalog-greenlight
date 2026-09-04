@@ -21,4 +21,4 @@ export {
   SCORER_WEIGHTS,
   isSeedFillerTitle
 } from './greenlight/GreenlightScorer';
-export { GREENLIGHT_ANALYTICS_QUERIES } from './greenlight/greenlightQueries';
+export { GREENLIGHT_ANALYTICS_QUERIES, SQL_EXCLUDE_SEED_FILLER_TITLES } from './greenlight/greenlightQueries';

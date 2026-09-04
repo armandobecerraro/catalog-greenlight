@@ -1,7 +1,7 @@
 # Hosted smoke verification — Catalog Greenlight
 
 **URL:** https://catalog-greenlight.onrender.com  
-**Verified:** 2026-09-02T23:01:00-05:00 (post-merge #5 + ready-gate fix `0da1cac`)  
+**Verified:** 2026-09-04T04:57:00Z (pre-fix diagnosis) · **Code fix packed:** anti-filler + SYNTHESIZE 25s + seed story titles (pending Render deploy + ClickHouse reseed)  
 **Platform:** Render (free tier — cold start 60–90s pre-warm after spin-down)
 
 ### 60-second judge path
@@ -9,13 +9,18 @@
 | Step | Action | Expect |
 |------|--------|--------|
 | 1 | Open hosted URL; wait health `ready: true` | ~60–90s if cold |
-| 2 | `/` dashboard | 3 greenlight picks with measured scores |
+| 2 | `/` dashboard | 3 greenlight picks with measured scores · **0 fillers** |
 | 3 | `/ask` → under-represented genre chip | Documentary `gap_score ≈ 0.074` |
 | 4 | `/judge` | Chloe wedge + Remove ClickHouse + benchmarks |
 
 **p50 (warm):** greenlight cached ~11s · `?refresh=1` ~37s · `/ask` ~33s — see [`BENCHMARKS.md`](./BENCHMARKS.md). Keep-alive: `bash scripts/keepalive-smoke.sh` or `npm run keepalive:smoke`.
 
 > **Keep-alive (opcional):** UptimeRobot o cron cada 5 min contra `/api/v1/health` evita spin-down; no requiere provisioning ni pago en tier free.
+
+```bash
+# Judging / grabación — solo health (no cron de ?refresh=1)
+BASE_URL=https://catalog-greenlight.onrender.com bash scripts/keepalive-smoke.sh
+```
 
 ### Smoke scripts
 
@@ -33,6 +38,45 @@ BASE_URL=https://catalog-greenlight.onrender.com npm run keepalive:smoke
 # Pre-demo / post-deploy judge verification
 BASE_URL=https://catalog-greenlight.onrender.com npm run judge:smoke
 ```
+
+---
+
+## Re-smoke 2026-09-04 (pre-deploy diagnosis)
+
+| Check | Result | Evidence |
+|-------|--------|----------|
+| `GET /api/v1/health` | **PASS** | `ready: true`, partners clickhouse+mcp+`gemini-2.0-flash` @ `2026-09-04T04:56:50Z` |
+| `GET /api/v1/catalog/stats` | **PASS** | `totalEntries: 200`, `latestRevenue.topTitle: Crimen sin Fronteras: Bogotá` |
+| `GET /api/v1/greenlight?refresh=1` | **FAIL fillers** | Top-3: Bogotá / Archive: Road 114 / **Fading Line 75** (seed filler) |
+| SYNTHESIZE | **FAIL timeout** | `latencyMs: 10001`, `fallback: true`, answer = “Gemini memo is optional.” |
+| `POST /api/v1/agent/ask` under-represented | **PASS** | Documentary `gap_score` 0.074 + `D_slate_holes` SQL + 6 steps |
+
+### Fixes shipped in this commit (need Render auto-deploy from `main` + reseed)
+
+1. **Anti-filler:** Query B + ask fallback SQL exclude `Catalog Extra*`, `Scorer pick:*`, and `Word Word N` without colon; scorer never admits fillers when ≥3 story candidates (relaxes diversity first); seed adds `Harbor Letters: Winter` (Drama) + `Late Night: Banter Room` (Comedy).
+2. **SYNTHESIZE:** timeout **25s**; slim Flash prompt (no 6k SQL dump).
+3. **Cast polish:** stats `topCast` filters `Actor` / `Actor A–Z`; UI `formatCast` hides synthetic names.
+
+**Post-deploy checklist:**
+
+```bash
+# 1) After Render builds from main — reseed ClickHouse Cloud once
+set -a && source .env && set +a && bash deployment/scripts/seed-remote.sh
+
+# 2) Warm + verify
+curl -sS --max-time 120 https://catalog-greenlight.onrender.com/api/v1/health
+curl -sS --max-time 180 'https://catalog-greenlight.onrender.com/api/v1/greenlight?refresh=1'
+# Expect: 0 fillers; SYNTHESIZE.fallback !== true on ≥1 of 2 warm runs; answer ≠ “Gemini memo is optional.”
+
+BASE_URL=https://catalog-greenlight.onrender.com npm run judge:smoke
+```
+
+### Devpost Built With (manual)
+
+Edit Devpost submission → Built With:
+
+- **Remove:** `langchain`, `python`
+- **Keep/add:** ClickHouse, mcp-clickhouse, Google Gemini API / `@google/genai`, MCP, TypeScript, React, Vite, Docker, Render
 
 ---
 
@@ -58,7 +102,7 @@ curl -sS --max-time 120 https://catalog-greenlight.onrender.com/api/v1/health
 ```
 
 ```json
-{"status":"ok","product":"Catalog Greenlight","ready":true,"error":null,"timestamp":"2026-09-02T15:29:26.394Z","partners":{"clickhouse":"connected","mcp":"mcp-clickhouse","gemini":"gemini-2.0-flash"}}
+{"status":"ok","product":"Catalog Greenlight","ready":true,"error":null,"timestamp":"2026-09-04T04:56:50.346Z","partners":{"clickhouse":"connected","mcp":"mcp-clickhouse","gemini":"gemini-2.0-flash"}}
 ```
 
 | Check | Result |
@@ -78,75 +122,26 @@ curl -sS --max-time 120 https://catalog-greenlight.onrender.com/api/v1/catalog/s
 {"totalEntries":200,"genres":{"Comedy":52,"Drama":39,"Documentary":22,"Action":18,"Romance":16,"Thriller":15,"Sci-Fi":14,"Horror":14,"Animation":10},"recentAdditions":200,"topCast":[{"name":"Actor B","count":190},{"name":"Actor A","count":190},{"name":"Actor","count":7},{"name":"Host","count":2},{"name":"Gael García Bernal","count":1}],"latestRevenue":{"totalViews":8580304,"totalRevenueUsd":63217.40000000001,"topTitle":"Crimen sin Fronteras: Bogotá"}}
 ```
 
+> Post-deploy: `topCast` must not list `Actor A` / `Actor B` (filtered in `McpCatalogRepository`).
+
 | Check | Result |
 |-------|--------|
-| HTTP 200 | PASS |
-| `totalEntries` ≈ 200 | PASS (200) |
+| ~200 titles | PASS |
+| Revenue non-zero | PASS |
 
 ---
 
 ## 3. Greenlight (`?refresh=1`)
 
 ```bash
-curl -sS --max-time 240 "https://catalog-greenlight.onrender.com/api/v1/greenlight?refresh=1"
+curl -sS --max-time 180 'https://catalog-greenlight.onrender.com/api/v1/greenlight?refresh=1'
 ```
 
-**Truncated response** (full payload ~67 KB; omitted `sql`, `steps[].output.fullById`, query row dumps):
+**Pre-fix 2026-09-04:** picks included **Fading Line 75**; SYNTHESIZE timed out at 10s.
 
-```json
-{
-  "runId": "b21c707b-b6c7-46fc-9397-d89246804994",
-  "intent": "greenlight",
-  "answer": "Weekly greenlight from measured ClickHouse analytics. TypeScript scored the slate; Gemini memo is optional.",
-  "cached": false,
-  "totalLatencyMs": 34776,
-  "model": "gemini-2.0-flash",
-  "recommendations": [
-    {
-      "title": "Crimen sin Fronteras: Bogotá",
-      "genre": "Thriller",
-      "opportunity_score": 0.268,
-      "wow_pct": 0.32,
-      "genre_gap": 0.135,
-      "in_cannibal_pair": false
-    },
-    {
-      "title": "Archive: Road 114",
-      "genre": "Documentary",
-      "opportunity_score": 0.21,
-      "wow_pct": 0.021,
-      "genre_gap": 0.139,
-      "in_cannibal_pair": false
-    },
-    {
-      "title": "Archive: City 102",
-      "genre": "Documentary",
-      "opportunity_score": 0.173,
-      "wow_pct": -0.162,
-      "genre_gap": 0.139,
-      "in_cannibal_pair": false
-    }
-  ],
-  "steps_summary": {
-    "SYNTHESIZE": {
-      "fallback": true,
-      "geminiError": "Gemini synthesis timed out after 10s"
-    }
-  }
-}
-```
+**Target post-fix:** 3 story titles (e.g. Bogotá / Archive / Harbor Letters), 3 genres, scores numeric, `SYNTHESIZE.fallback !== true` on warm path when Gemini quota OK.
 
-**Recommendation object keys (real):** `title`, `genre`, `justification`, `evidence`, `opportunity_score`, `wow_pct`, `genre_gap`, `in_cannibal_pair`
-
-| Check | Result |
-|-------|--------|
-| HTTP 200 | PASS |
-| 3 recommendations | PASS |
-| Numeric `opportunity_score` on each | PASS (0.268, 0.21, 0.173) |
-| No garbage titles | PASS |
-| Gemini on greenlight | **timeout** (fallback; picks + metrics OK) |
-
-**Garbage title check:** none of `Catalog Extra*`, `Fading Line 75`, `Chronicle of Dream <n>`, `Scorer pick:`, or empty.
+**Garbage title check:** none of `Catalog Extra*`, `Fading Line*`, `Chronicle of Dream*`, `Scorer pick:`, or empty.
 
 ---
 
@@ -158,108 +153,20 @@ curl -sS --max-time 240 -X POST https://catalog-greenlight.onrender.com/api/v1/a
   -d '{"question":"Which genre is under-represented in our catalog?"}'
 ```
 
-**Verified 2026-09-02T20:09:05Z** — HTTP **200** in ~34s. No `429` / `gemini_billing`.
+**Verified 2026-09-04T04:57:Z** — HTTP **200**. Body key is `question` (not `prompt`).
 
 | Field | Value |
 |-------|--------|
 | `intent` | `catalog_qa` |
-| `model` | `gemini-2.0-flash` |
-| `fallback` | `true` (planner+writer used deterministic MCP SQL after ~10s Gemini wait) |
-| `queryRows` | 11 |
-| 6-step timeline | INTENT → DISCOVER → PLAN_SQL → EXECUTE → SYNTHESIZE → AUDIT, all `completed` |
-| Answer | Documentary is the most underserved slice: `gap_score` 0.074 (revenue share minus title share). Measured in ClickHouse via mcp-clickhouse. |
-| SQL | `D_slate_holes` (`WITH latest AS … gap_score`) via `mcp-clickhouse` `run_query` |
-| Recs | Documentary 0.074, Thriller 0.069 (language holes like `es` are not shown as genre cards) |
-
-Gemini **credits are live** (no billing 429). PLAN_SQL/SYNTHESIZE still fall back if Gemini exceeds ~10s (`fallback: true`, ~31s); ClickHouse evidence still returns. Fallback SQL now **honors the brief**.
-
-**Live re-smoke 2026-09-02 ~23:01 local (PR #5 deployed):**
-
-| Prompt | Result |
-|--------|--------|
-| Recommend a feel-good comedy under 2 hours | **PASS** — Comedy titles (e.g. Banter Echo 7); honest “no runtime column”; **not** Animation fewest-titles |
-| Which genre should we greenlight next based on recent revenue? | **PASS** — Documentary `gap_score` 0.074 (revenue share vs inventory); **not** canned Animation |
-| Which genre is under-represented in our catalog? | **PASS** — Documentary gap **0.074** + CTE SQL + rows |
-
-```bash
-curl -sS --max-time 240 -X POST https://catalog-greenlight.onrender.com/api/v1/agent/ask \
-  -H 'Content-Type: application/json' \
-  -d '{"question":"Recommend a feel-good comedy under 2 hours"}'
-# HTTP 200; SQL filters Comedy; answer cites comedy titles; duration not in schema
-
-curl -sS --max-time 240 -X POST https://catalog-greenlight.onrender.com/api/v1/agent/ask \
-  -H 'Content-Type: application/json' \
-  -d '{"question":"Which genre should we greenlight next based on recent revenue?"}'
-# HTTP 200; gap_score / recent revenue (Documentary 0.074)
-
-curl -sS --max-time 240 -X POST https://catalog-greenlight.onrender.com/api/v1/agent/ask \
-  -H 'Content-Type: application/json' \
-  -d '{"question":"Which genre is under-represented in our catalog?"}'
-# HTTP 200; Documentary gap_score 0.074 + CTE SQL + rows
-
-curl -sS --max-time 180 'https://catalog-greenlight.onrender.com/api/v1/greenlight?refresh=1'
-# HTTP 200 and 3 recommendations (Bogotá 0.268)
-```
+| Answer | Documentary is the most underserved slice: `gap_score` 0.074 |
+| SQL | `D_slate_holes` CTE with `gap_score` |
+| Recs | Documentary 0.074, Thriller 0.069 |
 
 ---
 
-## 5. SPA routes — no blank black pages
+## 5–7. SPA / Playwright / judge scripts
 
-Hosted HTML is the SPA shell for every path (HTTP 200). The client router must never render an empty `<main>`.
-
-| URL | Expected |
-|-----|----------|
-| `/greenlight` | Redirect → `/#greenlight` (dashboard hero + 3 picks) |
-| `/catalog/stats` | Catalog stats page (size / genres / revenue) |
-| `/does-not-exist` (any unknown) | NotFound (“Unknown route”) + header nav |
-| `/`, `/ask`, `/catalog`, `/ingest`, `/guia` | Unchanged working pages |
-| `/about` | Redirect → `/guia` |
-| `/judge` | Judge landing (`Judge.tsx`) — `npm run judge:smoke` asserts HTTP 200 |
-
-```bash
-# Browser (not curl — SPA routing is client-side)
-open https://catalog-greenlight.onrender.com/greenlight
-open https://catalog-greenlight.onrender.com/catalog/stats
-open https://catalog-greenlight.onrender.com/does-not-exist
-```
-
-**Live re-smoke 2026-09-02 ~23:01 local — all PASS (no blank charcoal pages):**
-
-| URL | Result |
-|-----|--------|
-| `/greenlight` | Dashboard / greenlight content (not blank) |
-| `/catalog/stats` | Stats content (not blank) |
-| `/no-such-xyz-test` | **Page not found** + nav |
-
-
----
-
-## 6. Playwright hosted smoke
-
-```bash
-npm run test:e2e:hosted
-```
-
-**2026-09-02T20:10Z — 4/4 passed** against https://catalog-greenlight.onrender.com (~9s, service already warm): health ready, stats ~200, greenlight 3 catalog-grounded picks, dashboard 3 rec-cards.
-
----
-
-## 7. Automated judge smoke (`npm run judge:smoke`)
-
-Runs `scripts/judge-smoke.sh` — health wake, cached greenlight (3 genres), `POST /api/v1/agent/ask` with the under-represented genre chip, and `GET /judge` HTTP 200.
-
-```bash
-BASE_URL=https://catalog-greenlight.onrender.com npm run judge:smoke
-```
-
-| Check | Assertion |
-|-------|-----------|
-| Health `ready: true` | Retries up to 6 × 15s |
-| Greenlight | 3 picks, 3 unique genres, scored |
-| Ask | `gap_score` in response; `sql` field or `SELECT` evidence; timeout 240s; up to 3 attempts |
-| `/judge` | HTTP 200 (SPA shell) |
-
-**Do not** wire `judge:smoke` to judging-week cron — it hits `/agent/ask` (~30–45s warm). Use `keepalive:smoke` for cron instead.
+Unchanged acceptance from prior smoke: `/`, `/ask`, `/catalog`, `/ingest`, `/judge`, `/guia` render; `npm run judge:smoke` + `npm run keepalive:smoke` documented above.
 
 ---
 
@@ -269,12 +176,10 @@ BASE_URL=https://catalog-greenlight.onrender.com npm run judge:smoke
 |----------|---------------|
 | Health endpoint | **YES** |
 | Stats (~200 titles) | **YES** |
-| Greenlight 3 picks + scores | **YES** (TypeScript scorer; Gemini memo timed out → fallback) |
-| Ask `/agent/ask` | **YES** — HTTP 200; comedy titles + no-runtime honesty; revenue + under-represented Documentary `gap_score` 0.074; `fallback: true` (~31s) is OK (Gemini timeout; ClickHouse SQL live) |
-| SPA `/greenlight`, `/catalog/stats`, unknown | **YES** — content / NotFound; no blank black pages |
-| Playwright hosted | **YES** — 4/4 (API + dashboard); SPA routes verified in browser smoke above |
-| Judge smoke script | **YES** — `npm run judge:smoke` (ask + `/judge`; retries on cold start) |
-| Keepalive cron script | **YES** — `npm run keepalive:smoke` (health + cached greenlight only) |
-| Ready-gate after MCP init | **YES** — `0da1cac` (greenlight no longer stuck on 503 after health `ready: true`) |
-| Cold start tolerance | **YES** (~74s with 60s pre-warm) |
-| Hosted benchmarks doc | **YES** — `docs/submission/BENCHMARKS.md` (honest warm/cold timings) |
+| Greenlight 3 picks + scores (anti-filler) | **CODE READY** — deploy + reseed required |
+| SYNTHESIZE Gemini memo (25s / slim prompt) | **CODE READY** — verify warm post-deploy |
+| Ask `/agent/ask` under-represented | **YES** — Documentary `gap_score` 0.074 |
+| Keepalive cron script | **YES** — `BASE_URL=… bash scripts/keepalive-smoke.sh` |
+| Devpost Built With cleanup | **MANUAL** — remove langchain/python |
+
+**Video verdict (pre-deploy):** **NO LISTO** hasta Render deploy + `seed-remote.sh` + re-smoke `?refresh=1` sin fillers y SYNTHESIZE sin fallback.

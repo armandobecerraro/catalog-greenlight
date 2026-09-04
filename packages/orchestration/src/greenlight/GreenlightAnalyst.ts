@@ -16,7 +16,7 @@ import {
 } from '../greenlight/groundRecommendations';
 
 /** Bound only the Gemini narrative call; MCP analytics + scorer are not capped here. */
-export const GREENLIGHT_SYNTHESIZE_TIMEOUT_MS = 10_000;
+export const GREENLIGHT_SYNTHESIZE_TIMEOUT_MS = 25_000;
 
 const GREENLIGHT_USER_PROMPT =
   'Weekly greenlight: pick 3 titles using measured genre gaps, week-over-week momentum, and cannibalization penalties.';

@@ -110,27 +110,23 @@ Use English. Be specific — reference counts, genres, revenue from the result r
     sql: string,
     candidateRows: Record<string, unknown>[]
   ): Promise<ReasoningSynthesis> {
-    const prompt = `You are Catalog Greenlight writing weekly programming picks for a streaming chief.
-The analyst team already scored titles in ClickHouse — you are the writer, not the analyst.
-
-User brief: ${userPrompt}
-
-Analytical SQL executed (deterministic, not your invention):
-${sql.slice(0, 6000)}
-
-Scored candidate rows (ONLY these titles may appear in recommendations):
-${JSON.stringify(candidateRows)}
-
-Respond in JSON:
-{
-  "answer": "2-3 sentence executive summary citing opportunity_score, wow_pct, and genre_gap from the rows",
-  "recommendations": [
-    {"title": "exact title from candidates", "genre": "...", "justification": "...", "evidence": "must cite numeric fields from that row"}
-  ]
-}
-
-Provide exactly 3 recommendations — one per candidate row when 3 candidates exist.
-Do NOT invent titles. Do NOT recommend cannibalized pairs unless opportunity_score still wins.`;
+    // Slim prompt for Flash latency: no full SQL dump; only scored fields Gemini must cite.
+    const slim = candidateRows.map(r => ({
+      title: r.title,
+      genre: r.genre,
+      opportunity_score: r.opportunity_score,
+      wow_pct: r.wow_pct,
+      genre_gap: r.genre_gap,
+      cannibalization_penalty: r.cannibalization_penalty
+    }));
+    const prompt = `Catalog Greenlight weekly memo for a streaming chief. Scorer already ranked picks — you only narrate.
+Brief: ${userPrompt}
+SQL fingerprint (do not invent queries): ${sql.slice(0, 180).replace(/\s+/g, ' ')}…
+Candidates (ONLY these titles):
+${JSON.stringify(slim)}
+JSON only:
+{"answer":"2-3 sentences citing opportunity_score, wow_pct, genre_gap","recommendations":[{"title":"exact","genre":"...","justification":"...","evidence":"cite numbers"}]}
+Exactly ${Math.min(3, slim.length)} recommendations. No invented titles.`;
 
     const text = await generateGeminiText(this.apiKey, prompt, this.modelName);
     return this.parseSynthesis(text);

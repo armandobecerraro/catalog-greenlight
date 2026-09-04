@@ -77,6 +77,7 @@ export class McpCatalogRepository implements ICatalogRepository {
       SELECT arrayJoin(cast) AS name, count() AS count
       FROM media_catalog.media_content
       GROUP BY name
+      HAVING NOT match(name, '^Actor( [A-Z])?$')
       ORDER BY count DESC
       LIMIT 5
     `);
@@ -113,10 +114,13 @@ export class McpCatalogRepository implements ICatalogRepository {
       totalEntries,
       genres,
       recentAdditions: Number(recentResult.rows[0]?.recent || 0),
-      topCast: castResult.rows.map(r => ({
-        name: String(r.name),
-        count: Number(r.count)
-      })),
+      topCast: castResult.rows
+        .map(r => ({
+          name: String(r.name),
+          count: Number(r.count)
+        }))
+        .filter(c => !/^Actor( [A-Z])?$/i.test(c.name))
+        .slice(0, 5),
       latestRevenue
     };
   }

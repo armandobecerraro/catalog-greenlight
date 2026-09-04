@@ -214,17 +214,29 @@ export function scoreTitles(
   });
 }
 
-/** At most one title per genre when the catalog has enough genres; filler titles may fill missing genres. */
+export interface PickTopCandidatesOptions {
+  /** When true, seed fillers may backfill only if fewer than `limit` story titles exist. */
+  allowFiller?: boolean;
+}
+
+/**
+ * Prefer story titles and genre diversity. Relax diversity before admitting fillers.
+ * Fillers never enter the slate when ≥`limit` story candidates exist (jury/demo path).
+ */
 export function pickTopCandidates(
   scored: ScoredCandidate[],
   limit = 3,
-  inventoryGenreCount?: number
+  inventoryGenreCount?: number,
+  options?: PickTopCandidatesOptions
 ): ScoredCandidate[] {
   const sorted = [...scored]
     .filter(s => s.title.trim())
     .sort((a, b) => b.opportunity_score - a.opportunity_score);
+  const storyPool = sorted.filter(s => !isSeedFillerTitle(s.title));
   const uniqueGenres = new Set(sorted.map(s => s.genre));
   const enforceDiversity = (inventoryGenreCount ?? uniqueGenres.size) >= limit;
+  const allowFiller =
+    options?.allowFiller === true && storyPool.length < limit;
 
   const picked: ScoredCandidate[] = [];
   const usedGenres = new Set<string>();
@@ -246,18 +258,23 @@ export function pickTopCandidates(
     }
   };
 
+  // Story-first: diversity → cannibal OK → relax diversity
   pickFrom(sorted, { allowCannibal: false, allowFiller: false, allowDuplicateGenre: false });
   if (picked.length < limit) {
-    pickFrom(sorted, { allowCannibal: false, allowFiller: true, allowDuplicateGenre: false });
-  }
-  if (picked.length < limit && !enforceDiversity) {
-    pickFrom(sorted, { allowCannibal: false, allowFiller: true, allowDuplicateGenre: true });
+    pickFrom(sorted, { allowCannibal: true, allowFiller: false, allowDuplicateGenre: false });
   }
   if (picked.length < limit) {
+    pickFrom(sorted, { allowCannibal: true, allowFiller: false, allowDuplicateGenre: true });
+  }
+  // Filler only when explicitly opted in and the catalog lacks enough story titles
+  if (picked.length < limit && allowFiller) {
+    pickFrom(sorted, { allowCannibal: false, allowFiller: true, allowDuplicateGenre: false });
+  }
+  if (picked.length < limit && allowFiller) {
     pickFrom(sorted, {
       allowCannibal: true,
       allowFiller: true,
-      allowDuplicateGenre: !enforceDiversity
+      allowDuplicateGenre: true
     });
   }
 

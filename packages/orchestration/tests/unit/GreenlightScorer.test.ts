@@ -186,7 +186,7 @@ describe('GreenlightScorer', () => {
     expect(new Set(top.map(t => t.genre)).size).toBe(3);
   });
 
-  it('uses filler titles only to fill missing genres when the catalog has enough genres', () => {
+  it('relaxes genre diversity before admitting fillers; fillers only with allowFiller', () => {
     const scored = scoreTitles(
       [
         {
@@ -234,14 +234,80 @@ describe('GreenlightScorer', () => {
       DEMO_CANNIBAL,
       DEMO_HOLES
     );
-    const top = pickTopCandidates(scored, 3, DEMO_INVENTORY.length);
+    const jurySlate = pickTopCandidates(scored, 3, DEMO_INVENTORY.length);
+    expect(jurySlate).toHaveLength(3);
+    expect(jurySlate.map(t => t.title)).not.toContain('Banter Echo 7');
+    expect(jurySlate.every(t => !isSeedFillerTitle(t.title))).toBe(true);
+    // Only two story genres → third pick reuses Documentary rather than filler
+    expect(jurySlate.map(t => t.title)).toContain('Archive: City 102');
 
-    expect(top).toHaveLength(3);
-    expect(new Set(top.map(t => t.genre)).size).toBe(3);
-    expect(top.map(t => t.title)).not.toContain('Archive: City 102');
-    expect(top.map(t => t.title)).toContain('Banter Echo 7');
+    const withFiller = pickTopCandidates(scored, 3, DEMO_INVENTORY.length, {
+      allowFiller: true
+    });
+    // Still enough story titles (≥3) → filler stays out even with the flag
+    expect(withFiller.map(t => t.title)).not.toContain('Banter Echo 7');
+
+    const onlyTwoStory = pickTopCandidates(
+      scored.filter(s => s.title !== 'Archive: City 102'),
+      3,
+      DEMO_INVENTORY.length,
+      { allowFiller: true }
+    );
+    expect(onlyTwoStory.map(t => t.title)).toContain('Banter Echo 7');
   });
 
+  it('never returns filler when at least three story candidates exist', () => {
+    const scored = scoreTitles(
+      [
+        {
+          title_id: 't1',
+          title: 'Crimen sin Fronteras: Bogotá',
+          genre: 'Thriller',
+          language: 'es',
+          revenue_this_week: 420,
+          revenue_prior_week: 180,
+          wow_pct: 0.32,
+          views_this_week: 85000
+        },
+        {
+          title_id: 't2',
+          title: 'Archive: Road 114',
+          genre: 'Documentary',
+          language: 'en',
+          revenue_this_week: 300,
+          revenue_prior_week: 290,
+          wow_pct: 0.05,
+          views_this_week: 40000
+        },
+        {
+          title_id: 't3',
+          title: 'Harbor Letters: Winter',
+          genre: 'Drama',
+          language: 'es',
+          revenue_this_week: 250,
+          revenue_prior_week: 200,
+          wow_pct: 0.25,
+          views_this_week: 35000
+        },
+        {
+          title_id: 'filler',
+          title: 'Fading Line 75',
+          genre: 'Comedy',
+          language: 'en',
+          revenue_this_week: 500,
+          revenue_prior_week: 100,
+          wow_pct: 4,
+          views_this_week: 90000
+        }
+      ],
+      DEMO_INVENTORY,
+      [],
+      DEMO_HOLES
+    );
+    const top = pickTopCandidates(scored, 3, DEMO_INVENTORY.length, { allowFiller: true });
+    expect(top.map(t => t.title)).not.toContain('Fading Line 75');
+    expect(new Set(top.map(t => t.genre)).size).toBe(3);
+  });
   it('scores full momentum rows — timeline slice must not change picks', () => {
     const filler = Array.from({ length: 22 }, (_, i) => ({
       title_id: `f${i}`,
@@ -328,6 +394,9 @@ describe('GreenlightScorer', () => {
   it('covers parser fallbacks, language gaps, wow clamp, and cannibal fill', () => {
     expect(isSeedFillerTitle('')).toBe(true);
     expect(isSeedFillerTitle('Catalog Extra 12')).toBe(true);
+    expect(isSeedFillerTitle('Fading Line 75')).toBe(true);
+    expect(isSeedFillerTitle('Chronicle of Dream 103')).toBe(true);
+    expect(isSeedFillerTitle('Harbor Letters: Winter')).toBe(false);
     expect(isSeedFillerTitle('Winter Harbor', 'catalog title for demo seed')).toBe(true);
     expect(isSeedFillerTitle('Two Words')).toBe(false);
 

@@ -1,5 +1,20 @@
 /** Deterministic SELECT queries for weekly greenlight analysis (no Gemini SQL). */
 
+/**
+ * Title filters aligned with `isSeedFillerTitle` (title-only rules):
+ * Catalog Extra*, Scorer pick:*, and "Word Word N" / "Chronicle of Dream N" without a colon.
+ * Story titles with a colon (e.g. Archive: Road 114) are kept.
+ */
+export const SQL_EXCLUDE_SEED_FILLER_TITLES = `
+  mc.title != ''
+  AND mc.title NOT LIKE 'Catalog Extra%'
+  AND mc.title NOT LIKE 'Scorer pick:%'
+  AND NOT (
+    positionUTF8(mc.title, ':') = 0
+    AND match(mc.title, '^([^ ]+ ){2,}[0-9]{1,3}$')
+  )
+`.trim();
+
 export const GREENLIGHT_QUERY_A_GENRE_INVENTORY = `
 SELECT
   mc.genre AS genre,
@@ -36,8 +51,7 @@ INNER JOIN media_catalog.title_revenue AS tw
 LEFT JOIN media_catalog.title_revenue AS pw
   ON pw.title_id = mc.id
  AND pw.week_start = (SELECT max(week_start) - 7 FROM media_catalog.title_revenue)
-WHERE mc.title != ''
-  AND mc.title NOT LIKE 'Catalog Extra%'
+WHERE ${SQL_EXCLUDE_SEED_FILLER_TITLES}
 ORDER BY wow_pct DESC
 `.trim();
 

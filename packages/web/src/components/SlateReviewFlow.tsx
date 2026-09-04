@@ -19,7 +19,7 @@ export function SlateReviewFlow({ greenlight }: { greenlight: AgentRunResult }) 
   const memo = programmingMemo(greenlight);
   const gap = gapFilledFromRun(greenlight);
   const queryRows: Record<string, unknown>[] = Array.isArray(greenlight.queryRows)
-    ? greenlight.queryRows
+    ? (greenlight.queryRows as Record<string, unknown>[])
     : [];
   const excluded = greenlight.cannibalExcluded ?? [];
 

@@ -46,14 +46,31 @@ ch() {
 
 echo "Target: ${CLICKHOUSE_HOST}:${CLIENT_PORT} (secure=${CLICKHOUSE_SECURE}, app port=${CLICKHOUSE_PORT})"
 
+echo "Hard-reset catalog tables (avoid SharedMergeTree truncate races)..."
+ch --query "DROP TABLE IF EXISTS media_catalog.title_revenue"
+ch --query "DROP TABLE IF EXISTS media_catalog.media_content"
+# Keep agent_runs — not part of the demo catalog seed.
+
 echo "Applying schema..."
 ch --multiquery < deployment/docker/init-schema.sql
 
 ch --query "ALTER TABLE media_catalog.media_content ADD COLUMN IF NOT EXISTS language String DEFAULT 'en'" || true
 
+BEFORE="$(ch --query "SELECT count() FROM media_catalog.media_content")"
+if [[ "$BEFORE" != "0" ]]; then
+  echo "ERROR: media_content not empty after reset (count=${BEFORE})" >&2
+  exit 1
+fi
+
 echo "Seeding ~200 titles (run generator if needed)..."
 node deployment/scripts/generate-seed-catalog.mjs
+# Prefer INSERT-only body if present; still safe after DROP because schema was recreated.
 ch --multiquery < deployment/docker/seed-catalog.sql
 
 echo "Done. Titles:"
-ch --query "SELECT count() FROM media_catalog.media_content"
+COUNT="$(ch --query "SELECT count() FROM media_catalog.media_content")"
+echo "$COUNT"
+if [[ "$COUNT" -lt 190 || "$COUNT" -gt 220 ]]; then
+  echo "ERROR: expected ~200 titles, got ${COUNT}" >&2
+  exit 1
+fi

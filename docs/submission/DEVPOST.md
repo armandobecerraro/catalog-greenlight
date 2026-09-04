@@ -63,11 +63,13 @@ https://github.com/armandobecerraro/catalog-greenlight
 
 ## Video demo (3 min, English)
 
-`TODO_YOUTUBE` — shot list + narration: `docs/submission/VIDEO_CHECKLIST.md` (summary in README.md § “3-minute demo video script”). Record against https://catalog-greenlight.onrender.com only.
+**YouTube (public, English, native CC):** https://youtu.be/XBCRFGOywTI (~2:32)
+
+Shot list / narration: `docs/submission/VIDEO_CHECKLIST.md`. Recorded against https://catalog-greenlight.onrender.com. Treat on-screen metrics as a snapshot — re-run `/ask` for the current live `gap_score`.
 
 ## What it does
 
-1. **Dashboard** — live catalog stats from ClickHouse via MCP, plus **Greenlight this week**: provenance header (scorer formula), weekly programming ritual table (export CSV/JSON), three rec-cards with per-card score provenance, ClickHouse analytics panels, and Gemini narrative
+1. **Dashboard** — **Decision Cockpit** (ClickHouse measured · TypeScript ranked · Gemini explained/skipped), cannibal exclusions above the fold, Formula Playground (client re-score of DISCOVER rows), Review → confirm → export (`greenlight-slate-YYYY-MM-DD.*`), three rec-cards with correct A–D provenance
 2. **Ingest** — add a title; Gemini enriches summary/tags; MCP INSERT persists it
 3. **Ask the catalog** — natural language → 6-step agent timeline → Gemini-planned SQL → result rows → grounded recommendations
 4. **Greenlight pipeline** — four parallel MCP SELECTs → TypeScript scorer → Gemini synthesis (25s timeout; scorer fallback on failure, timeout, or 429)

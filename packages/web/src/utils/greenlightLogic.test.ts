@@ -14,10 +14,14 @@ import {
   usedScorerFallback,
   topCandidatesFromSteps,
   isGeminiRateLimitError,
-  resolveGreenlightErrorMessage
+  resolveGreenlightErrorMessage,
+  greenlightGeminiStatus,
+  greenlightMcpMs,
+  greenlightGeminiMs,
+  synthesizeStepError
 } from './greenlightUx';
 import { parseGreenlightAnalytics } from './greenlightAnalytics';
-import { weeklySlateToCsv, contrafactualPairs, buildWeeklySlateExport, exportWeeklySlate, weeklySlateToJson } from './greenlightExport';
+import { weeklySlateToCsv, contrafactualPairs, buildWeeklySlateExport, exportWeeklySlate, weeklySlateToJson, programmingMemo, gapFilledFromRun } from './greenlightExport';
 import { buildWeekSignals } from './weekSignals';
 import type { AgentRunResult } from '../api';
 
@@ -103,6 +107,48 @@ describe('greenlightMetrics', () => {
     expect(metrics.opportunity_score).toBe(0.26);
     const pairs = extractCannibalPairs(sampleRun().steps);
     expect(pairs).toHaveLength(1);
+    expect(
+      extractCannibalPairs([
+        {
+          step: 'DISCOVER',
+          status: 'completed',
+          output: {
+            queries: [
+              {
+                id: 'C_cannibalization',
+                rows: [
+                  {
+                    title_a: 'True Crime: Highway 101',
+                    title_b: 'True Crime: Highway 101 Redux',
+                    genre: 'Documentary'
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ])
+    ).toEqual([
+      {
+        title_a: 'True Crime: Highway 101',
+        title_b: 'True Crime: Highway 101 Redux',
+        genre: 'Documentary'
+      }
+    ]);
+    expect(
+      extractCannibalPairs([
+        { step: 'DISCOVER', status: 'completed', output: {} }
+      ])
+    ).toEqual([]);
+    expect(
+      extractCannibalPairs([
+        {
+          step: 'DISCOVER',
+          status: 'completed',
+          output: { queries: [{ id: 'C_cannibalization' }] }
+        }
+      ])
+    ).toEqual([]);
   });
 });
 
@@ -129,6 +175,8 @@ describe('greenlightUx', () => {
     expect(greenlightPhaseFromElapsed(30_000)).toBe('scoring');
     expect(greenlightPhaseFromElapsed(50_000)).toBe('narrative');
     expect(usedScorerFallback(sampleRun())).toBe(true);
+    expect(usedScorerFallback(null)).toBe(false);
+    expect(usedScorerFallback({ ...sampleRun(), fallback: false, steps: [] })).toBe(false);
     expect(topCandidatesFromSteps(sampleRun())[0].title).toContain('Crimen');
     expect(isGeminiRateLimitError(new ApiError('gemini_billing', 'x'))).toBe(true);
     expect(isGeminiRateLimitError(new Error('429 quota'))).toBe(true);
@@ -136,6 +184,83 @@ describe('greenlightUx', () => {
     expect(isGeminiRateLimitError(12)).toBe(false);
     const resolved = resolveGreenlightErrorMessage(new ApiError('gemini_billing', 'x'), t);
     expect(resolved.isRateLimit).toBe(true);
+    expect(greenlightGeminiStatus(null)).toBeUndefined();
+    expect(greenlightGeminiStatus(sampleRun())).toBe('skipped');
+    expect(greenlightGeminiStatus({ ...sampleRun(), geminiStatus: 'explained' })).toBe('explained');
+    expect(
+      greenlightGeminiStatus({
+        ...sampleRun(),
+        fallback: false,
+        steps: [{ step: 'SYNTHESIZE', status: 'completed', output: { fallback: false } }]
+      })
+    ).toBe('explained');
+    expect(
+      greenlightGeminiStatus({
+        ...sampleRun(),
+        fallback: true,
+        steps: [{ step: 'SYNTHESIZE', status: 'completed', output: { geminiError: 'quota' } }]
+      })
+    ).toBe('error');
+    expect(synthesizeStepError(null)).toBeUndefined();
+    expect(greenlightMcpMs(null)).toBeUndefined();
+    expect(greenlightMcpMs({ ...sampleRun(), mcpMs: 9 })).toBe(9);
+    expect(greenlightMcpMs({ ...sampleRun(), mcpMs: undefined, steps: [] })).toBeUndefined();
+    expect(
+      greenlightMcpMs({
+        ...sampleRun(),
+        mcpMs: undefined,
+        steps: [{ step: 'DISCOVER', status: 'completed', output: { queries: [] } }]
+      })
+    ).toBeUndefined();
+    expect(
+      greenlightMcpMs({
+        ...sampleRun(),
+        mcpMs: undefined,
+        steps: [
+          {
+            step: 'DISCOVER',
+            status: 'completed',
+            output: { queries: [{ id: 'A' }, { id: 'B' }] }
+          }
+        ]
+      })
+    ).toBeUndefined();
+    expect(
+      greenlightMcpMs({
+        ...sampleRun(),
+        mcpMs: undefined,
+        steps: [
+          {
+            step: 'DISCOVER',
+            status: 'completed',
+            output: { queries: [{ id: 'A' }, { id: 'B', latencyMs: 4 }] }
+          }
+        ]
+      })
+    ).toBe(4);
+    expect(
+      greenlightMcpMs({
+        ...sampleRun(),
+        mcpMs: undefined,
+        steps: [
+          {
+            step: 'DISCOVER',
+            status: 'completed',
+            output: { queries: [{ id: 'A', latencyMs: 2 }, { id: 'B', latencyMs: 3 }] }
+          }
+        ]
+      })
+    ).toBe(5);
+    expect(greenlightGeminiMs(null)).toBeUndefined();
+    expect(greenlightGeminiMs({ ...sampleRun(), geminiMs: 11 })).toBe(11);
+    expect(greenlightGeminiMs({ ...sampleRun(), geminiMs: undefined, steps: [] })).toBeUndefined();
+    expect(
+      greenlightGeminiMs({
+        ...sampleRun(),
+        geminiMs: undefined,
+        steps: [{ step: 'SYNTHESIZE', status: 'completed', latencyMs: 22 }]
+      })
+    ).toBe(22);
   });
 });
 
@@ -167,5 +292,65 @@ describe('analytics export signals', () => {
     expect(weeklySlateToJson(sampleRun())).toContain('Crimen');
     expect(click).toHaveBeenCalled();
     click.mockRestore();
+  });
+
+  it('builds a deterministic memo when Gemini fallback is set', () => {
+    const memo = programmingMemo({ ...sampleRun(), fallback: true });
+    expect(memo.source).toBe('template');
+    expect(memo.text).toMatch(/TypeScript scorer/);
+    expect(
+      programmingMemo({
+        ...sampleRun(),
+        fallback: true,
+        cannibalExcluded: [
+          {
+            title: 'True Crime: Highway 101',
+            genre: 'Documentary',
+            opportunity_score: 0.02,
+            pair: { title_a: 'True Crime: Highway 101', title_b: 'Redux', genre: 'Documentary' },
+            copy: 'split'
+          }
+        ]
+      }).text
+    ).toMatch(/Cannibal exclusions/);
+    expect(gapFilledFromRun(sampleRun()).available).toBe(true);
+    expect(gapFilledFromRun(sampleRun()).label).not.toMatch(/0\.074/);
+    expect(programmingMemo({ ...sampleRun(), answer: undefined, fallback: false }).source).toBe('template');
+    expect(programmingMemo({ ...sampleRun(), answer: '   ', fallback: false }).source).toBe('template');
+    expect(
+      programmingMemo({
+        ...sampleRun(),
+        fallback: false,
+        answer: 'Weekly greenlight from measured ClickHouse analytics. TypeScript scored the slate; Gemini memo is optional.'
+      }).source
+    ).toBe('template');
+    expect(programmingMemo({ ...sampleRun(), answer: 'Chief memo from Gemini.', fallback: false }).source).toBe(
+      'gemini'
+    );
+    expect(gapFilledFromRun({ ...sampleRun(), steps: [] }).available).toBe(false);
+    expect(
+      gapFilledFromRun({
+        ...sampleRun(),
+        steps: [
+          {
+            step: 'DISCOVER',
+            status: 'completed',
+            output: {
+              queries: [
+                {
+                  id: 'D_slate_holes',
+                  rows: [
+                    { hole_type: 'language', dimension: 'es', gap_score: 0.9 },
+                    { dimension: 'Thriller', gap_score: 0.4 },
+                    { hole_type: 'genre', gap_score: 0.01 },
+                    { hole_type: 'genre', genre: 'Comedy', gap_score: '0.21' }
+                  ]
+                }
+              ]
+            }
+          }
+        ]
+      }).label
+    ).toMatch(/Thriller gap_score 0\.400/);
   });
 });

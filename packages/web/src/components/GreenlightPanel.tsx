@@ -4,8 +4,9 @@ import type { AgentRunResult, Recommendation } from '../api';
 import AnalyticsInsights from './AnalyticsInsights';
 import { AgentTimeline } from './AgentTimeline';
 import { GreenlightRitualPanel } from './GreenlightRitualPanel';
-import { GreenlightProvenanceHeader, RecProvenance, RecProvenanceStrip, FillerDepthBadge } from './GreenlightProvenance';
+import { GreenlightProvenanceHeader, RecProvenance, RecProvenanceStrip, FillerDepthBadge, DecisionCockpitStrip, CannibalConflictPanel } from './GreenlightProvenance';
 import { GreenlightSlateBar } from './GreenlightSlateBar';
+import { FormulaPlayground } from './FormulaPlayground';
 import { McpSqlEvidence } from './McpSqlEvidence';
 import { ErrorBanner, EmptyState } from './Layout';
 import { useLocale } from '../i18n/LocaleContext';
@@ -175,11 +176,13 @@ function RecMetrics({
 function RecCard({
   rec,
   queryRows,
-  narrativePending
+  narrativePending,
+  runnerUp
 }: {
   rec: Recommendation;
   queryRows: Record<string, unknown>[];
   narrativePending?: boolean;
+  runnerUp?: AgentRunResult['runnerUp'];
 }) {
   const { t } = useLocale();
   const metrics = metricsForRec(rec, queryRows);
@@ -196,7 +199,7 @@ function RecCard({
       <RecMetrics metrics={metrics} t={t} />
       <details className="rec-provenance-details">
         <summary>{t('greenlight.provenanceTitle')}</summary>
-        <RecProvenance rec={rec} queryRows={queryRows} />
+        <RecProvenance rec={rec} queryRows={queryRows} runnerUp={runnerUp} />
       </details>
       {narrativePending && !hasNarrative ? (
         <p className="rec-narrative-pending muted">{t('dashboard.greenlightPartialNarrative')}</p>
@@ -293,6 +296,7 @@ export function GreenlightPanel({
 
       {hasCachedSlate && !isInitialLoad && (
         <>
+          {greenlight && <DecisionCockpitStrip greenlight={greenlight} />}
           <p className="slate-attribution greenlight-hero-attribution">
             {t('greenlight.clickhouseAttribution')}
           </p>
@@ -306,9 +310,12 @@ export function GreenlightPanel({
                 rec={r}
                 queryRows={queryRows}
                 narrativePending={showPartialOnly}
+                runnerUp={greenlight?.runnerUp}
               />
             ))}
           </div>
+          {greenlight && <CannibalConflictPanel exclusions={greenlight.cannibalExcluded} />}
+          {greenlight && <FormulaPlayground greenlight={greenlight} />}
         </>
       )}
 

@@ -10,7 +10,7 @@
 |------|--------|--------|
 | 1 | Open hosted URL; wait health `ready: true` | ~60–90s if cold |
 | 2 | `/` dashboard | 3 greenlight picks with measured scores · **0 fillers** |
-| 3 | `/ask` → under-represented genre chip | Documentary `gap_score ≈ 0.074` |
+| 3 | `/ask` → under-represented genre chip | live `gap_score` from ClickHouse (genre can move after ingest) |
 | 4 | `/judge` | Chloe wedge + Remove ClickHouse + benchmarks |
 
 **p50 (warm):** greenlight cached ~11s · `?refresh=1` ~37s · `/ask` ~33s — see [`BENCHMARKS.md`](./BENCHMARKS.md). Keep-alive: `bash scripts/keepalive-smoke.sh` or `npm run keepalive:smoke`.
@@ -49,7 +49,7 @@ BASE_URL=https://catalog-greenlight.onrender.com npm run judge:smoke
 | `GET /api/v1/catalog/stats` | **PASS** | `totalEntries: 200`, `latestRevenue.topTitle: Crimen sin Fronteras: Bogotá` |
 | `GET /api/v1/greenlight?refresh=1` | **FAIL fillers** | Top-3: Bogotá / Archive: Road 114 / **Fading Line 75** (seed filler) |
 | SYNTHESIZE | **FAIL timeout** | `latencyMs: 10001`, `fallback: true`, answer = “Gemini memo is optional.” |
-| `POST /api/v1/agent/ask` under-represented | **PASS** | Documentary `gap_score` 0.074 + `D_slate_holes` SQL + 6 steps |
+| `POST /api/v1/agent/ask` under-represented | **PASS** | live `gap_score` from `D_slate_holes` SQL + 6 steps (genre can move after ingest) |
 
 ### Fixes shipped in this commit (need Render auto-deploy from `main` + reseed)
 
@@ -158,9 +158,9 @@ curl -sS --max-time 240 -X POST https://catalog-greenlight.onrender.com/api/v1/a
 | Field | Value |
 |-------|--------|
 | `intent` | `catalog_qa` |
-| Answer | Documentary is the most underserved slice: `gap_score` 0.074 |
+| Answer | Live `gap_score` from ClickHouse (genre can move after ingest) |
 | SQL | `D_slate_holes` CTE with `gap_score` |
-| Recs | Documentary 0.074, Thriller 0.069 |
+| Recs | Ranked genre slices from the returned rows — never a hardcoded Documentary 0.074 |
 
 ---
 
@@ -178,7 +178,7 @@ Unchanged acceptance from prior smoke: `/`, `/ask`, `/catalog`, `/ingest`, `/jud
 | Stats (~200 titles) | **YES** |
 | Greenlight 3 picks + scores (anti-filler) | **CODE READY** — deploy + reseed required |
 | SYNTHESIZE Gemini memo (25s / slim prompt) | **CODE READY** — verify warm post-deploy |
-| Ask `/agent/ask` under-represented | **YES** — Documentary `gap_score` 0.074 |
+| Ask `/agent/ask` under-represented | **YES** — live `gap_score` from ClickHouse (genre can move after ingest) |
 | Keepalive cron script | **YES** — `BASE_URL=… bash scripts/keepalive-smoke.sh` |
 | Devpost Built With cleanup | **MANUAL** — remove langchain/python |
 

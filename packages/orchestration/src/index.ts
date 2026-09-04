@@ -19,6 +19,10 @@ export {
   parseCannibalization,
   parseSlateHoles,
   SCORER_WEIGHTS,
+  SCORE_FROM_QUERIES,
+  slateDecisionTrace,
+  scoreFromAnalyticsById,
+  candidatesToQueryRows,
   isSeedFillerTitle
 } from './greenlight/GreenlightScorer';
 export { GREENLIGHT_ANALYTICS_QUERIES, SQL_EXCLUDE_SEED_FILLER_TITLES } from './greenlight/greenlightQueries';

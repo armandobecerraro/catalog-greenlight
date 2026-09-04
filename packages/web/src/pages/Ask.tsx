@@ -133,10 +133,31 @@ export default function Ask() {
             </div>
           ) : null}
 
+          {result.sql && (
+            <Card className="ask-sql-card">
+              <h3>{t('ask.sqlTitle')}</h3>
+              <p className="muted small">{t('ask.contested.evidenceFirst')}</p>
+              <pre className="sql-block">{result.sql}</pre>
+            </Card>
+          )}
+
+          {result.queryRows && result.queryRows.length > 0 && (
+            <Card>
+              <h3>{t('ask.evidenceTitle', { count: result.queryRows.length })}</h3>
+              {gapHighlight && (
+                <p className="ask-gap-highlight" data-testid="ask-gap-highlight">
+                  {gapHighlight}
+                </p>
+              )}
+              <DataTable rows={result.queryRows as Record<string, unknown>[]} maxRows={20} />
+            </Card>
+          )}
+
           <div ref={answerRef} className="ask-answer-scroll-target">
           <Card className="ask-answer-card">
             <h3>{t('ask.answer')}</h3>
-            {gapHighlight && (
+            <p className="muted small ask-explanation-only">{t('ask.contested.explanationOnly')}</p>
+            {!result.queryRows?.length && gapHighlight && (
               <p className="ask-gap-highlight" data-testid="ask-gap-highlight">
                 {gapHighlight}
               </p>
@@ -150,20 +171,6 @@ export default function Ask() {
             )}
           </Card>
           </div>
-
-          {result.queryRows && result.queryRows.length > 0 && (
-            <Card>
-              <h3>{t('ask.evidenceTitle', { count: result.queryRows.length })}</h3>
-              <DataTable rows={result.queryRows as Record<string, unknown>[]} maxRows={20} />
-            </Card>
-          )}
-
-          {result.sql && (
-            <details className="ask-sql-details">
-              <summary>{t('ask.sqlTitle')}</summary>
-              <pre className="sql-block">{result.sql}</pre>
-            </details>
-          )}
 
           <Card>
             <h3>{t('ask.timelineTitle')}</h3>

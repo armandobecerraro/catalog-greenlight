@@ -122,6 +122,18 @@ describe('GeminiReasoningAdapter', () => {
     generate.mockResolvedValueOnce('not-json');
     const raw = await adapter.synthesizeGreenlight('q', 'SELECT 1', []);
     expect(raw.answer).toBe('not-json');
+
+    generate.mockResolvedValueOnce(
+      JSON.stringify({
+        answer: 'weekly memo',
+        recommendations: [{ title: 'T', genre: 'Drama', justification: 'j', evidence: 'e' }]
+      })
+    );
+    const greenlight = await adapter.synthesizeGreenlight('q', 'SELECT 1', [
+      { title: 'T', genre: 'Drama', opportunity_score: 0.2 }
+    ]);
+    expect(greenlight.answer).toBe('weekly memo');
+    expect(greenlight.recommendations?.[0].title).toBe('T');
   });
 
   it('keeps raw text when JSON has no answer field', async () => {

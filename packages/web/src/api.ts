@@ -35,7 +35,46 @@ export interface Recommendation {
   opportunity_score?: number;
   wow_pct?: number;
   genre_gap?: number;
+  language_gap?: number;
   in_cannibal_pair?: boolean;
+}
+
+export type GeminiStatus = 'explained' | 'skipped' | 'error';
+export type WhyLost = 'lower_score' | 'diversity' | 'cannibal';
+
+export interface ScoreBreakdown {
+  genre_gap: number;
+  wow_momentum: number;
+  cannibalization_penalty: number;
+  language_gap: number;
+  opportunity_score: number;
+  weights: {
+    genre_gap: number;
+    wow_momentum: number;
+    cannibalization_penalty: number;
+    language_gap: number;
+  };
+  fromQueries: {
+    genre_gap: 'A_genre_inventory';
+    wow_momentum: 'B_title_momentum';
+    cannibalization_penalty: 'C_cannibalization';
+    language_gap: 'D_slate_holes';
+  };
+}
+
+export interface RunnerUp {
+  title: string;
+  genre: string;
+  opportunity_score: number;
+  whyLost: WhyLost;
+}
+
+export interface CannibalExcluded {
+  title: string;
+  genre: string;
+  opportunity_score: number;
+  pair: { title_a: string; title_b: string; genre: string };
+  copy: string;
 }
 
 export interface AgentRunResult {
@@ -48,6 +87,12 @@ export interface AgentRunResult {
   totalLatencyMs: number;
   model: string;
   fallback?: boolean;
+  geminiStatus?: GeminiStatus;
+  mcpMs?: number;
+  geminiMs?: number;
+  scoreBreakdown?: ScoreBreakdown[];
+  runnerUp?: RunnerUp;
+  cannibalExcluded?: CannibalExcluded[];
 }
 
 export interface HealthStatus {

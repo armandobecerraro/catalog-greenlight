@@ -8,7 +8,7 @@ export function hasClickHouseEvidence(run: Pick<AgentRunResult, 'sql' | 'queryRo
   return false;
 }
 
-/** Best-effort highlight for the demo fold (Documentary gap_score …). */
+/** Best-effort highlight from live ClickHouse gap_score rows (genre can move after ingest). */
 export function gapScoreHighlight(
   run: Pick<AgentRunResult, 'answer' | 'queryRows'>
 ): string | null {

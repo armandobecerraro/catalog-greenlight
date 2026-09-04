@@ -243,6 +243,9 @@ export function coerceGeneratedAskSql(
   if (isRevenueGenreBrief(userPrompt) && plan.queryId === 'D_slate_holes') {
     return sqlGroundsRevenueGenre(generatedSql) ? null : plan;
   }
+  if (isSlateHoleBrief(userPrompt) && plan.queryId === 'D_slate_holes') {
+    return /gap_score/i.test(generatedSql) ? null : plan;
+  }
   return null;
 }
 

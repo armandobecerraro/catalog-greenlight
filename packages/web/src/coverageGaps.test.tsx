@@ -236,7 +236,7 @@ describe('McpSqlEvidence', () => {
 });
 
 describe('GreenlightRitualPanel extra pairs', () => {
-  it('shows contrafactual overflow and returns null without recs', () => {
+  it('shows the slate table without a duplicate cannibal callout', () => {
     expect(wrap(<GreenlightRitualPanel greenlight={{ ...greenlight, recommendations: [] }} />).container.textContent).toBe(
       ''
     );
@@ -269,7 +269,8 @@ describe('GreenlightRitualPanel extra pairs', () => {
         }}
       />
     );
-    expect(screen.getByText(/more near-duplicate|pares casi duplicados/i)).toBeInTheDocument();
+    expect(screen.getByText('Pick')).toBeInTheDocument();
+    expect(screen.queryByText(/more near-duplicate|pares casi duplicados/i)).not.toBeInTheDocument();
     expect(screen.getAllByText('—').length).toBeGreaterThan(0);
   });
 });
@@ -286,6 +287,11 @@ describe('provenance and timeline', () => {
         <RecProvenance
           rec={{ title: 'Y', genre: 'Drama', justification: '', evidence: '', in_cannibal_pair: true }}
           queryRows={[{ title: 'Y', wow_momentum: 0.4, wow_pct: 0.2, cannibalization_penalty: 1 }]}
+        />
+        <RecProvenance
+          rec={{ title: 'W', genre: 'Drama', justification: '', evidence: '' }}
+          queryRows={[]}
+          runnerUp={{ title: 'Runner', genre: 'Drama', opportunity_score: 0.1, whyLost: 'lower_score' }}
         />
         <SynthesizeFallbackBadge greenlight={{ ...greenlight, steps: [] }} />
         <AgentTimeline

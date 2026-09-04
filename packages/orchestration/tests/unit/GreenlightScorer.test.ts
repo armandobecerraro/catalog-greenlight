@@ -6,9 +6,13 @@ import {
   scoreTitles,
   pickTopCandidates,
   scoreFromAnalyticsById,
+  slateDecisionTrace,
+  candidatesToQueryRows,
   SCORER_WEIGHTS,
+  SCORE_FROM_QUERIES,
   isNearDuplicateTitle,
-  isSeedFillerTitle
+  isSeedFillerTitle,
+  type ScoredCandidate
 } from '../../src/greenlight/GreenlightScorer';
 
 /** Demo-story fixtures — mirrors seeded ClickHouse narrative. */
@@ -534,5 +538,229 @@ describe('GreenlightScorer', () => {
     expect(onlyCannibals).toHaveLength(3);
 
     expect(pickTopCandidates([{ ...scored[0], title: '   ' }], 3)).toEqual([]);
+  });
+
+  it('keeps default weights matching production fixtures', () => {
+    const scored = scoreTitles(DEMO_MOMENTUM, DEMO_INVENTORY, DEMO_CANNIBAL, DEMO_HOLES);
+    const top = pickTopCandidates(scored, 3, DEMO_INVENTORY.length);
+    expect(top.map(t => t.title)).toEqual([
+      'Crimen sin Fronteras: Bogotá',
+      'Winter Harbor',
+      'Open Mic Circuit'
+    ]);
+    const rows = candidatesToQueryRows(top);
+    expect(rows[0]).toEqual(
+      expect.objectContaining({
+        language_gap: expect.any(Number),
+        scoreBreakdown: expect.objectContaining({
+          fromQueries: SCORE_FROM_QUERIES,
+          weights: SCORER_WEIGHTS
+        })
+      })
+    );
+  });
+
+  it('changes ranked order when alternate weights are injected', () => {
+    const production = scoreTitles(DEMO_MOMENTUM, DEMO_INVENTORY, DEMO_CANNIBAL, DEMO_HOLES);
+    const languageOnly = scoreTitles(DEMO_MOMENTUM, DEMO_INVENTORY, DEMO_CANNIBAL, DEMO_HOLES, {
+      genre_gap: 0,
+      wow_momentum: 0,
+      cannibalization_penalty: 0,
+      language_gap: 1
+    });
+    expect(production.map(s => s.opportunity_score)).not.toEqual(
+      languageOnly.map(s => s.opportunity_score)
+    );
+    expect(languageOnly.filter(s => s.language === 'es').every(s => s.opportunity_score > 0)).toBe(
+      true
+    );
+
+    const fromId = scoreFromAnalyticsById(
+      {
+        A_genre_inventory: [
+          { genre: 'Comedy', title_count: 52, revenue_4w: 12000 },
+          { genre: 'Thriller', title_count: 14, revenue_4w: 28000 },
+          { genre: 'Documentary', title_count: 22, revenue_4w: 22000 },
+          { genre: 'Drama', title_count: 32, revenue_4w: 15000 }
+        ],
+        B_title_momentum: DEMO_MOMENTUM.map(t => ({ ...t })),
+        C_cannibalization: [
+          {
+            title_a: 'True Crime: Highway 101',
+            title_b: 'True Crime: Highway 101 Redux',
+            genre: 'Documentary'
+          }
+        ],
+        D_slate_holes: [
+          { hole_type: 'genre', dimension: 'Thriller', gap_score: 0.42 },
+          { hole_type: 'language', dimension: 'es', gap_score: 0.35 }
+        ]
+      },
+      { weights: { genre_gap: 0, wow_momentum: 0, cannibalization_penalty: 0, language_gap: 1 } }
+    );
+    expect(fromId.scored.find(s => s.language === 'es')!.opportunity_score).toBeGreaterThan(
+      fromId.scored.find(s => s.language === 'en')!.opportunity_score
+    );
+  });
+
+  it('lets cannibal titles into the slate when relaxCannibal is set', () => {
+    const scored = scoreTitles(DEMO_MOMENTUM, DEMO_INVENTORY, DEMO_CANNIBAL, DEMO_HOLES, {
+      ...SCORER_WEIGHTS,
+      cannibalization_penalty: 0
+    });
+    const production = pickTopCandidates(scored, 3, DEMO_INVENTORY.length);
+    const relaxed = pickTopCandidates(scored, 3, DEMO_INVENTORY.length, { relaxCannibal: true });
+    expect(production.every(t => !t.in_cannibal_pair)).toBe(true);
+    expect(relaxed.some(t => t.in_cannibal_pair)).toBe(true);
+  });
+
+  it('can pick two titles in the same genre when relaxDiversity is set', () => {
+    const scored = scoreTitles(DEMO_MOMENTUM, DEMO_INVENTORY, DEMO_CANNIBAL, DEMO_HOLES);
+    const production = pickTopCandidates(scored, 3, DEMO_INVENTORY.length);
+    const relaxed = pickTopCandidates(scored, 3, DEMO_INVENTORY.length, { relaxDiversity: true });
+    expect(new Set(production.map(t => t.genre)).size).toBe(3);
+    expect(relaxed.filter(t => t.genre === 'Thriller').length).toBeGreaterThan(
+      production.filter(t => t.genre === 'Thriller').length
+    );
+  });
+
+  it('traces first-pass cannibal exclusions and a runner-up', () => {
+    const scored = scoreTitles(DEMO_MOMENTUM, DEMO_INVENTORY, DEMO_CANNIBAL, DEMO_HOLES);
+    const top = pickTopCandidates(scored, 3, DEMO_INVENTORY.length);
+    const trace = slateDecisionTrace(scored, top, DEMO_CANNIBAL, {
+      inventoryGenreCount: DEMO_INVENTORY.length
+    });
+    expect(trace.cannibalExcluded.map(c => c.title)).toEqual(
+      expect.arrayContaining(['True Crime: Highway 101', 'True Crime: Highway 101 Redux'])
+    );
+    expect(trace.cannibalExcluded[0].copy).toBe(
+      'If you greenlit both, they split the same audience.'
+    );
+    expect(trace.runnerUp).toEqual(
+      expect.objectContaining({
+        title: expect.any(String),
+        whyLost: expect.stringMatching(/lower_score|diversity|cannibal/)
+      })
+    );
+    expect(top.map(t => t.title)).not.toContain(trace.runnerUp?.title);
+  });
+
+  it('fills remaining slots with cannibal fillers only on the last pick pass', () => {
+    const scored = scoreTitles(
+      [
+        {
+          title_id: 'story',
+          title: 'Harbor Letters: Winter',
+          genre: 'Drama',
+          language: 'en',
+          revenue_this_week: 100,
+          revenue_prior_week: 90,
+          wow_pct: 0.1,
+          views_this_week: 1000
+        },
+        {
+          title_id: 'f1',
+          title: 'Banter Echo 7',
+          genre: 'Comedy',
+          language: 'en',
+          revenue_this_week: 80,
+          revenue_prior_week: 70,
+          wow_pct: 0.1,
+          views_this_week: 1000
+        },
+        {
+          title_id: 'f2',
+          title: 'Catalog Extra 12',
+          genre: 'Thriller',
+          language: 'en',
+          revenue_this_week: 70,
+          revenue_prior_week: 60,
+          wow_pct: 0.1,
+          views_this_week: 1000
+        }
+      ],
+      [
+        { genre: 'Drama', title_count: 10, revenue_4w: 10 },
+        { genre: 'Comedy', title_count: 10, revenue_4w: 10 },
+        { genre: 'Thriller', title_count: 10, revenue_4w: 10 }
+      ],
+      parseCannibalization([
+        { title_a: 'Banter Echo 7', title_b: 'Banter Echo 7 Twin', genre: 'Comedy' },
+        { title_a: 'Catalog Extra 12', title_b: 'Catalog Extra 12 Twin', genre: 'Thriller' }
+      ]),
+      []
+    );
+    expect(pickTopCandidates(scored, 3, 3)).toHaveLength(1);
+    const withFiller = pickTopCandidates(scored, 3, 3, { allowFiller: true });
+    expect(withFiller).toHaveLength(3);
+    expect(withFiller.slice(1).every(t => isSeedFillerTitle(t.title))).toBe(true);
+  });
+
+  it('labels a leftover cannibal as whyLost cannibal when the skip list is empty', () => {
+    const scored = scoreTitles(
+      DEMO_MOMENTUM.filter(t => t.title.includes('Highway')),
+      DEMO_INVENTORY,
+      DEMO_CANNIBAL,
+      DEMO_HOLES
+    );
+    const top = pickTopCandidates(scored, 0, DEMO_INVENTORY.length, { relaxCannibal: true });
+    expect(top).toEqual([]);
+    const trace = slateDecisionTrace(scored, top, DEMO_CANNIBAL, {
+      relaxCannibal: true,
+      inventoryGenreCount: DEMO_INVENTORY.length
+    });
+    expect(trace.runnerUp?.title).toMatch(/Highway 101/);
+    expect(trace.runnerUp?.whyLost).toBe('cannibal');
+  });
+
+  it('covers first-pass skip loop edges in the decision trace', () => {
+    const cand = (
+      over: Partial<ScoredCandidate> & Pick<ScoredCandidate, 'title_id' | 'title' | 'genre'>
+    ): ScoredCandidate => ({
+      language: 'en',
+      revenue_this_week: 1,
+      revenue_prior_week: 1,
+      wow_pct: 0,
+      genre_gap: 0,
+      wow_momentum: 0,
+      cannibalization_penalty: 0,
+      language_gap: 0,
+      opportunity_score: 0.1,
+      in_cannibal_pair: false,
+      ...over
+    });
+    const scored = [
+      cand({ title_id: 'p1', title: 'Pick One', genre: 'Drama', opportunity_score: 0.9 }),
+      cand({ title_id: 'p1', title: 'Pick One', genre: 'Drama', opportunity_score: 0.89 }),
+      cand({ title_id: '   ', title: '   ', genre: 'Western', opportunity_score: 0.88 }),
+      cand({ title_id: 'fill', title: 'Banter Echo 7', genre: 'Comedy', opportunity_score: 0.5 }),
+      cand({
+        title_id: 'orphan',
+        title: 'Orphan Cannibal',
+        genre: 'Thriller',
+        opportunity_score: 0.8,
+        in_cannibal_pair: true
+      }),
+      cand({
+        title_id: 'orphan',
+        title: 'Orphan Cannibal',
+        genre: 'Thriller',
+        opportunity_score: 0.79,
+        in_cannibal_pair: true
+      }),
+      cand({ title_id: 'p2', title: 'Pick Two', genre: 'Drama', opportunity_score: 0.7 }),
+      cand({ title_id: 'p3', title: 'Pick Three', genre: 'Comedy', opportunity_score: 0.4 }),
+      cand({ title_id: 'p4', title: 'Pick Four', genre: 'Documentary', opportunity_score: 0.3 })
+    ];
+    const top = [scored[0], scored[6], scored[7]];
+    const noPair = slateDecisionTrace(scored, top, [], { relaxDiversity: true });
+    expect(noPair.cannibalExcluded).toEqual([]);
+    const withPair = slateDecisionTrace(
+      scored,
+      top,
+      [{ title_a: 'Orphan Cannibal', title_b: 'Orphan Twin', genre: 'Thriller' }]
+    );
+    expect(withPair.cannibalExcluded.map(c => c.title)).toContain('Orphan Cannibal');
+    expect(slateDecisionTrace(scored, top, []).runnerUp?.title).toBe('Orphan Cannibal');
   });
 });

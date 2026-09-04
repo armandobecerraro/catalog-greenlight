@@ -130,6 +130,15 @@ describe('askSqlFallback', () => {
       )
     ).toBeNull();
     expect(coerceGeneratedAskSql('how many titles per genre', INVENTORY_SQL)).toBeNull();
+    expect(coerceGeneratedAskSql('Which genre is under-represented in our catalog?', INVENTORY_SQL)?.queryId).toBe(
+      'D_slate_holes'
+    );
+    expect(
+      coerceGeneratedAskSql(
+        'Which genre is under-represented in our catalog?',
+        'SELECT dimension, gap_score FROM holes ORDER BY gap_score DESC'
+      )
+    ).toBeNull();
   });
 
   it('synthesizes wow, revenue, inventory, empty, and generic rows', () => {

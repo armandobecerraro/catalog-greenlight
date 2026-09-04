@@ -118,7 +118,7 @@ describe('GreenlightSlateBar', () => {
   it('renders export actions when recommendations exist', () => {
     wrap(<GreenlightSlateBar greenlight={run} />);
     expect(screen.getAllByText(/Gemini did not invent the ranking/i).length).toBeGreaterThan(0);
-    expect(screen.getByRole('button', { name: /Export CSV/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Review slate/i })).toBeInTheDocument();
   });
 
   it('renders nothing without titled recommendations', () => {

@@ -257,7 +257,7 @@ describe("pages", () => {
     expect(await screen.findByText("ingest failed")).toBeInTheDocument();
   });
 
-  it("asks a question and renders grounded badge plus collapsible SQL", async () => {
+  it("asks a question and renders grounded badge plus visible SQL first", async () => {
     wrap(<Ask />);
     expect(screen.getByRole("textbox", { name: /Question for the catalog agent/i })).toBeInTheDocument();
     expect(document.querySelector(".ask-actions-sticky")).toBeTruthy();
@@ -272,12 +272,10 @@ describe("pages", () => {
     expect(await screen.findByText("Thriller is underserved.")).toBeInTheDocument();
     expect(screen.getByText(/Measured in ClickHouse via mcp-clickhouse/i)).toBeInTheDocument();
     expect(screen.queryByText(/No ClickHouse evidence returned/i)).not.toBeInTheDocument();
-    expect(screen.getByText(/SQL executed/i).closest("summary")).toBeTruthy();
-    fireEvent.click(
-      screen
-        .getAllByRole("button")
-        .find((btn) => /show|ver|details|detalle/i.test(btn.textContent ?? ""))!,
-    );
+    expect(screen.getByText(/SQL executed/i)).toBeInTheDocument();
+    expect(screen.getByText(/SQL executed/i).closest("summary")).toBeFalsy();
+    expect(screen.getByText(/Explanation only/i)).toBeInTheDocument();
+    expect(document.querySelector(".sql-block")?.textContent).toMatch(/SELECT genre/);
   });
 
   it("shows scary fallback badge only when Ask has no ClickHouse evidence", async () => {
@@ -326,6 +324,18 @@ describe("pages", () => {
     );
     expect(screen.getByText(/Measured in ClickHouse via mcp-clickhouse/i)).toBeInTheDocument();
     expect(screen.getByText(/Gemini planner\/writer was unavailable/i)).toBeInTheDocument();
+  });
+
+  it("highlights gap_score from the answer when Ask has no evidence rows", async () => {
+    mockedApi.ask.mockResolvedValueOnce({
+      ...askResult,
+      queryRows: [],
+      sql: undefined,
+      answer: "Thriller is underserved: gap_score 0.42 from ClickHouse.",
+    });
+    wrap(<Ask />);
+    fireEvent.submit(screen.getByRole("button", { name: /Run agent/i }).closest("form")!);
+    expect(await screen.findByTestId("ask-gap-highlight")).toHaveTextContent(/gap_score 0.42/);
   });
 
   it("renders greenlight provenance on Ask results", async () => {
@@ -529,6 +539,50 @@ describe("pages", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: /Copy jury evidence JSON/i }));
     expect(await screen.findByText(/Clipboard unavailable/i)).toBeInTheDocument();
+  });
+
+  it("uses live C_cannibalization SQL on /judge when DISCOVER includes it", async () => {
+    mockedApi.getGreenlight.mockResolvedValue({
+      intent: "greenlight",
+      answer: "memo",
+      recommendations: [],
+      queryRows: [],
+      steps: [
+        {
+          step: "DISCOVER",
+          status: "completed",
+          output: {
+            queries: [{ id: "C_cannibalization", sql: "SELECT live_cannibal FROM ch" }],
+          },
+        },
+      ],
+      totalLatencyMs: 1,
+      model: "gemini-test",
+    });
+    wrap(<App />, "/judge");
+    expect(await screen.findByText(/SELECT live_cannibal FROM ch/)).toBeInTheDocument();
+  });
+
+  it("falls back to published cannibal SQL when live SQL is blank", async () => {
+    mockedApi.getGreenlight.mockResolvedValue({
+      intent: "greenlight",
+      answer: "memo",
+      recommendations: [],
+      queryRows: [],
+      steps: [
+        {
+          step: "DISCOVER",
+          status: "completed",
+          output: {
+            queries: [{ id: "C_cannibalization", sql: "   " }],
+          },
+        },
+      ],
+      totalLatencyMs: 1,
+      model: "gemini-test",
+    });
+    wrap(<App />, "/judge");
+    expect(await screen.findByText(/quantile\(0\.75\)/)).toBeInTheDocument();
   });
 
   it("shows /judge cold-start copy when health is waking", async () => {

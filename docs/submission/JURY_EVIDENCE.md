@@ -16,14 +16,14 @@
 | Requirement                                             | Status      | Evidence                                                                                                                                                                                                                 |
 | ------------------------------------------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Public hosted web URL                                   | **PASS**    | https://catalog-greenlight.onrender.com — `GET /api/v1/health` → `ready: true` (verified 2026-09-01). Also in `docs/submission/DEVPOST.md`.                                                                              |
-| Video ≤3 min EN (YouTube/Vimeo), product working        | **PENDING** | `DEVPOST.md` line 40: `TODO_YOUTUBE`. No YouTube/Vimeo link yet.                                                                                                                                                         |
+| Video ≤3 min EN (YouTube/Vimeo), product working        | **PASS**    | https://youtu.be/XBCRFGOywTI (~2:32). Same URL on Devpost.                                                                                                                                                               |
 | Public repo + OSI license visible                       | **PASS**    | GitHub URL above. Root `LICENSE` = MIT.                                                                                                                                                                                  |
 | Google Cloud AI imported AND called at runtime          | **PASS**    | `@google/genai` in `packages/infrastructure/package.json`. `generateContent.ts`: `GoogleGenAI`, `ai.models.generateContent`. Adapters: `GeminiEnrichmentAdapter.ts`, `GeminiReasoningAdapter.ts`.                        |
 | ClickHouse via official MCP `mcp-clickhouse` at runtime | **PASS**    | `McpClickHouseConnector.ts`: spawns `uv run --with mcp-clickhouse --python 3.13 mcp-clickhouse`; `Client.callTool` → `run_query`, `list_databases`, `list_tables`. No `@clickhouse/client` in `packages/*/package.json`. |
 | Web / mobile platform                                   | **PASS**    | React + Vite UI: `packages/web` — routes `/`, `/judge`, `/catalog`, `/ingest`, `/ask`, `/guia` (`/about` → `/guia`).                                                                                                     |
 | New project in contest period                           | **PASS**    | Public GitHub repo created **2026-08-26** (contest period). Root `LICENSE` = MIT.                                                                                                                                        |
 | No LangChain / OpenAI / Anthropic in runtime            | **PASS**    | No imports/deps in `packages/*`; only UI disclaimer strings in `packages/web/src/i18n/translations.ts`.                                                                                                                  |
-| Devpost form + ClickHouse track                         | **PENDING** | Draft 1155720; hosted URL ready; video (`TODO_YOUTUBE`) and final Devpost submit still outstanding — form **not** marked Submitted.                                                                                      |
+| Devpost form + ClickHouse track                         | **PASS**    | Draft 1155720 **Submitted**. Hosted URL + video live.                                                                                                                                                                    |
 
 ---
 
@@ -184,7 +184,6 @@ Same claim appears on `/judge`, README, and the Devpost Impact/Tech paste in `DE
 
 ## What is NOT demonstrated
 
-- English ≤3 min video of working product (`TODO_YOUTUBE`)
 - `@google/adk` / Agent Builder / Vertex ADK
 - Grafana MCP (not used — correct for track)
 - LangChain, OpenAI, Anthropic

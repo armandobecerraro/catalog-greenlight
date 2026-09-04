@@ -9,7 +9,12 @@ import {
   runAgentStep
 } from '@bas/core';
 import { GREENLIGHT_ANALYTICS_QUERIES } from '../greenlight/greenlightQueries';
-import { scoreFromAnalyticsById, SCORER_WEIGHTS } from '../greenlight/GreenlightScorer';
+import {
+  scoreBreakdownFor,
+  scoreFromAnalyticsById,
+  SCORER_WEIGHTS,
+  type GeminiStatus
+} from '../greenlight/GreenlightScorer';
 import {
   groundRecommendations,
   recommendationsFromCandidateRows
@@ -65,17 +70,24 @@ export async function runGreenlightAnalysis(
   });
 
   const scoredPlan = scoreFromAnalyticsById(analyticsFullById.fullById);
+  const decisionTrace = scoredPlan.trace;
+  const mcpMs = analyticsFullById.queries.reduce((sum, q) => sum + q.latencyMs, 0);
 
   await runAgentStep(steps, 'PLAN_SQL', async () => ({
     formula: `opportunity = ${SCORER_WEIGHTS.genre_gap}*genre_gap + ${SCORER_WEIGHTS.wow_momentum}*wow_momentum - ${SCORER_WEIGHTS.cannibalization_penalty}*cannibalization_penalty + ${SCORER_WEIGHTS.language_gap}*language_gap`,
     candidateCount: scoredPlan.scored.length,
     momentumRowsScored: analyticsFullById.fullById[ANALYTICS_QUERY_IDS.B].length,
+    mcpMs,
+    runnerUp: decisionTrace.runnerUp,
+    cannibalExcluded: decisionTrace.cannibalExcluded,
+    scoreBreakdown: scoredPlan.candidateRows.map(row => row.scoreBreakdown),
     topCandidates: scoredPlan.top.map(c => ({
       title: c.title,
       genre: c.genre,
       opportunity_score: c.opportunity_score,
       wow_pct: c.wow_pct,
       genre_gap: c.genre_gap,
+      language_gap: c.language_gap,
       in_cannibal_pair: c.in_cannibal_pair
     }))
   }));
@@ -102,6 +114,14 @@ export async function runGreenlightAnalysis(
     summary: synthesis.recommendations.map(r => r.title).join(', ') || synthesis.answer.slice(0, 200)
   });
 
+  const synthStep = steps.find(s => s.step === 'SYNTHESIZE');
+  const synthOutput = synthStep?.output as
+    | { fallback?: boolean; geminiError?: string }
+    | undefined;
+  const fallback = Boolean(synthOutput?.fallback);
+  const geminiStatus: GeminiStatus = synthOutput?.geminiError ? 'error' : 'explained';
+  const geminiMs = synthStep!.latencyMs;
+
   return {
     runId,
     intent: 'greenlight',
@@ -112,7 +132,14 @@ export async function runGreenlightAnalysis(
     recommendations: synthesis.recommendations,
     steps,
     totalLatencyMs: Date.now() - totalStart,
-    model: modelName
+    model: modelName,
+    fallback,
+    geminiStatus,
+    mcpMs,
+    geminiMs,
+    scoreBreakdown: scoredPlan.top.map(c => scoreBreakdownFor(c)),
+    runnerUp: decisionTrace.runnerUp,
+    cannibalExcluded: decisionTrace.cannibalExcluded
   };
 }
 
@@ -121,7 +148,7 @@ async function runSynthesizeStep(
   reasoning: IGeminiReasoningPort,
   candidateRows: Record<string, unknown>[],
   combinedSql: string
-): Promise<{ answer: string; recommendations: GreenlightRecommendation[] }> {
+): Promise<{ answer: string; recommendations: GreenlightRecommendation[]; geminiRan: boolean }> {
   const startedAt = new Date().toISOString();
   const step: AgentStep = { step: 'SYNTHESIZE', status: 'running', startedAt };
   steps.push(step);
@@ -146,19 +173,28 @@ async function runSynthesizeStep(
       step.output = {
         answer: raw.answer || fallbackAnswer,
         recommendations,
-        fallback: true
+        fallback: true,
+        geminiStatus: 'explained' as GeminiStatus,
+        geminiMs: Date.now() - stepStart
       };
       return {
         answer: raw.answer || fallbackAnswer,
-        recommendations
+        recommendations,
+        geminiRan: true
       };
     }
 
     step.status = 'completed';
     step.completedAt = new Date().toISOString();
     step.latencyMs = Date.now() - stepStart;
-    step.output = { answer: raw.answer, recommendations };
-    return { answer: raw.answer, recommendations };
+    step.output = {
+      answer: raw.answer,
+      recommendations,
+      fallback: false,
+      geminiStatus: 'explained' as GeminiStatus,
+      geminiMs: Date.now() - stepStart
+    };
+    return { answer: raw.answer, recommendations, geminiRan: true };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     step.status = 'completed';
@@ -168,11 +204,14 @@ async function runSynthesizeStep(
       answer: fallbackAnswer,
       recommendations: fallbackRecommendations,
       fallback: true,
-      geminiError: message
+      geminiError: message,
+      geminiStatus: 'error' as GeminiStatus,
+      geminiMs: Date.now() - stepStart
     };
     return {
       answer: fallbackAnswer,
-      recommendations: fallbackRecommendations
+      recommendations: fallbackRecommendations,
+      geminiRan: false
     };
   }
 }

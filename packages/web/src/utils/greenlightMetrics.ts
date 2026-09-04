@@ -12,6 +12,13 @@ export const SCORER_WEIGHTS = {
   language_gap: 0.05
 } as const;
 
+export const SCORE_FROM_QUERIES = {
+  genre_gap: 'A_genre_inventory',
+  wow_momentum: 'B_title_momentum',
+  cannibalization_penalty: 'C_cannibalization',
+  language_gap: 'D_slate_holes'
+} as const;
+
 export function scorerFormulaText(): string {
   return `opportunity = ${SCORER_WEIGHTS.genre_gap}*genre_gap + ${SCORER_WEIGHTS.wow_momentum}*wow_momentum - ${SCORER_WEIGHTS.cannibalization_penalty}*cannibalization_penalty + ${SCORER_WEIGHTS.language_gap}*language_gap`;
 }
@@ -20,6 +27,7 @@ export interface RecMetrics {
   opportunity_score?: number;
   wow_pct?: number;
   genre_gap?: number;
+  language_gap?: number;
   wow_momentum?: number;
   cannibalization_penalty?: number;
   in_cannibal_pair?: boolean;
@@ -30,6 +38,7 @@ export function metricsForRec(rec: Recommendation, queryRows: Record<string, unk
     opportunity_score: rec.opportunity_score,
     wow_pct: rec.wow_pct,
     genre_gap: rec.genre_gap,
+    language_gap: rec.language_gap,
     in_cannibal_pair: rec.in_cannibal_pair,
     cannibalization_penalty: rec.in_cannibal_pair ? 1 : 0
   };
@@ -45,6 +54,7 @@ export function metricsForRec(rec: Recommendation, queryRows: Record<string, unk
     opportunity_score: fromRec.opportunity_score ?? num(row, 'opportunity_score'),
     wow_pct: fromRec.wow_pct ?? num(row, 'wow_pct'),
     genre_gap: fromRec.genre_gap ?? num(row, 'genre_gap'),
+    language_gap: fromRec.language_gap ?? num(row, 'language_gap'),
     wow_momentum: num(row, 'wow_momentum'),
     cannibalization_penalty:
       cannibalPenalty ?? ((inPair ?? fromRec.in_cannibal_pair) ? 1 : 0),

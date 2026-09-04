@@ -46,7 +46,7 @@ function str(v: unknown): string {
   return v == null ? '' : String(v);
 }
 
-function discoverFullById(greenlight: AgentRunResult | null): Record<string, Record<string, unknown>[]> | null {
+export function discoverFullById(greenlight: AgentRunResult | null): Record<string, Record<string, unknown>[]> | null {
   const discover = greenlight?.steps?.find(s => s.step === 'DISCOVER');
   if (!discover?.output || typeof discover.output !== 'object') return null;
   const fullById = (discover.output as { fullById?: Record<string, unknown[]> }).fullById;

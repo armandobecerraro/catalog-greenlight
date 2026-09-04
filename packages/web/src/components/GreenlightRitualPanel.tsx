@@ -1,21 +1,11 @@
 import type { AgentRunResult } from '../api';
 import { useLocale } from '../i18n/LocaleContext';
-import {
-  extractCannibalPairs,
-  formatPct,
-  metricsForRec,
-  isSeedFillerTitle
-} from '../utils/greenlightMetrics';
-import { contrafactualPairs, exportWeeklySlate } from '../utils/greenlightExport';
+import { formatPct, metricsForRec, isSeedFillerTitle } from '../utils/greenlightMetrics';
 
 export function GreenlightRitualPanel({ greenlight }: { greenlight: AgentRunResult }) {
   const { t } = useLocale();
   const recommendations = (greenlight.recommendations ?? []).filter(r => r.title?.trim());
   const queryRows = (greenlight.queryRows ?? []) as Record<string, unknown>[];
-  const cannibalPairs = extractCannibalPairs(greenlight.steps);
-  const excludedPairs = contrafactualPairs(cannibalPairs, recommendations);
-  const shownPairs = excludedPairs.slice(0, 2);
-  const extraPairCount = Math.max(0, excludedPairs.length - shownPairs.length);
 
   if (recommendations.length === 0) return null;
 
@@ -26,40 +16,7 @@ export function GreenlightRitualPanel({ greenlight }: { greenlight: AgentRunResu
           <h4>{t('dashboard.ritualTitle')}</h4>
           <p className="muted ritual-sub">{t('dashboard.ritualSubtitle')}</p>
         </div>
-        <div className="ritual-actions">
-          <button
-            type="button"
-            className="btn-secondary"
-            onClick={() => exportWeeklySlate(greenlight, 'csv')}
-          >
-            {t('dashboard.exportCsv')}
-          </button>
-          <button
-            type="button"
-            className="btn-secondary"
-            onClick={() => exportWeeklySlate(greenlight, 'json')}
-          >
-            {t('dashboard.exportJson')}
-          </button>
-        </div>
       </div>
-
-      {shownPairs.length > 0 && (
-        <div className="contrafactual-callout" role="note">
-          {shownPairs.map((pair, i) => (
-            <p key={i}>
-              {t('dashboard.contrafactual', {
-                titleA: pair.title_a,
-                titleB: pair.title_b,
-                genre: pair.genre
-              })}
-            </p>
-          ))}
-          {extraPairCount > 0 && (
-            <p className="muted small">{t('dashboard.contrafactualMore', { count: extraPairCount })}</p>
-          )}
-        </div>
-      )}
 
       <div className="table-wrap">
         <table className="greenlight-slate-table">

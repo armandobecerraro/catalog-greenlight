@@ -14,6 +14,47 @@ import { metricsForRec } from "../utils/greenlightMetrics";
 
 const HEALTH_JSON = "/api/v1/health";
 const GREENLIGHT_REFRESH = "/api/v1/greenlight?refresh=1";
+const SCORER_GITHUB =
+  "https://github.com/armandobecerraro/catalog-greenlight/blob/main/packages/orchestration/src/greenlight/GreenlightScorer.ts";
+
+/** Published C_cannibalization (aggregates + windows) — fallback when the live run has no SQL. */
+const PUBLISHED_CANNIBAL_SQL = `-- C_cannibalization: same-genre near-duplicates in the top revenue quartile
+-- ClickHouse: quantile(0.75) threshold + title containment / prefix match
+WITH latest AS (
+  SELECT max(week_start) AS w FROM media_catalog.title_revenue
+),
+title_rev AS (
+  SELECT tr.title_id, any(tr.title) AS title, mc.genre AS genre,
+         sum(tr.revenue_usd) AS revenue_this_week
+  FROM media_catalog.title_revenue AS tr
+  INNER JOIN media_catalog.media_content AS mc ON mc.id = tr.title_id
+  CROSS JOIN latest
+  WHERE tr.week_start = latest.w
+  GROUP BY tr.title_id, mc.genre
+),
+threshold AS (
+  SELECT quantile(0.75)(revenue_this_week) AS q75 FROM title_rev
+)
+SELECT a.title AS title_a, b.title AS title_b, a.genre AS genre
+FROM title_rev AS a
+INNER JOIN title_rev AS b ON a.genre = b.genre AND a.title_id < b.title_id
+CROSS JOIN threshold
+WHERE a.revenue_this_week >= threshold.q75
+  AND b.revenue_this_week >= threshold.q75
+  AND (
+    positionCaseInsensitiveUTF8(a.title, b.title) > 0
+    OR positionCaseInsensitiveUTF8(b.title, a.title) > 0
+    OR leftUTF8(lowerUTF8(a.title), 18) = leftUTF8(lowerUTF8(b.title), 18)
+  )
+LIMIT 40`;
+
+function liveMcpSql(run: AgentRunResult | null, queryId: string): string | null {
+  const discover = run?.steps?.find((s) => s.step === "DISCOVER");
+  const queries = (discover?.output as { queries?: Array<{ id: string; sql?: string }> } | undefined)
+    ?.queries;
+  const sql = queries?.find((q) => q.id === queryId)?.sql;
+  return sql && sql.trim() ? sql : null;
+}
 
 export default function Judge() {
   const { t, setLocale } = useLocale();
@@ -67,6 +108,7 @@ export default function Judge() {
   const waking = healthFailed || health == null || !health.ready;
   const recommendations = (greenlight?.recommendations ?? []).filter((r) => r.title?.trim());
   const queryRows = (greenlight?.queryRows ?? []) as Record<string, unknown>[];
+  const cannibalSql = liveMcpSql(greenlight, "C_cannibalization") ?? PUBLISHED_CANNIBAL_SQL;
 
   return (
     <div className="judge-page">
@@ -84,6 +126,33 @@ export default function Judge() {
       )}
 
       <TrustStrip health={health} />
+
+      <Card className="judge-track-fit">
+        <h3>{t("judge.trackFitTitle")}</h3>
+        <ul className="judge-wedge-list">
+          <li>{t("judge.trackFit1")}</li>
+          <li>{t("judge.trackFit2")}</li>
+          <li>{t("judge.trackFit3")}</li>
+          <li>{t("judge.trackFit4")}</li>
+          <li>{t("judge.trackFit5")}</li>
+        </ul>
+      </Card>
+
+      <Card className="judge-job-table">
+        <h3>{t("judge.jobTableTitle")}</h3>
+        <table className="judge-benchmarks-table">
+          <tbody>
+            <tr>
+              <td>Chloe Greenlight</td>
+              <td>{t("judge.jobChloe")}</td>
+            </tr>
+            <tr>
+              <td>Catalog Greenlight</td>
+              <td>{t("judge.jobUs")}</td>
+            </tr>
+          </tbody>
+        </table>
+      </Card>
 
       <Card className="judge-wedge">
         <h3>{t("judge.wedgeTitle")}</h3>
@@ -117,6 +186,21 @@ export default function Judge() {
         <p className="muted small">
           {t("judge.codePointers")}: <code>McpClickHouseConnector.ts</code>,{" "}
           <code>GreenlightScorer.ts</code>, <code>AgentRunner.ts</code>
+        </p>
+        <h4>{t("judge.liveSqlTitle")}</h4>
+        <p className="muted small">{t("judge.irreplaceableCaption")}</p>
+        <pre className="sql-block judge-live-sql">{cannibalSql}</pre>
+      </Card>
+
+      <Card className="judge-why-not-llm">
+        <h3>{t("judge.whyNotLlmTitle")}</h3>
+        <p>{t("judge.whyNotLlmBody")}</p>
+        <p className="judge-links">
+          <Link to="/#formula-playground">{t("judge.playgroundLink")}</Link>
+          {" · "}
+          <a href={SCORER_GITHUB} target="_blank" rel="noreferrer">
+            GreenlightScorer.ts
+          </a>
         </p>
       </Card>
 

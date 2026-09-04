@@ -21,7 +21,7 @@ A streaming **programming chief** has to pick three catalog titles to push each 
 ## 60-second judge path
 
 1. **Warm** — Open [catalog-greenlight.onrender.com](https://catalog-greenlight.onrender.com). Render free tier: wait until health shows `ready: true` (~60–90s after spin-down). `GET /api/v1/health` → `clickhouse: connected`, `mcp: mcp-clickhouse`.
-2. **`/`** — **Greenlight this week**: three ranked titles, three genres, `opportunity_score` / `wow_pct` / `genre_gap` on each card. Provenance names mcp-clickhouse + the TypeScript scorer. Expand SQL evidence (queries A–D). Export CSV/JSON.
+2. **`/`** — **Greenlight this week**: Decision Cockpit (measured / ranked / Gemini status), three ranked titles, cannibal exclusions above the fold, Formula Playground (preview only). Provenance names mcp-clickhouse + the TypeScript scorer. Review → confirm → export CSV/JSON (`greenlight-slate-YYYY-MM-DD.*`).
 3. **`/ask`** — Chip *“Which genre is under-represented in our catalog?”* → 6-step timeline → **SQL** + **gap_score** (revenue share minus title share) from live ClickHouse rows. The winning genre is **measured**, not hardcoded — ingest on `/ingest` changes the catalog, so the cited genre can move.
 4. **`/judge`** — Pitch, Remove-ClickHouse wedge, hosted benchmarks, jury-evidence JSON.
 
@@ -35,7 +35,7 @@ Gemini synthesis is optional on the critical path: if it times out (25s), errors
 
 | Route | Job |
 | ----- | --- |
-| `/` | Weekly **catalog slate** — four parallel MCP SELECTs → TypeScript rank → optional Gemini memo |
+| `/` | Weekly **catalog slate** — Decision Cockpit + Formula Playground (preview) + Review→export |
 | `/ask` | Natural-language catalog Q&A — Gemini plans SQL; MCP executes; answer cites returned rows |
 | `/catalog` | Full title table from ClickHouse |
 | `/ingest` | Add a title (Gemini enrich + MCP INSERT) — grows the **same** hosted tables |
@@ -107,7 +107,19 @@ Default model: `gemini-flash-latest` (`GEMINI_MODEL`). Greenlight memo timeout: 
 
 ## Agent architecture
 
-**Greenlight** (`GET /api/v1/greenlight`, 10 min cache; `?refresh=1` bypasses):
+**Greenlight** (`GET /api/v1/greenlight`, 10 min cache; `?refresh=1` bypasses cache, it is not a catalog mutation):
+
+```mermaid
+flowchart LR
+  MCP["MCP mcp-clickhouse"] --> SEL["4 SELECTs (A–D)"]
+  SEL --> SC["GreenlightScorer"]
+  SC --> GEM["optional Gemini memo"]
+  GEM --> SLATE["3-title slate"]
+```
+
+```
+MCP mcp-clickhouse → 4 SELECTs (A–D) → GreenlightScorer → optional Gemini memo → 3-title slate
+```
 
 ```
 INTENT (default greenlight)

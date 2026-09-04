@@ -1,14 +1,28 @@
 /**
- * Deterministic greenlight scoring — TypeScript analyst, not Gemini.
- *
- * opportunity = 0.4 * genre_gap + 0.4 * wow_momentum - 0.2 * cannibalization_penalty + 0.05 * language_gap
+ * Client-side reimplementation of GreenlightScorer (scoreTitles + pickTopCandidates +
+ * slateDecisionTrace). Keep in lockstep with packages/orchestration GreenlightScorer.ts.
+ * Preview only — never writes production weights, never calls ClickHouse or Gemini.
  */
+import { SCORER_WEIGHTS } from './greenlightMetrics';
 
-export interface GenreInventoryRow {
-  genre: string;
-  title_count: number;
-  revenue_4w: number;
-}
+export type ScorerWeights = {
+  genre_gap: number;
+  wow_momentum: number;
+  cannibalization_penalty: number;
+  language_gap: number;
+};
+
+export const SCORE_FROM_QUERIES = {
+  genre_gap: 'A_genre_inventory',
+  wow_momentum: 'B_title_momentum',
+  cannibalization_penalty: 'C_cannibalization',
+  language_gap: 'D_slate_holes'
+} as const;
+
+export const CANNIBAL_EXCLUDED_COPY =
+  'If you greenlit both, they split the same audience.' as const;
+
+export type WhyLost = 'lower_score' | 'diversity' | 'cannibal';
 
 export interface TitleMomentumRow {
   title_id: string;
@@ -19,6 +33,12 @@ export interface TitleMomentumRow {
   revenue_prior_week: number;
   wow_pct: number;
   views_this_week: number;
+}
+
+export interface GenreInventoryRow {
+  genre: string;
+  title_count: number;
+  revenue_4w: number;
 }
 
 export interface CannibalizationRow {
@@ -49,41 +69,10 @@ export interface ScoredCandidate {
   in_cannibal_pair: boolean;
 }
 
-export const SCORER_WEIGHTS = {
-  genre_gap: 0.4,
-  wow_momentum: 0.4,
-  cannibalization_penalty: 0.2,
-  language_gap: 0.05
-} as const;
-
-export type ScorerWeights = {
-  genre_gap: number;
-  wow_momentum: number;
-  cannibalization_penalty: number;
-  language_gap: number;
-};
-
-export const SCORE_FROM_QUERIES = {
-  genre_gap: 'A_genre_inventory',
-  wow_momentum: 'B_title_momentum',
-  cannibalization_penalty: 'C_cannibalization',
-  language_gap: 'D_slate_holes'
-} as const;
-
-export const CANNIBAL_EXCLUDED_COPY =
-  'If you greenlit both, they split the same audience.' as const;
-
-export type GeminiStatus = 'explained' | 'skipped' | 'error';
-export type WhyLost = 'lower_score' | 'diversity' | 'cannibal';
-
-export interface ScoreBreakdown {
-  genre_gap: number;
-  wow_momentum: number;
-  cannibalization_penalty: number;
-  language_gap: number;
-  opportunity_score: number;
-  weights: ScorerWeights;
-  fromQueries: typeof SCORE_FROM_QUERIES;
+export interface PickFlags {
+  relaxCannibal?: boolean;
+  relaxDiversity?: boolean;
+  allowFiller?: boolean;
 }
 
 export interface RunnerUp {
@@ -106,18 +95,6 @@ export interface SlateDecisionTrace {
   cannibalExcluded: CannibalExcluded[];
 }
 
-/** Seed-generator titles look like "Fading Line 75" — keep story titles with a colon. */
-export function isSeedFillerTitle(title: string, description?: string): boolean {
-  const t = title.trim();
-  if (!t) return true;
-  if (/^Catalog Extra\b/i.test(t)) return true;
-  if (description && /catalog title for demo seed|padding title/i.test(description)) return true;
-  if (t.includes(':')) return false;
-  const parts = t.split(/\s+/);
-  const last = parts[parts.length - 1];
-  return parts.length >= 3 && /^\d{1,3}$/.test(last);
-}
-
 function num(row: Record<string, unknown>, key: string): number {
   const v = row[key];
   if (typeof v === 'number') return v;
@@ -130,30 +107,15 @@ function str(row: Record<string, unknown>, key: string): string {
   return v == null ? '' : String(v);
 }
 
-export function parseGenreInventory(rows: Record<string, unknown>[]): GenreInventoryRow[] {
-  return rows.map(r => ({
-    genre: str(r, 'genre'),
-    title_count: num(r, 'title_count'),
-    revenue_4w: num(r, 'revenue_4w')
-  }));
-}
-
-export function parseTitleMomentum(rows: Record<string, unknown>[]): TitleMomentumRow[] {
-  return rows
-    .filter(r => {
-      const title = str(r, 'title').trim();
-      return Boolean(title);
-    })
-    .map(r => ({
-      title_id: str(r, 'title_id'),
-      title: str(r, 'title'),
-      genre: str(r, 'genre'),
-      language: str(r, 'language') || 'en',
-      revenue_this_week: num(r, 'revenue_this_week'),
-      revenue_prior_week: num(r, 'revenue_prior_week'),
-      wow_pct: num(r, 'wow_pct'),
-      views_this_week: num(r, 'views_this_week')
-    }));
+export function isSeedFillerTitle(title: string, description?: string): boolean {
+  const t = title.trim();
+  if (!t) return true;
+  if (/^Catalog Extra\b/i.test(t)) return true;
+  if (description && /catalog title for demo seed|padding title/i.test(description)) return true;
+  if (t.includes(':')) return false;
+  const parts = t.split(/\s+/);
+  const last = parts[parts.length - 1];
+  return parts.length >= 3 && /^\d{1,3}$/.test(last);
 }
 
 export function isNearDuplicateTitle(a: string, b: string): boolean {
@@ -167,6 +129,29 @@ export function isNearDuplicateTitle(a: string, b: string): boolean {
   const tokensA = na.split(/[\s:]+/).filter(t => t.length > 2).slice(0, 3).join(' ');
   const tokensB = nb.split(/[\s:]+/).filter(t => t.length > 2).slice(0, 3).join(' ');
   return tokensA.length >= 10 && tokensA === tokensB;
+}
+
+export function parseGenreInventory(rows: Record<string, unknown>[]): GenreInventoryRow[] {
+  return rows.map(r => ({
+    genre: str(r, 'genre'),
+    title_count: num(r, 'title_count'),
+    revenue_4w: num(r, 'revenue_4w')
+  }));
+}
+
+export function parseTitleMomentum(rows: Record<string, unknown>[]): TitleMomentumRow[] {
+  return rows
+    .filter(r => Boolean(str(r, 'title').trim()))
+    .map(r => ({
+      title_id: str(r, 'title_id'),
+      title: str(r, 'title'),
+      genre: str(r, 'genre'),
+      language: str(r, 'language') || 'en',
+      revenue_this_week: num(r, 'revenue_this_week'),
+      revenue_prior_week: num(r, 'revenue_prior_week'),
+      wow_pct: num(r, 'wow_pct'),
+      views_this_week: num(r, 'views_this_week')
+    }));
 }
 
 export function parseCannibalization(rows: Record<string, unknown>[]): CannibalizationRow[] {
@@ -187,8 +172,7 @@ export function parseSlateHoles(rows: Record<string, unknown>[]): SlateHoleRow[]
   }));
 }
 
-/** genre_gap: revenue share minus normalized title share (higher = underserved genre). */
-export function buildGenreGapMap(inventory: GenreInventoryRow[]): Map<string, number> {
+function buildGenreGapMap(inventory: GenreInventoryRow[]): Map<string, number> {
   const totalTitles = inventory.reduce((s, g) => s + g.title_count, 0) || 1;
   const totalRev = inventory.reduce((s, g) => s + g.revenue_4w, 0) || 1;
   const gaps = new Map<string, number>();
@@ -207,7 +191,7 @@ export function buildGenreGapMap(inventory: GenreInventoryRow[]): Map<string, nu
   return gaps;
 }
 
-export function buildLanguageGapMap(holes: SlateHoleRow[]): Map<string, number> {
+function buildLanguageGapMap(holes: SlateHoleRow[]): Map<string, number> {
   const langHoles = holes.filter(h => h.hole_type === 'language');
   const maxGap = Math.max(...langHoles.map(h => h.gap_score), 0.001);
   const map = new Map<string, number>();
@@ -217,7 +201,7 @@ export function buildLanguageGapMap(holes: SlateHoleRow[]): Map<string, number> 
   return map;
 }
 
-export function buildCannibalizedTitles(pairs: CannibalizationRow[]): Set<string> {
+function buildCannibalizedTitles(pairs: CannibalizationRow[]): Set<string> {
   const set = new Set<string>();
   for (const p of pairs) {
     set.add(p.title_a);
@@ -226,7 +210,7 @@ export function buildCannibalizedTitles(pairs: CannibalizationRow[]): Set<string
   return set;
 }
 
-export function normalizeWow(wow: number): number {
+function normalizeWow(wow: number): number {
   const clamped = Math.max(-0.5, Math.min(1.5, wow));
   return (clamped + 0.5) / 2;
 }
@@ -265,24 +249,11 @@ export function scoreTitles(
   });
 }
 
-export interface PickTopCandidatesOptions {
-  /** When true, seed fillers may backfill only if fewer than `limit` story titles exist. */
-  allowFiller?: boolean;
-  /** Preview only: skip the first-pass cannibal exclusion. */
-  relaxCannibal?: boolean;
-  /** Preview only: do not enforce one-pick-per-genre. */
-  relaxDiversity?: boolean;
-}
-
-/**
- * Prefer story titles and genre diversity. Relax diversity before admitting fillers.
- * Fillers never enter the slate when ≥`limit` story candidates exist (jury/demo path).
- */
 export function pickTopCandidates(
   scored: ScoredCandidate[],
   limit = 3,
   inventoryGenreCount?: number,
-  options?: PickTopCandidatesOptions
+  options?: PickFlags
 ): ScoredCandidate[] {
   const sorted = [...scored]
     .filter(s => s.title.trim())
@@ -293,8 +264,7 @@ export function pickTopCandidates(
     options?.relaxDiversity === true
       ? false
       : (inventoryGenreCount ?? uniqueGenres.size) >= limit;
-  const allowFiller =
-    options?.allowFiller === true && storyPool.length < limit;
+  const allowFiller = options?.allowFiller === true && storyPool.length < limit;
   const firstPassAllowsCannibal = options?.relaxCannibal === true;
 
   const picked: ScoredCandidate[] = [];
@@ -317,7 +287,6 @@ export function pickTopCandidates(
     }
   };
 
-  // Story-first: diversity → cannibal OK → relax diversity
   pickFrom(sorted, {
     allowCannibal: firstPassAllowsCannibal,
     allowFiller: false,
@@ -329,66 +298,21 @@ export function pickTopCandidates(
   if (picked.length < limit) {
     pickFrom(sorted, { allowCannibal: true, allowFiller: false, allowDuplicateGenre: true });
   }
-  // Filler only when explicitly opted in and the catalog lacks enough story titles
   if (picked.length < limit && allowFiller) {
     pickFrom(sorted, { allowCannibal: false, allowFiller: true, allowDuplicateGenre: false });
   }
   if (picked.length < limit && allowFiller) {
-    pickFrom(sorted, {
-      allowCannibal: true,
-      allowFiller: true,
-      allowDuplicateGenre: true
-    });
+    pickFrom(sorted, { allowCannibal: true, allowFiller: true, allowDuplicateGenre: true });
   }
 
   return picked.slice(0, limit);
-}
-
-export function scoreBreakdownFor(
-  c: ScoredCandidate,
-  weights: ScorerWeights = SCORER_WEIGHTS
-): ScoreBreakdown {
-  return {
-    genre_gap: c.genre_gap,
-    wow_momentum: c.wow_momentum,
-    cannibalization_penalty: c.cannibalization_penalty,
-    language_gap: c.language_gap,
-    opportunity_score: c.opportunity_score,
-    weights: { ...weights },
-    fromQueries: SCORE_FROM_QUERIES
-  };
-}
-
-export function candidatesToQueryRows(
-  candidates: ScoredCandidate[],
-  weights: ScorerWeights = SCORER_WEIGHTS
-): Record<string, unknown>[] {
-  return candidates.map(c => ({
-    title_id: c.title_id,
-    title: c.title,
-    genre: c.genre,
-    language: c.language,
-    revenue_this_week: c.revenue_this_week,
-    revenue_prior_week: c.revenue_prior_week,
-    wow_pct: Math.round(c.wow_pct * 1000) / 1000,
-    genre_gap: Math.round(c.genre_gap * 1000) / 1000,
-    wow_momentum: Math.round(c.wow_momentum * 1000) / 1000,
-    cannibalization_penalty: c.cannibalization_penalty,
-    language_gap: Math.round(c.language_gap * 1000) / 1000,
-    opportunity_score: Math.round(c.opportunity_score * 1000) / 1000,
-    in_cannibal_pair: c.in_cannibal_pair,
-    scoreBreakdown: scoreBreakdownFor(c, weights)
-  }));
 }
 
 function round3(n: number): number {
   return Math.round(n * 1000) / 1000;
 }
 
-function pairForTitle(
-  title: string,
-  pairs: CannibalizationRow[]
-): CannibalizationRow | undefined {
+function pairForTitle(title: string, pairs: CannibalizationRow[]): CannibalizationRow | undefined {
   return pairs.find(p => p.title_a === title || p.title_b === title);
 }
 
@@ -396,7 +320,7 @@ function firstPassCannibalSkips(
   scored: ScoredCandidate[],
   limit: number,
   inventoryGenreCount?: number,
-  options?: PickTopCandidatesOptions
+  options?: PickFlags
 ): ScoredCandidate[] {
   if (options?.relaxCannibal) return [];
 
@@ -450,23 +374,13 @@ function whyRunnerLost(
   return 'lower_score';
 }
 
-/**
- * Decision trace for the programming-chief cockpit.
- * cannibalExcluded = high-scoring titles skipped because in_cannibal_pair on the first pick pass.
- * runnerUp = best title not in the 3 picks.
- */
 export function slateDecisionTrace(
   scored: ScoredCandidate[],
   top: ScoredCandidate[],
   pairs: CannibalizationRow[],
-  options?: PickTopCandidatesOptions & { inventoryGenreCount?: number }
+  options?: PickFlags & { inventoryGenreCount?: number }
 ): SlateDecisionTrace {
-  const skipped = firstPassCannibalSkips(
-    scored,
-    top.length || 3,
-    options?.inventoryGenreCount,
-    options
-  );
+  const skipped = firstPassCannibalSkips(scored, top.length || 3, options?.inventoryGenreCount, options);
   const seen = new Set<string>();
   const cannibalExcluded: CannibalExcluded[] = [];
   for (const c of skipped.sort((a, b) => b.opportunity_score - a.opportunity_score).slice(0, 6)) {
@@ -502,38 +416,34 @@ export function slateDecisionTrace(
   };
 }
 
-export interface ScoreFromAnalyticsOptions {
+export interface RescoreOptions {
   weights?: ScorerWeights;
   relaxCannibal?: boolean;
   relaxDiversity?: boolean;
-  allowFiller?: boolean;
 }
 
-export function scoreFromAnalyticsById(
-  byId: Record<string, Record<string, unknown>[]>,
-  options?: ScoreFromAnalyticsOptions
+export function hasDiscoverRows(fullById: Record<string, Record<string, unknown>[]> | null | undefined): boolean {
+  if (!fullById) return false;
+  const momentum = fullById['B_title_momentum'];
+  return Array.isArray(momentum) && momentum.length > 0;
+}
+
+export function rescoreFromDiscover(
+  fullById: Record<string, Record<string, unknown>[]>,
+  options?: RescoreOptions
 ) {
   const weights = options?.weights ?? SCORER_WEIGHTS;
-  const inventory = parseGenreInventory(byId['A_genre_inventory'] ?? []);
-  const momentum = parseTitleMomentum(byId['B_title_momentum'] ?? []);
-  const cannibal = parseCannibalization(byId['C_cannibalization'] ?? []);
-  const holes = parseSlateHoles(byId['D_slate_holes'] ?? []);
+  const inventory = parseGenreInventory(fullById['A_genre_inventory'] ?? []);
+  const momentum = parseTitleMomentum(fullById['B_title_momentum'] ?? []);
+  const cannibal = parseCannibalization(fullById['C_cannibalization'] ?? []);
+  const holes = parseSlateHoles(fullById['D_slate_holes'] ?? []);
   const scored = scoreTitles(momentum, inventory, cannibal, holes, weights);
   const inventoryGenreCount = inventory.filter(g => g.genre && g.title_count > 0).length;
-  const pickOpts: PickTopCandidatesOptions = {
-    allowFiller: options?.allowFiller,
+  const flags: PickFlags = {
     relaxCannibal: options?.relaxCannibal,
     relaxDiversity: options?.relaxDiversity
   };
-  const top = pickTopCandidates(scored, 3, inventoryGenreCount, pickOpts);
-  const trace = slateDecisionTrace(scored, top, cannibal, {
-    ...pickOpts,
-    inventoryGenreCount
-  });
-  return {
-    scored,
-    top,
-    candidateRows: candidatesToQueryRows(top, weights),
-    trace
-  };
+  const top = pickTopCandidates(scored, 3, inventoryGenreCount, flags);
+  const trace = slateDecisionTrace(scored, top, cannibal, { ...flags, inventoryGenreCount });
+  return { scored, top, trace, weights };
 }

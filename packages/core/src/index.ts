@@ -18,7 +18,17 @@ export {
 } from './ports/outbound/IGeminiReasoningPort';
 export { ICatalogRepository, InsertContentResult } from './ports/outbound/ICatalogRepository';
 export { IAgentAuditPort, AgentAuditRecord } from './ports/outbound/IAgentAuditPort';
-export { AgentRunResult, AgentStep, AgentStepName, AgentStepStatus } from './types/agent';
+export {
+  AgentRunResult,
+  AgentStep,
+  AgentStepName,
+  AgentStepStatus,
+  GeminiStatus,
+  WhyLost,
+  ScoreBreakdownPayload,
+  RunnerUpPayload,
+  CannibalExcludedPayload
+} from './types/agent';
 export { CatalogEntry, CatalogStats } from './types/catalog';
 export {
   validateGeneratedSql,

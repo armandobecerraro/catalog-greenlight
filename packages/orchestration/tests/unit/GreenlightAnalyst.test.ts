@@ -85,7 +85,13 @@ describe('GreenlightAnalyst', () => {
     const synth = result.steps.find(s => s.step === 'SYNTHESIZE');
     expect(synth?.status).toBe('completed');
     expect((synth?.output as { fallback?: boolean }).fallback).toBe(true);
+    expect(result.fallback).toBe(true);
+    expect(result.geminiStatus).toBe('error');
+    expect(result.mcpMs).toBeGreaterThanOrEqual(0);
+    expect(typeof result.geminiMs).toBe('number');
     expect(result.recommendations!.some(r => r.title === 'Late Winner')).toBe(true);
+    const rows = result.queryRows ?? [];
+    expect(rows[0]).toEqual(expect.objectContaining({ language_gap: expect.any(Number) }));
   });
 
   it('still returns 3 recommendations when Gemini hangs past synthesis timeout', async () => {
@@ -221,7 +227,9 @@ describe('GreenlightAnalyst', () => {
     const result = await analyze();
     const synth = result.steps.find(s => s.step === 'SYNTHESIZE');
     expect(result.answer).toBe('Grounded memo');
-    expect((synth?.output as { fallback?: boolean }).fallback).toBeUndefined();
+    expect((synth?.output as { fallback?: boolean }).fallback).toBe(false);
+    expect(result.fallback).toBe(false);
+    expect(result.geminiStatus).toBe('explained');
   });
 
   it('records analytics query errors after retry is exhausted', async () => {
@@ -289,5 +297,30 @@ describe('GreenlightAnalyst', () => {
     });
     const result = await analyze();
     expect(result.recommendations!.some(r => r.title === 'Keep Me')).toBe(true);
+  });
+
+  it('still scores when inventory rows omit genre or title_count', async () => {
+    mockReasoning.synthesizeGreenlight.mockResolvedValue({ answer: 'ok', recommendations: [] });
+    mockMcp.runQuery.mockImplementation(async (sql: string) => {
+      if (sql.includes('GROUP BY mc.genre') && sql.includes('revenue_4w')) {
+        return {
+          rows: [
+            { title_count: 0 },
+            { genre: '', title_count: 5 },
+            { genre: 'Drama' },
+            { genre: 'Thriller', title_count: 8, revenue_4w: 1 }
+          ],
+          metadata: { rowCount: 4, latencyMs: 1, partner: 'clickhouse' }
+        };
+      }
+      if (sql.includes('wow_pct')) {
+        return { rows: momentumRows, metadata: { rowCount: 25, latencyMs: 1, partner: 'clickhouse' } };
+      }
+      return { rows: [], metadata: { rowCount: 0, latencyMs: 1, partner: 'clickhouse' } };
+    });
+    const result = await analyze();
+    expect(result.recommendations).toHaveLength(3);
+    expect(result.geminiStatus).toBe('explained');
+    expect(result.runnerUp || result.recommendations![0]).toBeTruthy();
   });
 });

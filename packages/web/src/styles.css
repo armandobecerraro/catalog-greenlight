@@ -1933,3 +1933,177 @@ a {
   margin: 0.75rem 0 0;
   font-size: 0.95rem;
 }
+
+.decision-cockpit-strip {
+  margin: 0 0 1rem;
+  padding: 0.85rem 1rem;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.cockpit-status {
+  margin: 0;
+  font-weight: 600;
+}
+
+.cockpit-gemini {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.cockpit-gemini-icon {
+  font-size: 0.9rem;
+}
+
+.cockpit-timings {
+  margin: 0.35rem 0 0;
+}
+
+.cockpit-ranking-stands {
+  margin: 0.45rem 0 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.35rem;
+}
+
+.cockpit-job-line {
+  margin: 0.5rem 0 0;
+  font-size: 0.9rem;
+  color: var(--accent);
+}
+
+.cannibal-conflict-panel {
+  margin: 1rem 0;
+  padding: 0.85rem 1rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.cannibal-conflict-panel h4 {
+  color: var(--accent);
+}
+
+.cannibal-conflict-list {
+  margin: 0.5rem 0 0;
+  padding-left: 1.1rem;
+}
+
+.cannibal-conflict-list li {
+  margin-bottom: 0.65rem;
+}
+
+.cannibal-conflict-list .genre-pill {
+  margin-left: 0.4rem;
+}
+
+.formula-playground {
+  margin: 1rem 0;
+}
+
+.playground-body {
+  margin-top: 0.75rem;
+  padding: 0.85rem 1rem;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.playground-sliders {
+  display: grid;
+  gap: 0.65rem;
+  margin: 0.75rem 0;
+}
+
+.playground-slider {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.85rem;
+}
+
+.playground-flag {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  margin: 0.35rem 0;
+  font-size: 0.9rem;
+}
+
+.playground-preview-slate {
+  margin: 0.75rem 0;
+  padding-left: 1.2rem;
+}
+
+.playground-preview-slate li {
+  margin-bottom: 0.35rem;
+}
+
+.slate-review-panel {
+  margin: 1rem 0;
+  padding: 0.85rem 1rem;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.slate-review-picks {
+  padding-left: 1.2rem;
+}
+
+.slate-review-memo {
+  white-space: pre-wrap;
+  font-size: 0.85rem;
+  background: #0a0c10;
+  padding: 0.75rem;
+  border-radius: 6px;
+  overflow-x: auto;
+}
+
+.provenance-runner-up {
+  margin: 0.5rem 0 0;
+  font-size: 0.8rem;
+  color: var(--accent);
+}
+
+.ask-explanation-only {
+  margin-top: 0;
+}
+
+.judge-live-sql {
+  max-height: 16rem;
+  overflow: auto;
+  font-size: 0.75rem;
+}
+
+@media (max-width: 430px) {
+  .rec-grid,
+  .greenlight-rec-hero {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .rec-card,
+  .decision-cockpit-strip,
+  .cannibal-conflict-panel,
+  .slate-bar,
+  .formula-playground {
+    overflow-x: hidden;
+    max-width: 100%;
+  }
+
+  .rec-metrics {
+    grid-template-columns: 1fr;
+  }
+
+  .rec-provenance-strip {
+    flex-wrap: wrap;
+  }
+
+  .slate-bar-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}

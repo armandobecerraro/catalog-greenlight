@@ -1,13 +1,20 @@
-import type { AgentRunResult, Recommendation } from '../api';
+import type { AgentRunResult, CannibalExcluded, Recommendation, RunnerUp } from '../api';
 import { useLocale } from '../i18n/LocaleContext';
 import {
   metricsForRec,
   SCORER_WEIGHTS,
+  SCORE_FROM_QUERIES,
   scorerFormulaText,
   formatPct,
   isSeedFillerTitle
 } from '../utils/greenlightMetrics';
-import { synthesizeStepError, usedScorerFallback } from '../utils/greenlightUx';
+import {
+  greenlightGeminiMs,
+  greenlightGeminiStatus,
+  greenlightMcpMs,
+  synthesizeStepError,
+  usedScorerFallback
+} from '../utils/greenlightUx';
 
 export const MCP_QUERY_IDS = [
   'A_genre_inventory',
@@ -124,20 +131,30 @@ function ProvenanceRow({
 
 export function RecProvenance({
   rec,
-  queryRows
+  queryRows,
+  runnerUp
 }: {
   rec: Recommendation;
   queryRows: Record<string, unknown>[];
+  runnerUp?: RunnerUp;
 }) {
   const { t } = useLocale();
   const fields = metricsForRec(rec, queryRows);
   const genreGap = fields.genre_gap ?? 0;
   const wowMomentum = fields.wow_momentum;
   const cannibalPenalty = fields.cannibalization_penalty || 0;
+  const languageGap = fields.language_gap ?? 0;
   const genreContrib = SCORER_WEIGHTS.genre_gap * genreGap;
   const wowContrib =
     wowMomentum != null ? SCORER_WEIGHTS.wow_momentum * wowMomentum : undefined;
   const cannibalContrib = -SCORER_WEIGHTS.cannibalization_penalty * cannibalPenalty;
+  const languageContrib = SCORER_WEIGHTS.language_gap * languageGap;
+  const whyKey =
+    runnerUp?.whyLost === 'diversity'
+      ? 'cockpit.whyLostDiversity'
+      : runnerUp?.whyLost === 'cannibal'
+        ? 'cockpit.whyLostCannibal'
+        : 'cockpit.whyLostLower';
 
   return (
     <div className="rec-provenance">
@@ -146,7 +163,7 @@ export function RecProvenance({
         <ProvenanceRow
           dimension="genre_gap"
           rawValue={formatNum(fields.genre_gap)}
-          queryId="D_slate_holes"
+          queryId={SCORE_FROM_QUERIES.genre_gap}
           contribution={`+${formatNum(genreContrib)}`}
         />
         <ProvenanceRow
@@ -156,17 +173,109 @@ export function RecProvenance({
               ? `${formatNum(wowMomentum)} (wow_pct ${formatPctLocal(fields.wow_pct)})`
               : `wow_pct ${formatPctLocal(fields.wow_pct)}`
           }
-          queryId="B_title_momentum"
+          queryId={SCORE_FROM_QUERIES.wow_momentum}
           contribution={wowContrib != null ? `+${formatNum(wowContrib)}` : '—'}
         />
         <ProvenanceRow
           dimension="cannibalization_penalty"
           rawValue={String(cannibalPenalty)}
-          queryId="C_cannibalization"
+          queryId={SCORE_FROM_QUERIES.cannibalization_penalty}
           contribution={formatNum(cannibalContrib)}
         />
+        <ProvenanceRow
+          dimension="language_gap"
+          rawValue={formatNum(fields.language_gap)}
+          queryId={SCORE_FROM_QUERIES.language_gap}
+          contribution={`+${formatNum(languageContrib)}`}
+        />
       </ul>
+      {runnerUp && (
+        <p className="provenance-runner-up">
+          {t('cockpit.beatRunnerUp', {
+            title: runnerUp.title,
+            score: runnerUp.opportunity_score.toFixed(3),
+            why: t(whyKey)
+          })}
+        </p>
+      )}
     </div>
+  );
+}
+
+export function DecisionCockpitStrip({ greenlight }: { greenlight: AgentRunResult }) {
+  const { t } = useLocale();
+  const status = greenlightGeminiStatus(greenlight);
+  const mcpMs = greenlightMcpMs(greenlight);
+  const geminiMs = greenlightGeminiMs(greenlight);
+  const geminiFailed = status === 'skipped' || status === 'error';
+  const geminiLabel =
+    status === 'error'
+      ? t('cockpit.geminiError')
+      : status === 'skipped'
+        ? t('cockpit.geminiSkipped')
+        : t('cockpit.geminiExplained');
+
+  return (
+    <div className="decision-cockpit-strip" role="region" aria-label={t('cockpit.stripAria')}>
+      <p className="cockpit-status">
+        <span>{t('cockpit.statusMeasured')}</span>
+        <span aria-hidden="true"> · </span>
+        <span>{t('cockpit.statusRanked')}</span>
+        <span aria-hidden="true"> · </span>
+        <span className="cockpit-gemini">
+          <span className="cockpit-gemini-icon" aria-hidden="true">
+            {geminiFailed ? '⚠' : '✓'}
+          </span>
+          {geminiLabel}
+        </span>
+      </p>
+      <p className="cockpit-timings muted small">
+        {mcpMs != null && <span>{t('cockpit.mcpMs', { ms: mcpMs })}</span>}
+        {mcpMs != null && geminiMs != null && <span aria-hidden="true"> · </span>}
+        {geminiMs != null && <span>{t('cockpit.geminiMs', { ms: geminiMs })}</span>}
+      </p>
+      {geminiFailed && (
+        <p className="cockpit-ranking-stands">
+          <span className="cockpit-gemini-icon" aria-hidden="true">
+            ℹ
+          </span>
+          {t('cockpit.rankingStands')}
+        </p>
+      )}
+      <p className="cockpit-job-line">{t('cockpit.jobLine')}</p>
+      <SynthesizeFallbackBadge greenlight={greenlight} />
+    </div>
+  );
+}
+
+export function CannibalConflictPanel({
+  exclusions
+}: {
+  exclusions: CannibalExcluded[] | undefined;
+}) {
+  const { t } = useLocale();
+  const items = exclusions ?? [];
+
+  return (
+    <section className="cannibal-conflict-panel" aria-label={t('cockpit.cannibalTitle')}>
+      <h4>{t('cockpit.cannibalTitle')}</h4>
+      {items.length === 0 ? (
+        <p className="muted">{t('cockpit.cannibalEmpty')}</p>
+      ) : (
+        <ul className="cannibal-conflict-list">
+          {items.map((item, i) => (
+            <li key={`${item.title}-${i}`}>
+              <strong>{item.title}</strong>
+              <span className="genre-pill">{item.genre}</span>
+              <span className="muted small">score {item.opportunity_score.toFixed(3)}</span>
+              <p>
+                {item.pair.title_a} / {item.pair.title_b} ({item.pair.genre}). {t('cockpit.cannibalCopy')}
+              </p>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
   );
 }
 

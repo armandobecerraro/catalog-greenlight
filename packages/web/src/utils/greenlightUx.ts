@@ -25,15 +25,43 @@ export function isGeminiRateLimitError(err: unknown): boolean {
 
 export function synthesizeStepError(greenlight: AgentRunResult | null): string | undefined {
   const step = greenlight?.steps?.find(s => s.step === 'SYNTHESIZE');
-  return step?.error;
+  const output = step?.output as { geminiError?: string } | undefined;
+  return step?.error ?? output?.geminiError;
 }
 
 export function usedScorerFallback(greenlight: AgentRunResult | null): boolean {
   if (!greenlight) return false;
+  if (greenlight.fallback === true) return true;
   const step = greenlight.steps?.find(s => s.step === 'SYNTHESIZE');
   if (!step) return false;
   const output = step.output as { fallback?: boolean } | undefined;
   return step.status === 'error' || output?.fallback === true;
+}
+
+export function greenlightGeminiStatus(
+  greenlight: AgentRunResult | null
+): 'explained' | 'skipped' | 'error' | undefined {
+  if (!greenlight) return undefined;
+  if (greenlight.geminiStatus) return greenlight.geminiStatus;
+  if (!usedScorerFallback(greenlight)) return 'explained';
+  return synthesizeStepError(greenlight) ? 'error' : 'skipped';
+}
+
+export function greenlightMcpMs(greenlight: AgentRunResult | null): number | undefined {
+  if (!greenlight) return undefined;
+  if (typeof greenlight.mcpMs === 'number') return greenlight.mcpMs;
+  const discover = greenlight.steps?.find(s => s.step === 'DISCOVER');
+  const queries = (discover?.output as { queries?: Array<{ latencyMs?: number }> } | undefined)?.queries;
+  if (!queries?.length) return undefined;
+  if (!queries.some(q => typeof q.latencyMs === 'number')) return undefined;
+  return queries.reduce((sum, q) => sum + (q.latencyMs ?? 0), 0);
+}
+
+export function greenlightGeminiMs(greenlight: AgentRunResult | null): number | undefined {
+  if (!greenlight) return undefined;
+  if (typeof greenlight.geminiMs === 'number') return greenlight.geminiMs;
+  const step = greenlight.steps?.find(s => s.step === 'SYNTHESIZE');
+  return typeof step?.latencyMs === 'number' ? step.latencyMs : undefined;
 }
 
 interface TopCandidate {

@@ -130,7 +130,10 @@ export const api = {
       timeoutMs: AGENT_FETCH_TIMEOUT_MS
     }),
 
-  getGreenlight: () => fetchJson<AgentRunResult>('/greenlight', { timeoutMs: AGENT_FETCH_TIMEOUT_MS })
+  getGreenlight: (opts?: { refresh?: boolean }) => {
+    const qs = opts?.refresh ? '?refresh=1' : '';
+    return fetchJson<AgentRunResult>(`/greenlight${qs}`, { timeoutMs: AGENT_FETCH_TIMEOUT_MS });
+  }
 };
 
 export { fetchJson };

@@ -91,6 +91,25 @@ describe('GreenlightPanel', () => {
     expect(screen.getByRole('status')).toBeInTheDocument();
   });
 
+  it('keeps cached slate dimmed while refreshing and retries on error', () => {
+    const onRetry = vi.fn();
+    wrap(<GreenlightPanel greenlight={run} loading={true} error={null} />);
+    expect(screen.getByRole('status')).toBeInTheDocument();
+    expect(document.querySelector('.is-cached-dimmed')).not.toBeNull();
+    expect(screen.getAllByText('Crimen sin Fronteras: Bogotá').length).toBeGreaterThan(0);
+
+    wrap(
+      <GreenlightPanel
+        greenlight={run}
+        loading={false}
+        error={new ApiError('timeout', 'slow')}
+        onRetry={onRetry}
+      />
+    );
+    fireEvent.click(screen.getByRole('button', { name: /Check again/i }));
+    expect(onRetry).toHaveBeenCalled();
+  });
+
   it('advances progress through scoring and narrative phases', () => {
     vi.useFakeTimers();
     const view = wrap(<GreenlightPanel greenlight={null} loading={true} error={null} />);

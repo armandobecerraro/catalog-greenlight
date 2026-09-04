@@ -44,6 +44,25 @@ describe('api client', () => {
     await expect(api.getGreenlight()).rejects.toBeInstanceOf(ApiError);
   });
 
+  it('requests greenlight with refresh=1 when asked', async () => {
+    const fetchMock = vi.fn(async () =>
+      new Response(
+        JSON.stringify({
+          intent: 'greenlight',
+          answer: 'ok',
+          steps: [],
+          totalLatencyMs: 1,
+          model: 'x',
+          recommendations: [],
+        }),
+        { status: 200 },
+      ),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+    await api.getGreenlight({ refresh: true });
+    expect(String(fetchMock.mock.calls[0]?.[0])).toContain('/greenlight?refresh=1');
+  });
+
   it('maps abort to a timeout error', async () => {
     vi.stubGlobal(
       'fetch',

@@ -1528,6 +1528,66 @@ a {
 .health-banner-retry {
   margin-top: 0.35rem;
 }
+.health-banner-eta {
+  margin: 0.15rem 0 0.5rem;
+}
+.health-banner-progress {
+  margin: 0.5rem 0 0.35rem;
+}
+.health-banner-progress-track {
+  height: 0.35rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+.health-banner-progress-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--accent-dim), var(--accent));
+  transition: width 0.35s ease;
+}
+.health-banner-progress-meta {
+  margin: 0.35rem 0 0;
+}
+.health-banner-meta {
+  margin: 0.35rem 0 0;
+}
+
+.panel-head-greenlight {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+.panel-head-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+.greenlight-refresh-btn[disabled] {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+.greenlight-refresh-banner {
+  margin: 0 0 0.75rem;
+  padding: 0.55rem 0.75rem;
+  border-radius: 6px;
+  border: 1px solid var(--accent-dim);
+  background: rgba(212, 160, 23, 0.08);
+  color: var(--accent);
+  font-size: 0.9rem;
+}
+.greenlight-retry-btn {
+  margin-top: 0.5rem;
+}
+.rec-grid.is-cached-dimmed {
+  opacity: 0.62;
+  pointer-events: none;
+  filter: saturate(0.85);
+  transition: opacity 0.2s ease;
+}
 
 .trust-strip {
   margin-bottom: 1rem;
@@ -1672,6 +1732,28 @@ a {
   margin-top: 0.5rem;
 }
 
+.ask-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.ask-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  align-items: flex-start;
+}
+
+.ask-health-hint {
+  margin: 0;
+  line-height: 1.4;
+}
+
+.ask-answer-scroll-target {
+  scroll-margin-top: 5.5rem;
+}
+
 .catalog-stats-nav {
   margin: -0.5rem 0 1rem;
 }
@@ -1730,6 +1812,34 @@ a {
     padding: 0.35rem 0.55rem;
     white-space: nowrap;
   }
+  .ask-actions-sticky {
+    position: sticky;
+    bottom: 0;
+    z-index: 5;
+    margin: 0 -1rem -1rem;
+    padding: 0.75rem 1rem 1rem;
+    background: linear-gradient(
+      to top,
+      var(--surface, #0c1220) 72%,
+      rgba(12, 18, 32, 0.92) 88%,
+      transparent
+    );
+    border-top: 1px solid var(--border);
+  }
+  .ask-actions-sticky .btn {
+    width: 100%;
+  }
+  .judge-page .card {
+    padding: 0.85rem 1rem;
+  }
+  .judge-pitch {
+    font-size: 1.45rem;
+  }
+  .judge-benchmarks-table {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
 }
 
 @media (max-width: 390px) {
@@ -1770,6 +1880,30 @@ a {
 
 .judge-page .card h3 {
   margin-top: 0;
+}
+
+@media (max-width: 1366px) and (max-height: 800px) {
+  .judge-page .card {
+    margin-bottom: 0.75rem;
+  }
+  .judge-page .card h3 {
+    font-size: 1rem;
+    margin-bottom: 0.35rem;
+  }
+  .judge-arch-list li,
+  .judge-checklist li {
+    margin-bottom: 0.25rem;
+    font-size: 0.92rem;
+  }
+  .judge-pitch {
+    font-size: 1.55rem;
+    margin-bottom: 0.25rem;
+  }
+  .judge-scorer-note,
+  .judge-wake {
+    font-size: 0.88rem;
+    margin-bottom: 0.65rem;
+  }
 }
 
 .judge-arch-list,

@@ -13,9 +13,20 @@
 
 **Live demo:** https://catalog-greenlight.onrender.com · **[For judges](https://catalog-greenlight.onrender.com/judge)** · [User guide](https://catalog-greenlight.onrender.com/guia) · [GitHub](https://github.com/armandobecerraro/catalog-greenlight)
 
+### 60-second judge path (hosted demo)
+
+1. **Warm** — Open [catalog-greenlight.onrender.com](https://catalog-greenlight.onrender.com). On Render free tier, wait until the health banner shows `ready: true` (~60–90s cold start after spin-down).
+2. **`/`** — Dashboard weekly slate: **3 titles** ranked by the TypeScript scorer from four measured MCP SELECTs (`opportunity_score`, `wow_pct`, `genre_gap`).
+3. **`/ask`** — Click the chip *“Which genre is under-represented in our catalog?”* → answer cites **Documentary** with `gap_score ≈ 0.074` (revenue share minus title share, measured in ClickHouse).
+4. **`/judge`** — One-screen pitch: **Catalog Greenlight vs Chloe/Flashframe** (programming chief vs filmmaker agent), **Remove ClickHouse** wedge, and hosted benchmarks.
+
+**Latency (honest p50, warm service):** ~11s cached greenlight · ~37s `?refresh=1` · ~33s `/ask`. Full samples: [`docs/submission/BENCHMARKS.md`](./docs/submission/BENCHMARKS.md). Judging-week keep-alive: `bash scripts/keepalive-smoke.sh` or `npm run keepalive:smoke` (health only — do not cron `?refresh=1`).
+
 **Catalog Greenlight** is a web product for a streaming **programming chief** at a small Latin/US streaming studio. Each week it greenlights three titles in a **catalog slate**: four fixed MCP SELECTs at runtime, a transparent **TypeScript scorer** (`GreenlightScorer.ts`) ranks candidates and enforces genre diversity, and **Gemini** (`@google/genai` on Google Cloud — **not** Agent Builder / ADK) writes the narrative only — it does not plan greenlight SQL. If Gemini synthesis fails, times out, or returns 429, the dashboard still shows three scorer picks. Catalog Q&A on `/ask` uses Gemini for intent and NL→SQL.
 
 **Not Chloe:** Chloe (same hackathon) is a filmmaker production agent (screenplay → film). Catalog Greenlight is a **programming-chief** tool — weekly catalog slate, four MCP SELECTs, TypeScript scorer. Different user, output, and ClickHouse job.
+
+**Demo catalog (~200 titles):** The hosted and Docker paths seed a **synthetic** Latin/US streaming catalog so judges can see genre gaps, WoW momentum, and cannibalization without partner data. Ingest on `/ingest` appends to the same ClickHouse tables. **Real partner ingest** (S3/Parquet, rights metadata, production ETL) is deliberate **future work** — not a hidden limitation; the hackathon proof is runtime measurement + transparent scoring on a representative slate.
 
 ## Submission blockers (Devpost)
 

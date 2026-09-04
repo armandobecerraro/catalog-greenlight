@@ -226,13 +226,15 @@ export function GreenlightPanel({
   greenlight,
   loading,
   error,
-  collapseEvidenceDefault = false
+  collapseEvidenceDefault = false,
+  onRetry
 }: {
   greenlight: AgentRunResult | null;
   loading: boolean;
   error: unknown;
   /** When true, SQL / analytics / timeline start collapsed behind “Show evidence”. */
   collapseEvidenceDefault?: boolean;
+  onRetry?: () => void;
 }) {
   const { t } = useLocale();
   const [showEvidence, setShowEvidence] = useState(!collapseEvidenceDefault);
@@ -249,10 +251,13 @@ export function GreenlightPanel({
   const fallbackUsed = usedScorerFallback(greenlight);
 
   const resolvedError = error ? resolveGreenlightErrorMessage(error, t) : null;
+  const hasCachedSlate = displayRecs.length > 0;
+  const isInitialLoad = loading && !hasCachedSlate;
+  const isRefreshingWithCache = loading && hasCachedSlate;
 
   return (
     <>
-      {loading && (
+      {isInitialLoad && (
         <>
           <GreenlightProgress phase={phase} />
           <div className="rec-grid" aria-busy="true">
@@ -263,26 +268,38 @@ export function GreenlightPanel({
         </>
       )}
 
-      {!loading && resolvedError && (
-        <ErrorBanner
-          message={
-            resolvedError.title
-              ? `${resolvedError.title}: ${resolvedError.message}`
-              : resolvedError.message
-          }
-        />
+      {isRefreshingWithCache && <GreenlightProgress phase={phase} />}
+
+      {resolvedError && !isInitialLoad && (
+        <>
+          <ErrorBanner
+            message={
+              resolvedError.title
+                ? `${resolvedError.title}: ${resolvedError.message}`
+                : resolvedError.message
+            }
+          />
+          {onRetry && (
+            <button type="button" className="btn secondary greenlight-retry-btn" onClick={onRetry}>
+              {t('health.retry')}
+            </button>
+          )}
+        </>
       )}
 
       {!loading && fallbackUsed && displayRecs.length > 0 && (
         <WarningBanner message={t('dashboard.greenlightFallbackNotice')} />
       )}
 
-      {!loading && displayRecs.length > 0 && (
+      {hasCachedSlate && !isInitialLoad && (
         <>
           <p className="slate-attribution greenlight-hero-attribution">
             {t('greenlight.clickhouseAttribution')}
           </p>
-          <div className="rec-grid greenlight-rec-hero">
+          <div
+            className={`rec-grid greenlight-rec-hero${isRefreshingWithCache ? ' is-cached-dimmed' : ''}`}
+            aria-busy={isRefreshingWithCache}
+          >
             {displayRecs.map((r, i) => (
               <RecCard
                 key={`${r.title}-${i}`}

@@ -3,6 +3,7 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { LocaleProvider } from "../i18n/LocaleContext";
+import { HealthPollProvider } from "../hooks/useHealthPoll";
 import App from "../App";
 import Catalog from "./Catalog";
 import Ingest from "./Ingest";
@@ -13,6 +14,7 @@ import { api } from "../api";
 import { ApiError } from "../utils/apiErrors";
 import * as juryEvidence from "../utils/juryEvidence";
 import type { AgentRunResult } from "../api";
+import * as useHealthPollModule from "../hooks/useHealthPoll";
 
 vi.mock("../api", () => ({
   api: {
@@ -37,7 +39,9 @@ const mockedApi = api as unknown as {
 function wrap(ui: ReactElement, path = "/") {
   return render(
     <MemoryRouter initialEntries={[path]}>
-      <LocaleProvider>{ui}</LocaleProvider>
+      <LocaleProvider>
+        <HealthPollProvider>{ui}</HealthPollProvider>
+      </LocaleProvider>
     </MemoryRouter>,
   );
 }
@@ -255,7 +259,9 @@ describe("pages", () => {
 
   it("asks a question and renders grounded badge plus collapsible SQL", async () => {
     wrap(<Ask />);
-    fireEvent.change(screen.getByRole("textbox"), {
+    expect(screen.getByRole("textbox", { name: /Question for the catalog agent/i })).toBeInTheDocument();
+    expect(document.querySelector(".ask-actions-sticky")).toBeTruthy();
+    fireEvent.change(screen.getByRole("textbox", { name: /Question for the catalog agent/i }), {
       target: { value: "Which genre is under-represented?" },
     });
     fireEvent.click(
@@ -372,6 +378,42 @@ describe("pages", () => {
       view.unmount();
       vi.useRealTimers();
     }
+  });
+
+  it("scrolls the answer card into view when Ask returns a result", async () => {
+    const scrollIntoView = vi.fn();
+    const proto = HTMLElement.prototype as HTMLElement & { scrollIntoView?: Element['scrollIntoView'] };
+    const original = proto.scrollIntoView;
+    proto.scrollIntoView = scrollIntoView as Element['scrollIntoView'];
+    wrap(<Ask />);
+    try {
+      fireEvent.submit(screen.getByRole("button", { name: /Run agent/i }).closest("form")!);
+      expect(await screen.findByText("Thriller is underserved.")).toBeInTheDocument();
+      expect(scrollIntoView).toHaveBeenCalledWith({ behavior: "smooth", block: "start" });
+      expect(document.querySelector(".ask-answer-scroll-target")).toBeTruthy();
+    } finally {
+      if (original) proto.scrollIntoView = original;
+      else delete proto.scrollIntoView;
+    }
+  });
+
+  it("soft-disables Ask submit while health is not ready", () => {
+    const spy = vi.spyOn(useHealthPollModule, "useHealthPoll").mockReturnValue({
+      health: {
+        status: "ok",
+        ready: false,
+        partners: { clickhouse: "starting", mcp: "mcp-clickhouse", gemini: "gemini-test" },
+      },
+      waking: true,
+      retry: vi.fn(),
+      attempt: 1,
+      maxAttempts: 25,
+      elapsedHint: 3000,
+    });
+    wrap(<Ask />);
+    expect(screen.getByRole("button", { name: /Run agent/i })).toBeDisabled();
+    expect(screen.getByText(/API and ClickHouse are still starting/i)).toBeInTheDocument();
+    spy.mockRestore();
   });
 
   it("renders the user guide and redirects /about", async () => {
@@ -599,10 +641,128 @@ describe("pages", () => {
       .mockResolvedValueOnce({ status: "starting", ready: false, error: "still booting" })
       .mockResolvedValueOnce({ status: "ok", ready: true, partners: {} });
     wrap(<HealthBanner />);
-    expect(await screen.findByText(/Waking the demo/i)).toBeInTheDocument();
+    expect(await screen.findByText(/Service warming/i)).toBeInTheDocument();
     expect(screen.getByText("still booting")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /Check again/i }));
-    await vi.waitFor(() => expect(screen.queryByText(/Waking the demo/i)).not.toBeInTheDocument());
+    await vi.waitFor(() => expect(screen.queryByText(/Service warming/i)).not.toBeInTheDocument());
+  });
+
+  it("shows max-attempts copy on the health banner", async () => {
+    vi.spyOn(useHealthPollModule, "useHealthPoll").mockReturnValue({
+      health: { status: "starting", ready: false, partners: {} },
+      waking: true,
+      retry: vi.fn(),
+      attempt: 25,
+      maxAttempts: 25,
+      elapsedHint: 75_000,
+    });
+    wrap(<HealthBanner />);
+    expect(await screen.findByText(/Still waking/i)).toBeInTheDocument();
+    vi.restoreAllMocks();
+  });
+
+  it("throws when useHealthPoll is used outside HealthPollProvider", () => {
+    function Bare() {
+      useHealthPollModule.useHealthPoll();
+      return null;
+    }
+    expect(() => render(<Bare />)).toThrow(/HealthPollProvider/);
+  });
+
+  it("retries greenlight from the dashboard error state", async () => {
+    const { default: Dashboard } = await import("./Dashboard");
+    mockedApi.getGreenlight.mockRejectedValueOnce(new Error("boom"));
+    wrap(<Dashboard />);
+    expect(await screen.findByText(/boom/i)).toBeInTheDocument();
+    mockedApi.getGreenlight.mockResolvedValueOnce({
+      intent: "greenlight",
+      answer: "ok",
+      recommendations: [
+        {
+          title: "Crimen sin Fronteras: Bogotá",
+          genre: "Thriller",
+          justification: "breakout",
+          evidence: "wow",
+          opportunity_score: 0.26,
+        },
+      ],
+      queryRows: [],
+      steps: [],
+      totalLatencyMs: 10,
+      model: "gemini-test",
+    });
+    fireEvent.click(screen.getByRole("button", { name: /Check again/i }));
+    await vi.waitFor(() =>
+      expect(mockedApi.getGreenlight).toHaveBeenCalledWith({ refresh: true }),
+    );
+  });
+
+  it("refreshes the measured greenlight slate from the dashboard", async () => {
+    const { default: Dashboard } = await import("./Dashboard");
+    wrap(<Dashboard />);
+    expect(await screen.findByText("Greenlight this week")).toBeInTheDocument();
+    await vi.waitFor(() =>
+      expect(screen.getByRole("button", { name: /Refresh measured slate/i })).toBeEnabled(),
+    );
+
+    mockedApi.getGreenlight.mockClear();
+    let resolveRefresh: (value: AgentRunResult) => void = () => undefined;
+    mockedApi.getGreenlight.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveRefresh = resolve;
+        }),
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /Refresh measured slate/i }));
+    expect(await screen.findAllByText(/Refreshing measured slate/i)).not.toHaveLength(0);
+    expect(mockedApi.getGreenlight).toHaveBeenCalledWith({ refresh: true });
+
+    await act(async () => {
+      resolveRefresh({
+        intent: "greenlight",
+        answer: "refreshed",
+        recommendations: [
+          {
+            title: "Crimen sin Fronteras: Bogotá",
+            genre: "Thriller",
+            justification: "breakout",
+            evidence: "wow",
+            opportunity_score: 0.3,
+          },
+        ],
+        queryRows: [],
+        steps: [],
+        totalLatencyMs: 40,
+        model: "gemini-test",
+      });
+    });
+    await vi.waitFor(() =>
+      expect(screen.queryByText(/Refreshing measured slate/i)).not.toBeInTheDocument(),
+    );
+  });
+
+  it("covers health banner progress edge when maxAttempts is zero", async () => {
+    vi.spyOn(useHealthPollModule, "useHealthPoll").mockReturnValue({
+      health: null,
+      waking: true,
+      retry: vi.fn(),
+      attempt: 0,
+      maxAttempts: 0,
+      elapsedHint: 0,
+    });
+    wrap(<HealthBanner />);
+    expect(await screen.findByText(/Service warming/i)).toBeInTheDocument();
+    vi.restoreAllMocks();
+  });
+
+  it("ignores Ask submit while a run is already in flight", async () => {
+    mockedApi.ask.mockReturnValue(new Promise(() => undefined));
+    wrap(<Ask />);
+    const form = screen.getByRole("button", { name: /Run agent/i }).closest("form")!;
+    fireEvent.submit(form);
+    fireEvent.submit(form);
+    expect(mockedApi.ask).toHaveBeenCalledTimes(1);
   });
 
   it("catalog stats page handles missing revenue", async () => {
@@ -642,13 +802,13 @@ describe("pages", () => {
   it("health banner stays visible when health fetch throws", async () => {
     mockedApi.health.mockRejectedValue(new Error("network"));
     wrap(<HealthBanner />);
-    expect(await screen.findByText(/Waking the demo/i)).toBeInTheDocument();
+    expect(await screen.findByText(/Service warming/i)).toBeInTheDocument();
   });
 
   it("health banner hides when API becomes ready on first poll", async () => {
     mockedApi.health.mockResolvedValue({ status: "ok", ready: true, partners: {} });
     wrap(<HealthBanner />);
-    await vi.waitFor(() => expect(screen.queryByText(/Waking the demo/i)).not.toBeInTheDocument());
+    await vi.waitFor(() => expect(screen.queryByText(/Service warming/i)).not.toBeInTheDocument());
   });
 
   it("cancels in-flight health poll on unmount", async () => {

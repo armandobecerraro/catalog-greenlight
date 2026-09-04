@@ -4,7 +4,35 @@
 **Verified:** 2026-09-02T23:01:00-05:00 (post-merge #5 + ready-gate fix `0da1cac`)  
 **Platform:** Render (free tier — cold start 60–90s pre-warm after spin-down)
 
+### 60-second judge path
+
+| Step | Action | Expect |
+|------|--------|--------|
+| 1 | Open hosted URL; wait health `ready: true` | ~60–90s if cold |
+| 2 | `/` dashboard | 3 greenlight picks with measured scores |
+| 3 | `/ask` → under-represented genre chip | Documentary `gap_score ≈ 0.074` |
+| 4 | `/judge` | Chloe wedge + Remove ClickHouse + benchmarks |
+
+**p50 (warm):** greenlight cached ~11s · `?refresh=1` ~37s · `/ask` ~33s — see [`BENCHMARKS.md`](./BENCHMARKS.md). Keep-alive: `bash scripts/keepalive-smoke.sh` or `npm run keepalive:smoke`.
+
 > **Keep-alive (opcional):** UptimeRobot o cron cada 5 min contra `/api/v1/health` evita spin-down; no requiere provisioning ni pago en tier free.
+
+### Smoke scripts
+
+| Script | npm | Use |
+|--------|-----|-----|
+| `scripts/keepalive-smoke.sh` | `npm run keepalive:smoke` | **Judging-week cron** — health wake + cached greenlight (no `?refresh=1`, no `/agent/ask`) |
+| `scripts/judge-smoke.sh` | `npm run judge:smoke` | **Full judge-path QA** — health + greenlight + ask (`gap_score` + SQL) + `/judge` HTML |
+
+**Cold-start flakiness:** Render free tier may return 502/503 or time out on the first request after spin-down. Both scripts retry health wake (`MAX_WAKE_ATTEMPTS`, default 6 × 15s). `judge-smoke.sh` also retries `/api/v1/agent/ask` up to `MAX_ASK_ATTEMPTS` (default 3) with `ASK_TIMEOUT_SEC` 240s — a failed ask on a cold instance is expected; re-run or let retries succeed.
+
+```bash
+# Judging-week cron (safe — does not spam ask or refresh)
+BASE_URL=https://catalog-greenlight.onrender.com npm run keepalive:smoke
+
+# Pre-demo / post-deploy judge verification
+BASE_URL=https://catalog-greenlight.onrender.com npm run judge:smoke
+```
 
 ---
 
@@ -185,7 +213,8 @@ Hosted HTML is the SPA shell for every path (HTTP 200). The client router must n
 | `/catalog/stats` | Catalog stats page (size / genres / revenue) |
 | `/does-not-exist` (any unknown) | NotFound (“Unknown route”) + header nav |
 | `/`, `/ask`, `/catalog`, `/ingest`, `/guia` | Unchanged working pages |
-| `/about`, `/judge` | Redirect → `/guia` |
+| `/about` | Redirect → `/guia` |
+| `/judge` | Judge landing (`Judge.tsx`) — `npm run judge:smoke` asserts HTTP 200 |
 
 ```bash
 # Browser (not curl — SPA routing is client-side)
@@ -215,7 +244,26 @@ npm run test:e2e:hosted
 
 ---
 
-## 7. Summary
+## 7. Automated judge smoke (`npm run judge:smoke`)
+
+Runs `scripts/judge-smoke.sh` — health wake, cached greenlight (3 genres), `POST /api/v1/agent/ask` with the under-represented genre chip, and `GET /judge` HTTP 200.
+
+```bash
+BASE_URL=https://catalog-greenlight.onrender.com npm run judge:smoke
+```
+
+| Check | Assertion |
+|-------|-----------|
+| Health `ready: true` | Retries up to 6 × 15s |
+| Greenlight | 3 picks, 3 unique genres, scored |
+| Ask | `gap_score` in response; `sql` field or `SELECT` evidence; timeout 240s; up to 3 attempts |
+| `/judge` | HTTP 200 (SPA shell) |
+
+**Do not** wire `judge:smoke` to judging-week cron — it hits `/agent/ask` (~30–45s warm). Use `keepalive:smoke` for cron instead.
+
+---
+
+## 8. Summary
 
 | Category | Hosted ready? |
 |----------|---------------|
@@ -225,6 +273,8 @@ npm run test:e2e:hosted
 | Ask `/agent/ask` | **YES** — HTTP 200; comedy titles + no-runtime honesty; revenue + under-represented Documentary `gap_score` 0.074; `fallback: true` (~31s) is OK (Gemini timeout; ClickHouse SQL live) |
 | SPA `/greenlight`, `/catalog/stats`, unknown | **YES** — content / NotFound; no blank black pages |
 | Playwright hosted | **YES** — 4/4 (API + dashboard); SPA routes verified in browser smoke above |
+| Judge smoke script | **YES** — `npm run judge:smoke` (ask + `/judge`; retries on cold start) |
+| Keepalive cron script | **YES** — `npm run keepalive:smoke` (health + cached greenlight only) |
 | Ready-gate after MCP init | **YES** — `0da1cac` (greenlight no longer stuck on 503 after health `ready: true`) |
 | Cold start tolerance | **YES** (~74s with 60s pre-warm) |
 | Hosted benchmarks doc | **YES** — `docs/submission/BENCHMARKS.md` (honest warm/cold timings) |

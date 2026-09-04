@@ -1,9 +1,10 @@
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, useEffect, useRef, useState } from 'react';
 import { api, AgentRunResult } from '../api';
 import { PageHeader, Card, ErrorBanner, Link } from '../components/Layout';
 import { AgentTimeline } from '../components/AgentTimeline';
 import { DataTable } from '../components/DataTable';
 import { GreenlightProvenanceHeader, RecProvenance } from '../components/GreenlightProvenance';
+import { useHealthPoll } from '../hooks/useHealthPoll';
 import { useLocale } from '../i18n/LocaleContext';
 import { translations } from '../i18n/translations';
 import { formatApiError, ApiError } from '../utils/apiErrors';
@@ -11,8 +12,11 @@ import { filterRecommendations } from '../utils/recommendationGuards';
 import { ASK_PROGRESS_STEPS, askStepFromElapsed, askStepStatus } from '../utils/askProgress';
 import { gapScoreHighlight, hasClickHouseEvidence } from '../utils/askEvidence';
 
+const QUESTION_INPUT_ID = 'ask-question-input';
+
 export default function Ask() {
   const { locale, t } = useLocale();
+  const { health, waking } = useHealthPoll();
   const suggestions = translations[locale].ask.suggestions;
   const [question, setQuestion] = useState<string>(suggestions[0]);
   const [result, setResult] = useState<AgentRunResult | null>(null);
@@ -20,6 +24,10 @@ export default function Ask() {
   const [billingHint, setBillingHint] = useState(false);
   const [loading, setLoading] = useState(false);
   const [elapsed, setElapsed] = useState(0);
+  const answerRef = useRef<HTMLDivElement>(null);
+
+  const healthBlocking = health != null && !health.ready;
+  const showHealthHint = waking || healthBlocking;
 
   useEffect(() => {
     setQuestion(translations[locale].ask.suggestions[0]);
@@ -38,8 +46,14 @@ export default function Ask() {
     return () => window.clearInterval(id);
   }, [loading]);
 
+  useEffect(() => {
+    if (!result) return;
+    answerRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
+  }, [result]);
+
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
+    if (healthBlocking || loading) return;
     setLoading(true);
     setError('');
     setBillingHint(false);
@@ -60,15 +74,23 @@ export default function Ask() {
     result?.recommendations != null ? result.recommendations.length - groundedRecs.length : 0;
   const measured = result ? hasClickHouseEvidence(result) : false;
   const gapHighlight = result ? gapScoreHighlight(result) : null;
+  const showGroundedBadge = measured || !!gapHighlight;
 
   return (
     <>
       <PageHeader title={t('ask.title')} subtitle={t('ask.subtitle')} />
       <Card>
-        <form className="form" onSubmit={onSubmit}>
-          <label>
+        <form className="form ask-form" onSubmit={onSubmit}>
+          <label htmlFor={QUESTION_INPUT_ID}>
             {t('ask.labelQuestion')}
-            <textarea className="input" rows={3} value={question} onChange={e => setQuestion(e.target.value)} />
+            <textarea
+              id={QUESTION_INPUT_ID}
+              className="input"
+              rows={3}
+              value={question}
+              onChange={e => setQuestion(e.target.value)}
+              aria-label={t('ask.questionAriaLabel')}
+            />
           </label>
           <div className="chips">
             {suggestions.map(s => (
@@ -77,9 +99,16 @@ export default function Ask() {
               </button>
             ))}
           </div>
-          <button className="btn primary" type="submit" disabled={loading}>
-            {loading ? t('ask.running') : t('ask.submit')}
-          </button>
+          <div className="ask-actions ask-actions-sticky">
+            {showHealthHint && (
+              <p className="muted small ask-health-hint" aria-live="polite">
+                {t('ask.healthWaiting')}
+              </p>
+            )}
+            <button className="btn primary" type="submit" disabled={loading || healthBlocking}>
+              {loading ? t('ask.running') : t('ask.submit')}
+            </button>
+          </div>
         </form>
       </Card>
 
@@ -94,7 +123,7 @@ export default function Ask() {
 
       {result && (
         <>
-          {measured ? (
+          {showGroundedBadge ? (
             <div className="grounded-badge" role="status">
               {t('ask.groundedBadge')}
             </div>
@@ -104,6 +133,7 @@ export default function Ask() {
             </div>
           ) : null}
 
+          <div ref={answerRef} className="ask-answer-scroll-target">
           <Card className="ask-answer-card">
             <h3>{t('ask.answer')}</h3>
             {gapHighlight && (
@@ -115,10 +145,11 @@ export default function Ask() {
             <p className="muted">
               {t('ask.intent')}: {result.intent} · {result.totalLatencyMs}ms · model {result.model}
             </p>
-            {result.fallback && measured && (
+            {result.fallback && showGroundedBadge && (
               <p className="muted small">{t('ask.fallbackNotice')}</p>
             )}
           </Card>
+          </div>
 
           {result.queryRows && result.queryRows.length > 0 && (
             <Card>

@@ -1,24 +1,50 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
-import { api, AgentRunResult, CatalogStats, HealthStatus } from '../api';
+import { api, AgentRunResult, CatalogStats } from '../api';
 import { GreenlightPanel } from '../components/GreenlightPanel';
 import { TrustStrip } from '../components/TrustStrip';
 import { WeekSignalsPanel } from '../components/WeekSignalsPanel';
 import { PageHeader, Card, Loading, ErrorBanner } from '../components/Layout';
+import { useHealthPoll } from '../hooks/useHealthPoll';
 import { useLocale } from '../i18n/LocaleContext';
 import { formatApiError } from '../utils/apiErrors';
 
 export default function Dashboard() {
   const { t } = useLocale();
   const location = useLocation();
+  const { health, waking } = useHealthPoll();
   const [stats, setStats] = useState<CatalogStats | null>(null);
   const [greenlight, setGreenlight] = useState<AgentRunResult | null>(null);
-  const [health, setHealth] = useState<HealthStatus | null>(null);
   const [statsError, setStatsError] = useState<unknown>(null);
   const [greenlightError, setGreenlightError] = useState<unknown>(null);
   const [statsLoading, setStatsLoading] = useState(true);
   const [greenlightLoading, setGreenlightLoading] = useState(true);
+  const [greenlightRefreshing, setGreenlightRefreshing] = useState(false);
   const [snapshotOpen, setSnapshotOpen] = useState(false);
+
+  const healthReady = Boolean(health?.ready) && !waking;
+  const refreshBusy = greenlightLoading || greenlightRefreshing;
+
+  const loadGreenlight = useCallback(async (opts?: { refresh?: boolean }) => {
+    const refresh = opts?.refresh ?? false;
+    if (refresh) {
+      setGreenlightRefreshing(true);
+      setGreenlightError(null);
+    } else {
+      setGreenlightLoading(true);
+    }
+
+    try {
+      const result = await api.getGreenlight({ refresh });
+      setGreenlight(result);
+      setGreenlightError(null);
+    } catch (e) {
+      setGreenlightError(e);
+    } finally {
+      if (refresh) setGreenlightRefreshing(false);
+      else setGreenlightLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     api
@@ -29,16 +55,8 @@ export default function Dashboard() {
   }, []);
 
   useEffect(() => {
-    api
-      .getGreenlight()
-      .then(setGreenlight)
-      .catch(e => setGreenlightError(e))
-      .finally(() => setGreenlightLoading(false));
-  }, []);
-
-  useEffect(() => {
-    api.health().then(setHealth).catch(() => setHealth(null));
-  }, []);
+    loadGreenlight();
+  }, [loadGreenlight]);
 
   useEffect(() => {
     if (location.hash !== '#greenlight') return;
@@ -57,15 +75,33 @@ export default function Dashboard() {
       <TrustStrip health={health} />
 
       <Card id="greenlight" className="greenlight-panel greenlight-hero">
-        <div className="panel-head">
+        <div className="panel-head panel-head-greenlight">
           <h3>{t('dashboard.greenlightTitle')}</h3>
-          {greenlight?.model && <span className="badge">{greenlight.model}</span>}
+          <div className="panel-head-actions">
+            {greenlight?.model && <span className="badge">{greenlight.model}</span>}
+            <button
+              type="button"
+              className="btn secondary greenlight-refresh-btn"
+              onClick={() => loadGreenlight({ refresh: true })}
+              disabled={!healthReady || refreshBusy}
+              title={!healthReady ? t('dashboard.refreshDisabledTooltip') : undefined}
+              aria-busy={greenlightRefreshing}
+            >
+              {greenlightRefreshing ? t('dashboard.refreshingGreenlight') : t('dashboard.refreshGreenlight')}
+            </button>
+          </div>
         </div>
+        {greenlightRefreshing && (
+          <div className="greenlight-refresh-banner" role="status" aria-live="polite">
+            {t('dashboard.refreshingGreenlight')}
+          </div>
+        )}
         <GreenlightPanel
           greenlight={greenlight}
-          loading={greenlightLoading}
+          loading={refreshBusy}
           error={greenlightError}
           collapseEvidenceDefault
+          onRetry={() => loadGreenlight({ refresh: true })}
         />
       </Card>
 

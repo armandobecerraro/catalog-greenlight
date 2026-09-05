@@ -121,7 +121,9 @@ Full log: `docs/submission/DEV_VERIFY.md` + `docs/submission/playwright-output.t
 `AgentRunner.ts`: INTENT → DISCOVER → PLAN_SQL → EXECUTE → SYNTHESIZE → AUDIT  
 Unit test: `AgentRunner.test.ts` — PASS
 
-**Greenlight scorer** (`GreenlightScorer.ts`): four parallel MCP SELECTs → `scoreFromAnalyticsById` → `opportunity = 0.4×genre_gap + 0.4×wow_momentum − 0.2×cannibalization_penalty + 0.05×language_gap` → `pickTopCandidates` (genre diversity). Gemini (`@google/genai`, **not** Agent Builder / ADK) narrative only; 10s timeout or 429 → scorer fallback (`GreenlightAnalyst.ts`).
+**Greenlight scorer** (`GreenlightScorer.ts`): four parallel MCP SELECTs → `scoreFromAnalyticsById` → `opportunity = 0.4×genre_gap + 0.4×wow_momentum − 0.2×cannibalization_penalty + 0.05×language_gap` → `pickTopCandidates` (genre diversity). `language_gap` = raw `D_slate_holes` language `gap_score` (clamped ≥ 0). Gemini (`@google/genai`, **not** Agent Builder / ADK) narrative only; 10s timeout or 429 → scorer fallback (`GreenlightAnalyst.ts`).
+
+**Ask:** under-represented chip cites live ClickHouse `gap_score` (genre can move after ingest — not a hardcoded Documentary 0.074).
 
 ---
 
@@ -133,6 +135,6 @@ Unit test: `AgentRunner.test.ts` — PASS
 | Public GitHub | **YES** |
 | Browser E2E (Playwright) | **YES** |
 | Hosted URL | **YES** — https://catalog-greenlight.onrender.com (judge smoke 2026-09-02: health, 200 titles, greenlight 3 picks, 3 asks grounded, SPA routes) |
-| YouTube video | **YES** — https://youtu.be/XBCRFGOywTI |
+| YouTube video | **YES** — https://youtu.be/Q_MOBA7Thc4 |
 | Devpost draft 1155720 submitted | **YES** — Submitted |
 | Gemini integration | **YES** — `@google/genai` on Google Cloud; **not** Agent Builder / ADK |

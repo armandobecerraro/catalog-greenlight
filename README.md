@@ -3,7 +3,7 @@
 **Agentic Cinema Hackathon — ClickHouse Track**
 
 [![Live Demo](https://img.shields.io/badge/Live-Demo-F5C518?style=flat-square)](https://catalog-greenlight.onrender.com)
-[![Demo Video](https://img.shields.io/badge/Demo-Video-FF0000?style=flat-square)](https://youtu.be/XBCRFGOywTI)
+[![Demo Video](https://img.shields.io/badge/Demo-Video-FF0000?style=flat-square)](https://youtu.be/Q_MOBA7Thc4)
 [![For judges](https://img.shields.io/badge/For-judges-8b5cf6?style=flat-square)](https://catalog-greenlight.onrender.com/judge)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 [![ClickHouse MCP](https://img.shields.io/badge/ClickHouse-mcp--clickhouse-FAFF69?style=flat-square)](https://github.com/ClickHouse/mcp-clickhouse)
@@ -14,7 +14,7 @@
 
 A streaming **programming chief** has to pick three catalog titles to push each week — and defend that slate with numbers. Catalog Greenlight measures the catalog in **ClickHouse** through official **mcp-clickhouse**, ranks the slate with a published **TypeScript scorer**, and lets **Gemini** write the memo only.
 
-**Live:** https://catalog-greenlight.onrender.com · **[Judges](https://catalog-greenlight.onrender.com/judge)** · **[Video (English, ~2:32)](https://youtu.be/XBCRFGOywTI)** · **[User guide](https://catalog-greenlight.onrender.com/guia)** · **[GitHub](https://github.com/armandobecerraro/catalog-greenlight)**
+**Live:** https://catalog-greenlight.onrender.com · **[Judges](https://catalog-greenlight.onrender.com/judge)** · **[Video (English, ~2:43)](https://youtu.be/Q_MOBA7Thc4)** · **[User guide](https://catalog-greenlight.onrender.com/guia)** · **[GitHub](https://github.com/armandobecerraro/catalog-greenlight)**
 
 ---
 
@@ -65,6 +65,7 @@ Without ClickHouse / `mcp-clickhouse` there are no genre-gap or revenue-share me
 opportunity = 0.4×genre_gap + 0.4×wow_momentum − 0.2×cannibalization_penalty + 0.05×language_gap
 ```
 
+`genre_gap` is min–max scaled from `A_genre_inventory`. `language_gap` is the raw `D_slate_holes` language `gap_score` (clamped ≥ 0) — same number a ClickHouse judge re-derives from SQL; it is **not** max-normalized.
 Genre diversity: at most one pick per genre when the candidate pool has ≥3 genres. Seed-filler titles (`Fading Line N`, `Catalog Extra…`) are excluded from the ritual.
 
 **Code path:** `McpClickHouseConnector.ts` (official MCP `run_query` / `list_databases` / `list_tables` only — no `@clickhouse/client` in product packages) → `AgentRunner.ts` / `GreenlightAnalyst.ts` → `GreenlightScorer.ts`. Gemini (`@google/genai`) synthesizes the memo and, on `/ask`, plans NL→SQL. It does **not** plan greenlight SQL.
@@ -73,7 +74,7 @@ Genre diversity: at most one pick per genre when the candidate pool has ≥3 gen
 
 ## Demo video
 
-**YouTube (public, English, native CC):** https://youtu.be/XBCRFGOywTI (~2:32)
+**YouTube (public, English, native CC):** https://youtu.be/Q_MOBA7Thc4 (~2:43)
 
 Recorded against the **hosted** app (not localhost). Shot list / teleprompter: [`docs/submission/VIDEO_CHECKLIST.md`](./docs/submission/VIDEO_CHECKLIST.md). Same URL is on [Devpost](https://devpost.com/software/catalog-greenlight).
 
@@ -243,7 +244,7 @@ Hosted demo: Render + ClickHouse Cloud 8443 — [`docs/submission/DEPLOY.md`](./
 | Requirement | Status |
 | ----------- | ------ |
 | Hosted project URL | https://catalog-greenlight.onrender.com |
-| Demo video ≤3 min, English + native CC | https://youtu.be/XBCRFGOywTI (~2:32) |
+| Demo video ≤3 min, English + native CC | https://youtu.be/Q_MOBA7Thc4 (~2:43) |
 | Public repo + OSI license | MIT — [`LICENSE`](./LICENSE) (visible in GitHub About) |
 | ClickHouse at runtime via official mcp-clickhouse | `McpClickHouseConnector` → `run_query` |
 | Google Cloud AI imported and called | `@google/genai` `generateContent` — **not** Agent Builder / ADK / LangChain / OpenAI / Anthropic |

@@ -6,7 +6,7 @@
 | ----------------- | ---------------------------------------------------------- |
 | **Hosted URL**    | https://catalog-greenlight.onrender.com                    |
 | **Devpost draft** | 1155720                                                    |
-| **YouTube**       | https://youtu.be/XBCRFGOywTI — live on Devpost |
+| **YouTube**       | https://youtu.be/Q_MOBA7Thc4 — live on Devpost |
 | **Pitch line**    | “ClickHouse measures. TypeScript scores. Gemini explains.” |
 
 ---
@@ -39,7 +39,7 @@ Do **not** open with Ingest. Skip Ingest unless you have spare time.
 | 4   | 1:50–2:25 | Architecture slide       | mcp-clickhouse + TypeScript scorer + `@google/genai`. **Not Agent Builder / ADK.** **Remove ClickHouse** line. Optional flash of `/judge`.                                                                                         | —                                                                |
 | 5   | 2:25–2:50 | CTA                      | Hosted URL + GitHub on screen ≥ 5 seconds.                                                                                                                                                                                         | —                                                                |
 
-**Total:** ≤ 3:00 (target ~2:50). Video is live: https://youtu.be/XBCRFGOywTI
+**Total:** ≤ 3:00 (target ~2:50). Video is live: https://youtu.be/Q_MOBA7Thc4
 
 ---
 
@@ -138,7 +138,7 @@ Show the slide while narrating the closing line. Keep hosted URL readable for �
 
 - [ ] Trim dead air; verify ≤ 3:00
 - [ ] Upload to YouTube (public or unlisted per Devpost rules)
-- [x] YouTube live: https://youtu.be/XBCRFGOywTI (also in `docs/submission/DEVPOST.md`)
+- [x] YouTube live: https://youtu.be/Q_MOBA7Thc4 (also in `docs/submission/DEVPOST.md`)
 - [ ] Paste same URL into Devpost draft 1155720
 - [ ] Spot-check: video uses **catalog-greenlight.onrender.com**, not localhost
 

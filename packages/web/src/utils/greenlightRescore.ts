@@ -191,12 +191,12 @@ function buildGenreGapMap(inventory: GenreInventoryRow[]): Map<string, number> {
   return gaps;
 }
 
+/** Same semantics as GreenlightScorer.buildLanguageGapMap — raw SQL gap_score, clamped ≥ 0. */
 function buildLanguageGapMap(holes: SlateHoleRow[]): Map<string, number> {
   const langHoles = holes.filter(h => h.hole_type === 'language');
-  const maxGap = Math.max(...langHoles.map(h => h.gap_score), 0.001);
   const map = new Map<string, number>();
   for (const h of langHoles) {
-    map.set(h.dimension, Math.max(0, h.gap_score) / maxGap);
+    map.set(h.dimension, Math.max(0, h.gap_score));
   }
   return map;
 }

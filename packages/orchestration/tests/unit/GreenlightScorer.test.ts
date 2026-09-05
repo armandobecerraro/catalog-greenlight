@@ -3,6 +3,7 @@ import {
   parseTitleMomentum,
   parseCannibalization,
   parseSlateHoles,
+  buildLanguageGapMap,
   scoreTitles,
   pickTopCandidates,
   scoreFromAnalyticsById,
@@ -107,6 +108,58 @@ describe('GreenlightScorer', () => {
       cannibalization_penalty: 0.2,
       language_gap: 0.05
     });
+  });
+
+  it('publishes language_gap as raw D_slate_holes gap_score (no max-normalization inflate)', () => {
+    const holes = parseSlateHoles([
+      { hole_type: 'language', dimension: 'es', gap_score: 0.0009 },
+      { hole_type: 'language', dimension: 'pt', gap_score: 0.0004 },
+      { hole_type: 'language', dimension: 'fr', gap_score: -0.01 },
+      { hole_type: 'genre', dimension: 'Thriller', gap_score: 0.071 }
+    ]);
+    const map = buildLanguageGapMap(holes);
+    expect(map.get('es')).toBe(0.0009);
+    expect(map.get('pt')).toBe(0.0004);
+    expect(map.get('fr')).toBe(0);
+    expect(map.has('Thriller')).toBe(false);
+
+    const scored = scoreTitles(
+      [
+        {
+          title_id: 'es-1',
+          title: 'Crimen sin Fronteras: Bogotá',
+          genre: 'Thriller',
+          language: 'es',
+          revenue_this_week: 420,
+          revenue_prior_week: 180,
+          wow_pct: 0.25,
+          views_this_week: 85000
+        },
+        {
+          title_id: 'en-1',
+          title: 'Shadow Protocol',
+          genre: 'Thriller',
+          language: 'en',
+          revenue_this_week: 310,
+          revenue_prior_week: 280,
+          wow_pct: 0.25,
+          views_this_week: 45000
+        }
+      ],
+      [{ genre: 'Thriller', title_count: 14, revenue_4w: 28000 }],
+      [],
+      holes
+    );
+    const es = scored.find(s => s.language === 'es')!;
+    const en = scored.find(s => s.language === 'en')!;
+    // Must match SQL semantics — never ~0.9 from dividing by a 0.001 floor.
+    expect(es.language_gap).toBe(0.0009);
+    expect(en.language_gap).toBe(0);
+    expect(es.language_gap).toBeLessThan(0.01);
+    expect(es.opportunity_score - en.opportunity_score).toBeCloseTo(
+      SCORER_WEIGHTS.language_gap * 0.0009,
+      6
+    );
   });
 
   it('ranks LATAM breakout above cannibal pair and weak comedy', () => {

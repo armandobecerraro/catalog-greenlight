@@ -63,7 +63,7 @@ https://github.com/armandobecerraro/catalog-greenlight
 
 ## Video demo (3 min, English)
 
-**YouTube (public, English, native CC):** https://youtu.be/XBCRFGOywTI (~2:32)
+**YouTube (public, English, native CC):** https://youtu.be/Q_MOBA7Thc4 (~2:43)
 
 Shot list / narration: `docs/submission/VIDEO_CHECKLIST.md`. Recorded against https://catalog-greenlight.onrender.com. Treat on-screen metrics as a snapshot — re-run `/ask` for the current live `gap_score`.
 

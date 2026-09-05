@@ -136,6 +136,21 @@ describe('greenlightRescore', () => {
     });
   });
 
+  it('keeps language_gap equal to D_slate_holes gap_score (no inflate)', () => {
+    const scored = scoreTitles(
+      DEMO_MOMENTUM,
+      DEMO_INVENTORY,
+      DEMO_CANNIBAL,
+      parseSlateHoles([
+        { hole_type: 'language', dimension: 'es', gap_score: 0.0009 },
+        { hole_type: 'language', dimension: 'pt', gap_score: 0.0004 }
+      ])
+    );
+    const es = scored.find(s => s.language === 'es')!;
+    expect(es.language_gap).toBe(0.0009);
+    expect(es.language_gap).toBeLessThan(0.01);
+  });
+
   it('changes preview order when weights change', () => {
     const preview = rescoreFromDiscover(DEMO_BY_ID, {
       weights: { genre_gap: 0, wow_momentum: 0, cannibalization_penalty: 0, language_gap: 1 }

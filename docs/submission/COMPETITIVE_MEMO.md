@@ -12,7 +12,7 @@
 | Capa | Implementación |
 |------|----------------|
 | Medición | **4 queries MCP fijas** en paralelo (inventario por género, momentum WoW, pares de canibalización, huecos de slate) vía **mcp-clickhouse** oficial en runtime |
-| Ranking | **Scorer TypeScript determinista** — `opportunity = 0.4×genre_gap + 0.4×wow_momentum − 0.2×cannibalization_penalty + 0.05×language_gap`; diversidad de género; sin Gemini en PLAN_SQL del greenlight |
+| Ranking | **Scorer TypeScript determinista** — `opportunity = 0.4×genre_gap + 0.4×wow_momentum − 0.2×cannibalization_penalty + 0.05×language_gap`; `language_gap` = `gap_score` crudo de `D_slate_holes` (sin max-normalizar); diversidad de género; sin Gemini en PLAN_SQL del greenlight |
 | Narrativa | **Gemini** (`@google/genai`, `gemini-flash-latest`) solo en SYNTHESIZE — explica candidatos ya rankeados |
 | Evidencia UI | Timeline de 6 pasos, SQL visible, paneles analytics, provenance por tarjeta, ritual semanal exportable CSV/JSON |
 
@@ -77,7 +77,7 @@ Solo track **ClickHouse** con **mcp-clickhouse** obligatorio en runtime.
 
 | Gap | Estado |
 |-----|--------|
-| **Video ≤3 min** | **Hecho** — https://youtu.be/XBCRFGOywTI (público, EN, ~2:32). Devpost **Submitted**. |
+| **Video ≤3 min** | **Hecho** — https://youtu.be/Q_MOBA7Thc4 (público, EN, ~2:43). Devpost **Submitted**. |
 | **Gemini 429** | `/ask` e `/ingest` fallan con cuota agotada; greenlight sigue con picks del scorer |
 | **Render cold start** | Health puede tardar ~30 s; greenlight 1–3 min en frío (documentado en UI/i18n) |
 | **Seed sintético** | ~200 títulos generados; títulos filler tipo “Fading Line N” filtrados del ritual |

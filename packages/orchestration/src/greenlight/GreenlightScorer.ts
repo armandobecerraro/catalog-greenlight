@@ -207,12 +207,16 @@ export function buildGenreGapMap(inventory: GenreInventoryRow[]): Map<string, nu
   return gaps;
 }
 
+/**
+ * language_gap must match D_slate_holes SQL semantics: revenue_share − title_share
+ * for that language (clamped ≥ 0). Do NOT max-normalize — a 0.001 floor used to
+ * inflate tiny holes (~0.0009) to ~0.9 and fail a ClickHouse re-derivation check.
+ */
 export function buildLanguageGapMap(holes: SlateHoleRow[]): Map<string, number> {
   const langHoles = holes.filter(h => h.hole_type === 'language');
-  const maxGap = Math.max(...langHoles.map(h => h.gap_score), 0.001);
   const map = new Map<string, number>();
   for (const h of langHoles) {
-    map.set(h.dimension, Math.max(0, h.gap_score) / maxGap);
+    map.set(h.dimension, Math.max(0, h.gap_score));
   }
   return map;
 }

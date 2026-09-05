@@ -160,7 +160,7 @@ curl -sS --max-time 240 -X POST https://catalog-greenlight.onrender.com/api/v1/a
 | `intent` | `catalog_qa` |
 | Answer | Live `gap_score` from ClickHouse (genre can move after ingest) |
 | SQL | `D_slate_holes` CTE with `gap_score` |
-| Recs | Ranked genre slices from the returned rows — never a hardcoded Documentary 0.074 |
+| Recs | Ranked genre slices from the returned rows — never a hardcoded genre or gap_score |
 
 ---
 

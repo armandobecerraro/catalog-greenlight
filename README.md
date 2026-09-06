@@ -202,6 +202,8 @@ See `.env.example`. Secrets never belong in the repo.
 
 ```bash
 GEMINI_API_KEY=
+# Optional backups if the primary key hits prepaid quota
+# GEMINI_API_KEYS=backup-key-1,backup-key-2
 GEMINI_MODEL=gemini-flash-latest
 CLICKHOUSE_HOST=<your-cloud-host>
 CLICKHOUSE_PORT=8443

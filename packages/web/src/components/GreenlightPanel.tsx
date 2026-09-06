@@ -13,10 +13,11 @@ import { useLocale } from '../i18n/LocaleContext';
 import { parseGreenlightAnalytics } from '../utils/greenlightAnalytics';
 import { normalizeTitle } from '../utils/greenlightMetrics';
 import {
+  greenlightFallbackKind,
+  greenlightFallbackNoticeKey,
   greenlightPhaseFromElapsed,
   resolveGreenlightErrorMessage,
   topCandidatesFromSteps,
-  usedScorerFallback,
   type GreenlightPhase
 } from '../utils/greenlightUx';
 
@@ -217,9 +218,9 @@ function RecCard({
   );
 }
 
-function WarningBanner({ message }: { message: string }) {
+function FallbackBanner({ message }: { message: string }) {
   return (
-    <div className="warning-banner" role="alert">
+    <div className="info-banner" role="status" aria-live="polite">
       <p>{message}</p>
     </div>
   );
@@ -251,7 +252,7 @@ export function GreenlightPanel({
   const displayRecs = recommendations.length > 0 ? recommendations : partialCandidates;
   const showPartialOnly = recommendations.length === 0 && partialCandidates.length > 0;
 
-  const fallbackUsed = usedScorerFallback(greenlight);
+  const fallbackKind = greenlightFallbackKind(greenlight);
 
   const resolvedError = error ? resolveGreenlightErrorMessage(error, t) : null;
   const hasCachedSlate = displayRecs.length > 0;
@@ -290,8 +291,8 @@ export function GreenlightPanel({
         </>
       )}
 
-      {!loading && fallbackUsed && displayRecs.length > 0 && (
-        <WarningBanner message={t('dashboard.greenlightFallbackNotice')} />
+      {!loading && fallbackKind && displayRecs.length > 0 && (
+        <FallbackBanner message={t(greenlightFallbackNoticeKey(fallbackKind))} />
       )}
 
       {hasCachedSlate && !isInitialLoad && (

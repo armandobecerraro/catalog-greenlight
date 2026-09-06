@@ -18,7 +18,9 @@ import {
   greenlightGeminiStatus,
   greenlightMcpMs,
   greenlightGeminiMs,
-  synthesizeStepError
+  synthesizeStepError,
+  greenlightFallbackKind,
+  greenlightFallbackNoticeKey
 } from './greenlightUx';
 import { parseGreenlightAnalytics } from './greenlightAnalytics';
 import { weeklySlateToCsv, contrafactualPairs, buildWeeklySlateExport, exportWeeklySlate, weeklySlateToJson, programmingMemo, gapFilledFromRun } from './greenlightExport';
@@ -261,6 +263,47 @@ describe('greenlightUx', () => {
         steps: [{ step: 'SYNTHESIZE', status: 'completed', latencyMs: 22 }]
       })
     ).toBe(22);
+    expect(greenlightFallbackKind(null)).toBeNull();
+    expect(greenlightFallbackKind({ ...sampleRun(), fallback: false, steps: [] })).toBeNull();
+    expect(
+      greenlightFallbackKind({
+        ...sampleRun(),
+        fallback: true,
+        steps: [{ step: 'SYNTHESIZE', status: 'completed', output: { geminiError: 'Your prepayment credits are depleted' } }]
+      })
+    ).toBe('quota');
+    expect(
+      greenlightFallbackKind({
+        ...sampleRun(),
+        fallback: true,
+        steps: [{ step: 'SYNTHESIZE', status: 'completed', output: { geminiError: '429 Resource exhausted' } }]
+      })
+    ).toBe('generic');
+    expect(
+      greenlightFallbackKind({
+        ...sampleRun(),
+        fallback: true,
+        steps: [{ step: 'SYNTHESIZE', status: 'completed', output: { geminiError: 'Please go to AI Studio at https://ai.studio' } }]
+      })
+    ).toBe('generic');
+    expect(
+      greenlightFallbackKind({
+        ...sampleRun(),
+        fallback: true,
+        steps: [{ step: 'SYNTHESIZE', status: 'completed', output: { geminiError: 'Gemini synthesis timed out after 25s' } }]
+      })
+    ).toBe('timeout');
+    expect(
+      greenlightFallbackKind({
+        ...sampleRun(),
+        fallback: true,
+        steps: [{ step: 'SYNTHESIZE', status: 'completed', output: { geminiError: '429 Resource exhausted' } }]
+      })
+    ).toBe('generic');
+    expect(greenlightFallbackKind(sampleRun())).toBe('generic');
+    expect(greenlightFallbackNoticeKey('quota')).toBe('dashboard.greenlightFallbackQuota');
+    expect(greenlightFallbackNoticeKey('timeout')).toBe('dashboard.greenlightFallbackTimeout');
+    expect(greenlightFallbackNoticeKey('generic')).toBe('dashboard.greenlightFallbackNotice');
   });
 });
 

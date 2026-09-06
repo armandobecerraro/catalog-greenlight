@@ -17,6 +17,7 @@ npm run check:credentials
 2. Create [Render](https://render.com) account → **New Blueprint** → connect repo (`render.yaml` included).
 3. Set secrets in Render dashboard (Blueprint defaults: `CLICKHOUSE_PORT=8443`, `CLICKHOUSE_SECURE=true` in `render.yaml`):
    - `GEMINI_API_KEY`
+   - `GEMINI_API_KEYS` (optional comma-separated backups; rotated automatically on prepaid-quota 429)
    - `CLICKHOUSE_HOST` (ClickHouse Cloud hostname)
    - `CLICKHOUSE_PASSWORD`
 4. Deploy. Health check: `GET /api/v1/health`

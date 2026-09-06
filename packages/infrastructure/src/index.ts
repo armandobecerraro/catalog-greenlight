@@ -4,8 +4,13 @@ export { ConnectorFactory, buildClickHouseConfig } from './partners/ConnectorFac
 export { GeminiEnrichmentAdapter } from './gemini/GeminiEnrichmentAdapter';
 export { GeminiReasoningAdapter, parseRecommendations } from './gemini/GeminiReasoningAdapter';
 export { GeminiClientFactory } from './gemini/GeminiClientFactory';
-export { resolveGeminiApiKey } from './gemini/resolveGeminiApiKey';
-export { generateGeminiText } from './gemini/generateContent';
+export { resolveGeminiApiKey, resolveGeminiApiKeys, parseGeminiApiKeys } from './gemini/resolveGeminiApiKey';
+export {
+  generateGeminiText,
+  geminiKeyPool,
+  isPermanentGeminiQuotaError,
+  errorText
+} from './gemini/generateContent';
 export { McpCatalogRepository, parseCast } from './catalog/McpCatalogRepository';
 export { McpAgentAuditAdapter } from './catalog/McpAgentAuditAdapter';
 export { EnvSecretManager } from './secrets/EnvSecretManager';

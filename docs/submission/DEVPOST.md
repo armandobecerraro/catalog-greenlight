@@ -94,7 +94,7 @@ Gemini does **not** plan SQL for the greenlight path.
 - **Catalog Q&A** — `GeminiReasoningAdapter.ts` classifies intent, generates SQL, synthesizes answers
 - **Greenlight** — same adapter's `synthesizeGreenlight` writes executive narrative from scorer candidate rows only; scoring is TypeScript, not Gemini
 - Fails fast if `GEMINI_API_KEY` is missing (no silent fake in API/demo/web)
-- Synthesis bounded to 25s (`GREENLIGHT_SYNTHESIZE_TIMEOUT_MS`); timeout, API error, or **429/quota** → three scorer recommendations still returned (HTTP 200; SYNTHESIZE step completes with `fallback: true`)
+- Synthesis bounded to 25s (`GREENLIGHT_SYNTHESIZE_TIMEOUT_MS`); timeout, API error, or **429/quota** → three scorer recommendations still returned (HTTP 200; SYNTHESIZE step completes with `fallback: true`). Prepaid-quota 429s fail fast (no multi-model retries) and rotate optional `GEMINI_API_KEYS` backups.
 
 ## Try it yourself
 

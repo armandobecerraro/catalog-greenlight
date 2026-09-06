@@ -9,6 +9,7 @@ import {
   isSeedFillerTitle
 } from '../utils/greenlightMetrics';
 import {
+  greenlightFallbackKind,
   greenlightGeminiMs,
   greenlightGeminiStatus,
   greenlightMcpMs,
@@ -205,15 +206,20 @@ export function RecProvenance({
 export function DecisionCockpitStrip({ greenlight }: { greenlight: AgentRunResult }) {
   const { t } = useLocale();
   const status = greenlightGeminiStatus(greenlight);
+  const fallbackKind = greenlightFallbackKind(greenlight);
   const mcpMs = greenlightMcpMs(greenlight);
   const geminiMs = greenlightGeminiMs(greenlight);
   const geminiFailed = status === 'skipped' || status === 'error';
   const geminiLabel =
-    status === 'error'
-      ? t('cockpit.geminiError')
-      : status === 'skipped'
-        ? t('cockpit.geminiSkipped')
-        : t('cockpit.geminiExplained');
+    fallbackKind === 'quota'
+      ? t('cockpit.geminiQuota')
+      : fallbackKind === 'timeout'
+        ? t('cockpit.geminiTimeout')
+        : status === 'error'
+          ? t('cockpit.geminiError')
+          : status === 'skipped'
+            ? t('cockpit.geminiSkipped')
+            : t('cockpit.geminiExplained');
 
   return (
     <div className="decision-cockpit-strip" role="region" aria-label={t('cockpit.stripAria')}>
@@ -224,7 +230,7 @@ export function DecisionCockpitStrip({ greenlight }: { greenlight: AgentRunResul
         <span aria-hidden="true"> · </span>
         <span className="cockpit-gemini">
           <span className="cockpit-gemini-icon" aria-hidden="true">
-            {geminiFailed ? '⚠' : '✓'}
+            {geminiFailed ? '○' : '✓'}
           </span>
           {geminiLabel}
         </span>

@@ -185,6 +185,10 @@ export const translations = {
         "Gemini returned HTTP 429 (rate limit or quota). Check your API key, quota, and billing in Google AI Studio, then reload the page.",
       greenlightFallbackNotice:
         "ClickHouse measured these picks and TypeScript scored them. Gemini prose is optional — the numbers are still live.",
+      greenlightFallbackQuota:
+        "Gemini prepaid quota is exhausted. ClickHouse still measured the catalog and TypeScript ranked these three titles — the slate does not depend on the LLM.",
+      greenlightFallbackTimeout:
+        "Gemini memo timed out. The three picks below are still from ClickHouse + the TypeScript scorer.",
       greenlightPartialNarrative: "Narrative pending…",
       agentRun: "Agent run {ms}ms",
       followUp: "Ask follow-up questions →",
@@ -274,7 +278,9 @@ export const translations = {
       statusRanked: "TypeScript ranked",
       geminiExplained: "Gemini explained",
       geminiSkipped: "Gemini skipped",
-      geminiError: "Gemini error",
+      geminiError: "Gemini memo skipped",
+      geminiQuota: "Gemini quota — memo skipped",
+      geminiTimeout: "Gemini timed out — memo skipped",
       mcpMs: "MCP {ms} ms",
       geminiMs: "Gemini {ms} ms",
       rankingStands: "Ranking still stands — TypeScript scored the 3 titles without Gemini.",
@@ -724,6 +730,10 @@ export const translations = {
         "Gemini devolvió HTTP 429 (límite de tasa o cuota). Revisa tu clave API, cuota y facturación en Google AI Studio y recarga la página.",
       greenlightFallbackNotice:
         "ClickHouse midió estos picks y TypeScript los puntuó. La prosa de Gemini es opcional — los números siguen en vivo.",
+      greenlightFallbackQuota:
+        "La cuota prepago de Gemini está agotada. ClickHouse igual midió el catálogo y TypeScript rankeó estos tres títulos — el slate no depende del LLM.",
+      greenlightFallbackTimeout:
+        "El memo de Gemini agotó el tiempo. Los tres picks de abajo siguen saliendo de ClickHouse + el scorer TypeScript.",
       greenlightPartialNarrative: "Narrativa pendiente…",
       agentRun: "Ejecución del agente {ms} ms",
       followUp: "Hacer preguntas de seguimiento →",
@@ -816,7 +826,9 @@ export const translations = {
       statusRanked: "TypeScript rankeó",
       geminiExplained: "Gemini explicó",
       geminiSkipped: "Gemini omitido",
-      geminiError: "Error de Gemini",
+      geminiError: "Memo Gemini omitido",
+      geminiQuota: "Cuota Gemini — memo omitido",
+      geminiTimeout: "Timeout Gemini — memo omitido",
       mcpMs: "MCP {ms} ms",
       geminiMs: "Gemini {ms} ms",
       rankingStands: "El ranking se mantiene — TypeScript puntuó los 3 títulos sin Gemini.",

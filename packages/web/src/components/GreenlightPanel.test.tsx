@@ -149,6 +149,74 @@ describe('GreenlightPanel', () => {
     expect(screen.getByText(/quota|billing|Gemini/i)).toBeInTheDocument();
   });
 
+  it('explains designed fallback when Gemini quota is exhausted', () => {
+    wrap(
+      <GreenlightPanel
+        greenlight={{
+          ...run,
+          fallback: true,
+          geminiStatus: 'error',
+          steps: [
+            {
+              step: 'SYNTHESIZE',
+              status: 'completed',
+              output: { fallback: true, geminiError: 'Your prepayment credits are depleted' }
+            }
+          ]
+        }}
+        loading={false}
+        error={null}
+      />
+    );
+    expect(screen.getByText(/slate does not depend on the LLM/i)).toBeInTheDocument();
+    expect(screen.getByText(/Gemini quota/i)).toBeInTheDocument();
+  });
+
+  it('uses generic fallback copy for a transient Gemini 429', () => {
+    wrap(
+      <GreenlightPanel
+        greenlight={{
+          ...run,
+          fallback: true,
+          geminiStatus: 'error',
+          steps: [
+            {
+              step: 'SYNTHESIZE',
+              status: 'completed',
+              output: { fallback: true, geminiError: '429 Resource exhausted' }
+            }
+          ]
+        }}
+        loading={false}
+        error={null}
+      />
+    );
+    expect(screen.getByText(/Gemini prose is optional/i)).toBeInTheDocument();
+    expect(screen.queryByText(/prepaid quota/i)).not.toBeInTheDocument();
+  });
+
+  it('explains designed fallback when Gemini times out', () => {
+    wrap(
+      <GreenlightPanel
+        greenlight={{
+          ...run,
+          fallback: true,
+          geminiStatus: 'error',
+          steps: [
+            {
+              step: 'SYNTHESIZE',
+              status: 'completed',
+              output: { fallback: true, geminiError: 'Gemini synthesis timed out after 25s' }
+            }
+          ]
+        }}
+        loading={false}
+        error={null}
+      />
+    );
+    expect(screen.getByText(/Gemini memo timed out/i)).toBeInTheDocument();
+  });
+
   it('shows empty recommendations or the memo text', () => {
     wrap(
       <GreenlightPanel

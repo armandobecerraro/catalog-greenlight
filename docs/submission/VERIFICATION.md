@@ -121,7 +121,7 @@ Full log: `docs/submission/DEV_VERIFY.md` + `docs/submission/playwright-output.t
 `AgentRunner.ts`: INTENT → DISCOVER → PLAN_SQL → EXECUTE → SYNTHESIZE → AUDIT  
 Unit test: `AgentRunner.test.ts` — PASS
 
-**Greenlight scorer** (`GreenlightScorer.ts`): four parallel MCP SELECTs → `scoreFromAnalyticsById` → `opportunity = 0.4×genre_gap + 0.4×wow_momentum − 0.2×cannibalization_penalty + 0.05×language_gap` → `pickTopCandidates` (genre diversity). `language_gap` = raw `D_slate_holes` language `gap_score` (clamped ≥ 0). Gemini (`@google/genai`, **not** Agent Builder / ADK) narrative only; 10s timeout or 429 → scorer fallback (`GreenlightAnalyst.ts`).
+**Greenlight scorer** (`GreenlightScorer.ts`): four parallel MCP SELECTs → `scoreFromAnalyticsById` → `opportunity = 0.4×genre_gap + 0.4×wow_momentum − 0.2×cannibalization_penalty + 0.05×language_gap` → `pickTopCandidates` (genre diversity). `language_gap` = raw `D_slate_holes` language `gap_score` (clamped ≥ 0). Gemini (`@google/genai`, **not** Agent Builder / ADK) narrative only; 25s timeout or 429 → scorer fallback (`GreenlightAnalyst.ts`). Prepaid-quota 429s fail fast (no model retries) and rotate `GEMINI_API_KEYS` backups.
 
 **Ask:** under-represented chip cites live ClickHouse `gap_score` (genre can move after ingest — not a hardcoded Documentary 0.074).
 

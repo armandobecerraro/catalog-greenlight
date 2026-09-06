@@ -54,7 +54,7 @@ Pitch: *ClickHouse measures. TypeScript scores. Gemini explains.*
 | Problema | Drift de personaje/vestuario entre shots | Gap de género y momentum en catálogo |
 | Video | Trailer 56 s como evidencia fija | Sin video de producto |
 | Score | Similitud vectorial / fixtures locales | Fórmula TS con pesos explícitos |
-| Degradación | Errores live explícitos (según Devpost) | Greenlight devuelve 3 picks del scorer si Gemini falla (429, timeout 10 s) |
+| Degradación | Errores live explícitos (según Devpost) | Greenlight devuelve 3 picks del scorer si Gemini falla (429, timeout 25 s) |
 
 **Posicionamiento:** ellos tienen trailer; nosotros tenemos **scorer + fallback honesto** documentado en UI y código.
 

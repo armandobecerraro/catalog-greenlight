@@ -2,7 +2,7 @@ import { generateGeminiText } from '../../src/gemini/generateContent';
 import { GeminiReasoningAdapter, parseRecommendations } from '../../src/gemini/GeminiReasoningAdapter';
 import { GeminiEnrichmentAdapter } from '../../src/gemini/GeminiEnrichmentAdapter';
 import { GeminiClientFactory } from '../../src/gemini/GeminiClientFactory';
-import { resolveGeminiApiKey } from '../../src/gemini/resolveGeminiApiKey';
+import { parseGeminiApiKeys, resolveGeminiApiKey, resolveGeminiApiKeys } from '../../src/gemini/resolveGeminiApiKey';
 
 jest.mock('../../src/gemini/generateContent', () => ({
   generateGeminiText: jest.fn()
@@ -45,6 +45,22 @@ describe('resolveGeminiApiKey', () => {
     expect(resolveGeminiApiKey()).toBe('gen-key');
     process.env.GOOGLE_GENERATIVE_AI_API_KEY = '   ';
     expect(() => resolveGeminiApiKey()).toThrow(/GEMINI_API_KEY is required/);
+  });
+
+  it('parses GEMINI_API_KEYS and de-duplicates the pool', () => {
+    expect(parseGeminiApiKeys(undefined)).toEqual([]);
+    expect(parseGeminiApiKeys(null)).toEqual([]);
+    expect(parseGeminiApiKeys('  a,, a ; b\nc  ')).toEqual(['a', 'b', 'c']);
+    process.env = { ...original };
+    delete process.env.GEMINI_API_KEY;
+    delete process.env.GOOGLE_API_KEY;
+    delete process.env.GOOGLE_GENERATIVE_AI_API_KEY;
+    process.env.GEMINI_API_KEYS = 'backup-one, backup-two';
+    expect(resolveGeminiApiKeys()).toEqual(['backup-one', 'backup-two']);
+    expect(resolveGeminiApiKey()).toBe('backup-one');
+    process.env.GEMINI_API_KEY = 'primary';
+    process.env.GEMINI_API_KEYS = 'primary, backup-one';
+    expect(resolveGeminiApiKeys()).toEqual(['primary', 'backup-one']);
   });
 });
 

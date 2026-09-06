@@ -61,7 +61,7 @@ langchain / @langchain / openai / anthropic
 INTENT → DISCOVER → PLAN_SQL → EXECUTE → SYNTHESIZE → AUDIT
 
 - **Catalog Q&A:** DISCOVER (MCP `list_*`) → PLAN_SQL (**Gemini** NL→SQL) → EXECUTE (MCP `run_query`) → SYNTHESIZE (Gemini) → AUDIT.
-- **Greenlight:** DISCOVER (4 parallel MCP analytics SELECTs: A genre inventory, B title momentum, C cannibalization, D slate holes) → PLAN_SQL (**TypeScript scorer** in `GreenlightScorer.ts`, not Gemini) → EXECUTE (top 3 candidate rows) → SYNTHESIZE (Gemini narrative only via `@google/genai` — **not** Agent Builder / ADK; 10s timeout or 429/error → scorer fallback, HTTP 200) → AUDIT.
+- **Greenlight:** DISCOVER (4 parallel MCP analytics SELECTs: A genre inventory, B title momentum, C cannibalization, D slate holes) → PLAN_SQL (**TypeScript scorer** in `GreenlightScorer.ts`, not Gemini) → EXECUTE (top 3 candidate rows) → SYNTHESIZE (Gemini narrative only via `@google/genai` — **not** Agent Builder / ADK; 25s timeout or 429/prepaid quota/error → scorer fallback, HTTP 200) → AUDIT.
 - **Scorer formula** (`GreenlightScorer.ts`): `opportunity = 0.4×genre_gap + 0.4×wow_momentum − 0.2×cannibalization_penalty + 0.05×language_gap`; `pickTopCandidates` enforces genre diversity (max one per genre when ≥3 genres). `language_gap` on each pick is the raw `D_slate_holes` language `gap_score` (clamped ≥ 0), not a max-normalized proxy.
 - **Ask honesty:** `/ask` under-represented chip cites **live** ClickHouse `gap_score` from returned rows — genre can move after ingest; do not treat a recorded Documentary ≈0.074 (or any single genre) as the live answer.
 - SQL guard: `packages/core/src/utils/sqlValidation.ts` — blocks DROP/ALTER/TRUNCATE etc.; allows INSERT for ingest/audit.

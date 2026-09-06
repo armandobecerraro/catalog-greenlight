@@ -16,6 +16,13 @@ export function isGeminiRateLimit(message: string): boolean {
   return /429|rate.?limit|RESOURCE_EXHAUSTED|Resource exhausted|quota|billing|prepayment/i.test(message);
 }
 
+/** Prepaid / billing-dead 429s — not RPM. Keep in sync with infrastructure `isPermanentGeminiQuotaError`. */
+export function isPermanentGeminiQuota(message: string): boolean {
+  return /prepayment credits(?: are)? depleted|credits are depleted|billing#prepay|billing must be active/i.test(
+    message
+  );
+}
+
 export function isGeminiRateLimitError(err: unknown): boolean {
   if (err instanceof ApiError) return err.code === 'gemini_billing';
   if (err instanceof Error) return isGeminiRateLimit(err.message);
@@ -27,6 +34,24 @@ export function synthesizeStepError(greenlight: AgentRunResult | null): string |
   const step = greenlight?.steps?.find(s => s.step === 'SYNTHESIZE');
   const output = step?.output as { geminiError?: string } | undefined;
   return step?.error ?? output?.geminiError;
+}
+
+export type GreenlightFallbackKind = 'quota' | 'timeout' | 'generic';
+
+export function greenlightFallbackKind(
+  greenlight: AgentRunResult | null
+): GreenlightFallbackKind | null {
+  if (!usedScorerFallback(greenlight)) return null;
+  const err = synthesizeStepError(greenlight) ?? '';
+  if (isPermanentGeminiQuota(err)) return 'quota';
+  if (/timed out|timeout/i.test(err)) return 'timeout';
+  return 'generic';
+}
+
+export function greenlightFallbackNoticeKey(kind: GreenlightFallbackKind): string {
+  if (kind === 'quota') return 'dashboard.greenlightFallbackQuota';
+  if (kind === 'timeout') return 'dashboard.greenlightFallbackTimeout';
+  return 'dashboard.greenlightFallbackNotice';
 }
 
 export function usedScorerFallback(greenlight: AgentRunResult | null): boolean {

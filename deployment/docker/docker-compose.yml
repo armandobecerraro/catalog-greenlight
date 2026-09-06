@@ -32,6 +32,7 @@ services:
       - NODE_ENV=development
       - GOOGLE_CLOUD_PROJECT=blockbuster-agentic-studio
       - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - GEMINI_API_KEYS=${GEMINI_API_KEYS:-}
       - CLICKHOUSE_HOST=clickhouse
       - CLICKHOUSE_PORT=8123
       - CLICKHOUSE_USERNAME=default

@@ -123,6 +123,11 @@ describe('generateGeminiText', () => {
     expect(isPermanentGeminiQuotaError('Your prepayment credits are depleted')).toBe(true);
     expect(
       isPermanentGeminiQuotaError(
+        '{"error":{"code":429,"message":"Your prepayment credits are depleted. Please go to AI Studio at https://ai.studio/projects to manage your project and billing. Learn more at https://ai.google.dev/gemini-api/docs/billing#prepay. ","status":"RESOURCE_EXHAUSTED"}}',
+      ),
+    ).toBe(true);
+    expect(
+      isPermanentGeminiQuotaError(
         'Please go to AI Studio at https://ai.studio to manage your project',
       ),
     ).toBe(false);

@@ -70,10 +70,7 @@ export function geminiKeyPool(primary: string): string[] {
 function wrapError(error: unknown, keys: string[] = []): Error {
   const err = error instanceof Error ? error : new Error(errorText(error));
   if (keys.length === 0) return err;
-  err.message = keys.reduce(
-    (text, key) => (key ? text.split(key).join('[REDACTED]') : text),
-    err.message,
-  );
+  err.message = keys.reduce((text, key) => text.split(key).join('[REDACTED]'), err.message);
   return err;
 }
 

@@ -6,7 +6,7 @@
 | ----------------- | ---------------------------------------------------------- |
 | **Hosted URL**    | https://catalog-greenlight.onrender.com                    |
 | **Devpost draft** | 1155720                                                    |
-| **YouTube**       | https://youtu.be/Q_MOBA7Thc4 — live on Devpost |
+| **YouTube**       | https://youtu.be/Q_MOBA7Thc4 — live on Devpost             |
 | **Pitch line**    | “ClickHouse measures. TypeScript scores. Gemini explains.” |
 
 ---
@@ -16,7 +16,7 @@
 - [ ] **Pre-warm Render:** open https://catalog-greenlight.onrender.com and wait **60–90 seconds** for cold start before recording
 - [ ] Health check: `GET https://catalog-greenlight.onrender.com/api/v1/health` → `ready: true`
 - [ ] **Fresh greenlight:** open `https://catalog-greenlight.onrender.com/api/v1/greenlight?refresh=1` once (bypasses 10-min cache)
-- [ ] **Gemini billing:** `/ask` and `/ingest` require a funded `GEMINI_API_KEY` on Render (HTTP 429 if credits depleted or rate-limited). Greenlight still returns 3 scorer picks when synthesis fails (timeout, 429, or quota); the UI shows a designed fallback banner (not a warning) and metrics and ritual table remain visible.
+- [ ] **Gemini billing:** Prefer Vertex on Render (`GOOGLE_GENAI_USE_VERTEXAI=true` + GCP project + SA JSON) so Partner Marketing / GCP credits fund `/ask` and `/ingest`. AI Studio prepaid does not receive those credits (HTTP 429 if only a depleted AI Studio key is set). Greenlight still returns 3 scorer picks when synthesis fails (timeout, 429, or quota); the UI shows a designed fallback banner (not a warning) and metrics and ritual table remain visible.
 - [ ] Browser: **UI language English**, **1920×1080** (or 1280×720), zoom 100%, **hide bookmarks bar**
 - [ ] Close unrelated tabs; mute notifications
 - [ ] Prepare architecture slide (see § Architecture slide below)
@@ -34,7 +34,7 @@ Do **not** open with Ingest. Skip Ingest unless you have spare time.
 | --- | --------- | ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
 | 1   | 0:00–0:18 | Warm Render              | Browser already on hosted **/** (English). Health banner gone / `ready: true`. Say the programming-chief problem, then the pitch once.                                                                                             | If still waking: wait, do not record the spinner.                |
 | 2   | 0:18–1:05 | `/` stats + Greenlight   | Optional **Show catalog snapshot** (size / genres / revenue), then the **three rec-cards**. Point at Score / WoW / Genre gap. Click **Show evidence**. Name **mcp-clickhouse** and the TypeScript scorer. **Say the pitch aloud.** | —                                                                |
-| 3   | 1:05–1:50 | `/ask` under-represented | Chip _“Which genre is under-represented in our catalog?”_ → Run → live `gap_score` (genre can move) → **SQL** → **Evidence** → 6-step timeline. | If HTTP **429**: skip Ask, stay on Greenlight; splice Ask later. |
+| 3   | 1:05–1:50 | `/ask` under-represented | Chip _“Which genre is under-represented in our catalog?”_ → Run → live `gap_score` (genre can move) → **SQL** → **Evidence** → 6-step timeline.                                                                                    | If HTTP **429**: skip Ask, stay on Greenlight; splice Ask later. |
 | 3b  | optional  | Comedy ask               | Chip about comedy titles — grounded Comedy rows + honest no-runtime note (no invented `duration`).                                                                                                                                 | Skip if over time.                                               |
 | 4   | 1:50–2:25 | Architecture slide       | mcp-clickhouse + TypeScript scorer + `@google/genai`. **Not Agent Builder / ADK.** **Remove ClickHouse** line. Optional flash of `/judge`.                                                                                         | —                                                                |
 | 5   | 2:25–2:50 | CTA                      | Hosted URL + GitHub on screen ≥ 5 seconds.                                                                                                                                                                                         | —                                                                |

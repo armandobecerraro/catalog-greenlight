@@ -5,6 +5,7 @@
 - Google Cloud SDK (`gcloud`) installed and authenticated
 - Docker Desktop running
 - Node.js 20+ installed
+- For hosted Gemini narration: Vertex AI on a GCP project with billing credits (`GOOGLE_GENAI_USE_VERTEXAI=true`) — see `docs/submission/DEPLOY.md`. AI Studio `GEMINI_API_KEY` remains optional for local/dev when Vertex env is unset.
 
 ## Local Development
 
@@ -38,6 +39,7 @@ bash scripts/deploy.sh
 ## CI/CD
 
 GitHub Actions automatically:
+
 1. Lints code on every PR
 2. Runs unit tests with 80% coverage threshold
 3. Scans for security vulnerabilities (Trivy)

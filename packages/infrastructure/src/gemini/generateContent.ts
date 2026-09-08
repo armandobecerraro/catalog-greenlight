@@ -1,18 +1,23 @@
-import { GoogleGenAI, HarmBlockThreshold, HarmCategory } from '@google/genai';
-import { parseGeminiApiKeys, resolveGeminiApiKeys } from './resolveGeminiApiKey';
+import { GoogleGenAI, HarmBlockThreshold, HarmCategory, GoogleGenAIOptions } from "@google/genai";
+import { parseGeminiApiKeys, resolveGeminiApiKeys } from "./resolveGeminiApiKey";
+import {
+  isGeminiVertexEnabled,
+  resolveGeminiVertexConfig,
+  resolveGoogleAuthCredentials,
+} from "./resolveGeminiAuth";
 
-const FALLBACK_MODELS = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-3.5-flash-lite'];
+const FALLBACK_MODELS = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-3.5-flash-lite"];
 
 function defaultModel(): string {
-  return process.env.GEMINI_MODEL || 'gemini-flash-latest';
+  return process.env.GEMINI_MODEL || "gemini-flash-latest";
 }
 
 export function errorText(error: unknown): string {
-  if (typeof error === 'string') return error;
+  if (typeof error === "string") return error;
   if (error instanceof Error) return error.message;
-  if (error && typeof error === 'object' && 'message' in error) {
+  if (error && typeof error === "object" && "message" in error) {
     const message = (error as { message: unknown }).message;
-    if (message != null && message !== '') return String(message);
+    if (message != null && message !== "") return String(message);
   }
   return String(error);
 }
@@ -70,7 +75,7 @@ export function geminiKeyPool(primary: string): string[] {
 function wrapError(error: unknown, keys: string[] = []): Error {
   const err = error instanceof Error ? error : new Error(errorText(error));
   if (keys.length === 0) return err;
-  err.message = keys.reduce((text, key) => text.split(key).join('[REDACTED]'), err.message);
+  err.message = keys.reduce((text, key) => text.split(key).join("[REDACTED]"), err.message);
   return err;
 }
 
@@ -79,7 +84,7 @@ async function generateWithModels(
   models: string[],
   prompt: string,
 ): Promise<string> {
-  let lastError: unknown = new Error('Gemini request failed');
+  let lastError: unknown = new Error("Gemini request failed");
 
   for (const candidate of models) {
     for (let attempt = 0; attempt < 3; attempt++) {
@@ -91,7 +96,7 @@ async function generateWithModels(
         });
         const text = response?.text?.trim();
         if (text) return text;
-        throw new Error('Gemini returned an empty response');
+        throw new Error("Gemini returned an empty response");
       } catch (error) {
         lastError = error;
         if (isPermanentGeminiQuotaError(error)) {
@@ -111,20 +116,44 @@ async function generateWithModels(
   throw wrapError(lastError);
 }
 
+/** Build a Vertex-billed GoogleGenAI client (GCP project + ADC / inline SA JSON). */
+export function createVertexGoogleGenAI(): GoogleGenAI {
+  const { project, location } = resolveGeminiVertexConfig();
+  const options: GoogleGenAIOptions = {
+    vertexai: true,
+    project,
+    location,
+  };
+  const credentials = resolveGoogleAuthCredentials();
+  if (credentials) {
+    options.googleAuthOptions = { credentials };
+  }
+  return new GoogleGenAI(options);
+}
+
 export async function generateGeminiText(
   apiKey: string,
   prompt: string,
   model = defaultModel(),
 ): Promise<string> {
+  const models = [model, ...FALLBACK_MODELS.filter((m) => m !== model)];
+
+  if (isGeminiVertexEnabled()) {
+    try {
+      return await generateWithModels(createVertexGoogleGenAI(), models, prompt);
+    } catch (error) {
+      throw wrapError(error);
+    }
+  }
+
   const keys = geminiKeyPool(apiKey);
   if (keys.length === 0) {
     throw new Error(
-      'GEMINI_API_KEY is required. Set GEMINI_API_KEY (or GEMINI_API_KEYS) before calling Gemini.',
+      "GEMINI_API_KEY is required (AI Studio), or set GOOGLE_GENAI_USE_VERTEXAI=true with GOOGLE_CLOUD_PROJECT for Vertex billed to GCP.",
     );
   }
 
-  const models = [model, ...FALLBACK_MODELS.filter((m) => m !== model)];
-  let lastError: unknown = new Error('Gemini request failed');
+  let lastError: unknown = new Error("Gemini request failed");
 
   for (let i = 0; i < keys.length; i++) {
     const ai = new GoogleGenAI({ apiKey: keys[i] });

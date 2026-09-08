@@ -6,7 +6,7 @@
 | ----------------- | ---------------------------------------------------------- |
 | **Hosted URL**    | https://catalog-greenlight.onrender.com                    |
 | **Devpost draft** | 1155720                                                    |
-| **YouTube**       | https://youtu.be/Q_MOBA7Thc4 — live on Devpost             |
+| **YouTube**       | https://youtu.be/C15xaiQ-3-Q — live on Devpost             |
 | **Pitch line**    | “ClickHouse measures. TypeScript scores. Gemini explains.” |
 
 ---
@@ -16,7 +16,7 @@
 - [ ] **Pre-warm Render:** open https://catalog-greenlight.onrender.com and wait **60–90 seconds** for cold start before recording
 - [ ] Health check: `GET https://catalog-greenlight.onrender.com/api/v1/health` → `ready: true`
 - [ ] **Fresh greenlight:** open `https://catalog-greenlight.onrender.com/api/v1/greenlight?refresh=1` once (bypasses 10-min cache)
-- [ ] **Gemini billing:** Prefer Vertex on Render (`GOOGLE_GENAI_USE_VERTEXAI=true` + GCP project + SA JSON) so Partner Marketing / GCP credits fund `/ask` and `/ingest`. AI Studio prepaid does not receive those credits (HTTP 429 if only a depleted AI Studio key is set). Greenlight still returns 3 scorer picks when synthesis fails (timeout, 429, or quota); the UI shows a designed fallback banner (not a warning) and metrics and ritual table remain visible.
+- [ ] **Gemini billing:** Prefer Vertex on Render (`GOOGLE_GENAI_USE_VERTEXAI=true` + GCP project + SA JSON) so Partner Marketing / GCP credits fund `/ask` and `/ingest`. AI Studio prepaid does not receive those credits (HTTP 429 if only a depleted AI Studio key is set). **Published demo video** shows **Gemini explained / Vertex working** (not skipped/error). Greenlight still returns 3 scorer picks if synthesis fails at recording time (timeout, 429, or quota); the UI shows a designed fallback banner (not a warning) and metrics and ritual table remain visible.
 - [ ] Browser: **UI language English**, **1920×1080** (or 1280×720), zoom 100%, **hide bookmarks bar**
 - [ ] Close unrelated tabs; mute notifications
 - [ ] Prepare architecture slide (see § Architecture slide below)
@@ -39,7 +39,7 @@ Do **not** open with Ingest. Skip Ingest unless you have spare time.
 | 4   | 1:50–2:25 | Architecture slide       | mcp-clickhouse + TypeScript scorer + `@google/genai`. **Not Agent Builder / ADK.** **Remove ClickHouse** line. Optional flash of `/judge`.                                                                                         | —                                                                |
 | 5   | 2:25–2:50 | CTA                      | Hosted URL + GitHub on screen ≥ 5 seconds.                                                                                                                                                                                         | —                                                                |
 
-**Total:** ≤ 3:00 (target ~2:50). Video is live: https://youtu.be/Q_MOBA7Thc4
+**Total:** ≤ 3:00 (target ~2:50). Video is live: https://youtu.be/C15xaiQ-3-Q
 
 ---
 
@@ -49,7 +49,7 @@ Pause while the UI loads. If you go over 3:00, cut Ingest (already optional) and
 
 > **[0:00–0:18]** “**Catalog Greenlight** is for a streaming programming chief. Every week you have to pick a catalog slate — three titles to push — and the answer has to come from measured data, not vibes. **ClickHouse measures. TypeScript scores. Gemini explains.**”
 
-> **[0:18–1:05]** “This is the live app at **catalog-greenlight.onrender.com**. Catalog stats come from ClickHouse. Greenlight this week is three ranked titles. ClickHouse ran four analytics queries through **mcp-clickhouse**: genre inventory, week-over-week momentum, cannibalization, and slate holes. A **TypeScript scorer** — not Gemini — computed opportunity score. Gemini only writes the prose. If Gemini times out, the three picks and the numbers stay.”
+> **[0:18–1:05]** “This is the live app at **catalog-greenlight.onrender.com**. Catalog stats come from ClickHouse. Greenlight this week is three ranked titles. ClickHouse ran four analytics queries through **mcp-clickhouse**: genre inventory, week-over-week momentum, cannibalization, and slate holes. A **TypeScript scorer** — not Gemini — computed opportunity score. Gemini only writes the prose — Decision Cockpit shows **Gemini explained** on Vertex. If Gemini times out, the three picks and the numbers stay.”
 
 > **[1:05–1:50]** “On Ask: which genre is under-represented in our catalog? Watch the six-step agent — intent, discover, plan SQL, execute, synthesize, audit. The SQL is a ClickHouse CTE. The answer cites **gap_score** — revenue share minus title share — from live rows. That is not a chatbot inventing a genre.”
 
@@ -138,7 +138,7 @@ Show the slide while narrating the closing line. Keep hosted URL readable for �
 
 - [ ] Trim dead air; verify ≤ 3:00
 - [ ] Upload to YouTube (public or unlisted per Devpost rules)
-- [x] YouTube live: https://youtu.be/Q_MOBA7Thc4 (also in `docs/submission/DEVPOST.md`)
+- [x] YouTube live: https://youtu.be/C15xaiQ-3-Q (also in `docs/submission/DEVPOST.md`)
 - [ ] Paste same URL into Devpost draft 1155720
 - [ ] Spot-check: video uses **catalog-greenlight.onrender.com**, not localhost
 

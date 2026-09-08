@@ -62,7 +62,7 @@ Run these from a machine with internet (a laptop or a cron):
 ## If the whole live demo is down for a judge visit
 
 Fallbacks in priority order:
-1. The published demo video (English, ~2:43, CC) walks the same 6-step / greenlight / ask flow.
+1. The published demo video (English, ~2:43, CC) walks the same 6-step / greenlight / ask flow with **Gemini explained** (Vertex working).
 2. Local demo path (`npm run demo` + `npm run dev`) with Docker ClickHouse.
 3. `docs/submission/*.md` (JURY_EVIDENCE, HOSTED_SMOKE, VERIFICATION, COMPETITIVE_MEMO) carry timestamped evidence of the live behavior.
 

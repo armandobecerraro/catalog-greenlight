@@ -63,13 +63,13 @@ https://github.com/armandobecerraro/catalog-greenlight
 
 ## Video demo (3 min, English)
 
-**YouTube (public, English, native CC):** https://youtu.be/Q_MOBA7Thc4 (~2:43)
+**YouTube (public, English, native CC):** https://youtu.be/C15xaiQ-3-Q (~2:43)
 
-Shot list / narration: `docs/submission/VIDEO_CHECKLIST.md`. Recorded against https://catalog-greenlight.onrender.com. Treat on-screen metrics as a snapshot — re-run `/ask` for the current live `gap_score`.
+Shot list / narration: `docs/submission/VIDEO_CHECKLIST.md`. Recorded against https://catalog-greenlight.onrender.com with **Gemini explained** (Vertex AI working — not skipped/error). Treat on-screen metrics as a snapshot — re-run `/ask` for the current live `gap_score`.
 
 ## What it does
 
-1. **Dashboard** — **Decision Cockpit** (ClickHouse measured · TypeScript ranked · Gemini explained/skipped), cannibal exclusions above the fold, Formula Playground (client re-score of DISCOVER rows), Review → confirm → export (`greenlight-slate-YYYY-MM-DD.*`), three rec-cards with correct A–D provenance
+1. **Dashboard** — **Decision Cockpit** (ClickHouse measured · TypeScript ranked · Gemini explained / Vertex working), cannibal exclusions above the fold, Formula Playground (client re-score of DISCOVER rows), Review → confirm → export (`greenlight-slate-YYYY-MM-DD.*`), three rec-cards with correct A–D provenance
 2. **Ingest** — add a title; Gemini enriches summary/tags; MCP INSERT persists it
 3. **Ask the catalog** — natural language → 6-step agent timeline → Gemini-planned SQL → result rows → grounded recommendations
 4. **Greenlight pipeline** — four parallel MCP SELECTs → TypeScript scorer → Gemini synthesis (25s timeout; scorer fallback on failure, timeout, or 429)

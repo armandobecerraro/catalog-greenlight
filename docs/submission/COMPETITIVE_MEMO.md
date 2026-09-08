@@ -79,7 +79,7 @@ Solo track **ClickHouse** con **mcp-clickhouse** obligatorio en runtime.
 
 | Gap | Estado |
 |-----|--------|
-| **Video ≤3 min** | **Hecho** — https://youtu.be/Q_MOBA7Thc4 (público, EN, ~2:43). Devpost **Submitted**. |
+| **Video ≤3 min** | **Hecho** — https://youtu.be/C15xaiQ-3-Q (público, EN, ~2:43). Devpost **Submitted**. |
 | **Gemini 429** | `/ask` e `/ingest` fallan con cuota agotada; greenlight sigue con picks del scorer |
 | **Render cold start** | Health puede tardar ~30 s; greenlight 1–3 min en frío (documentado en UI/i18n) |
 | **Seed sintético** | ~200 títulos generados; títulos filler tipo “Fading Line N” filtrados del ritual |

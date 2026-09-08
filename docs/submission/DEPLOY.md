@@ -21,11 +21,11 @@ npm run check:credentials
 
 ### Gemini — Vertex AI (preferred on Render)
 
-| Env var | Required | What to set |
-| ------- | -------- | ----------- |
-| `GOOGLE_GENAI_USE_VERTEXAI` | **yes** | `true` |
-| `GOOGLE_CLOUD_PROJECT` | **yes** | GCP project id that has the Partner Marketing / billing credit attached |
-| `GOOGLE_CLOUD_LOCATION` | recommended | e.g. `us-central1` (Blueprint default) |
+| Env var                               | Required          | What to set                                                                                                                               |
+| ------------------------------------- | ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `GOOGLE_GENAI_USE_VERTEXAI`           | **yes**           | `true`                                                                                                                                    |
+| `GOOGLE_CLOUD_PROJECT`                | **yes**           | GCP project id that has the Partner Marketing / billing credit attached                                                                   |
+| `GOOGLE_CLOUD_LOCATION`               | recommended       | `us-central1` (Blueprint default) or `global` for `gemini-flash-latest`                                                                   |
 | `GOOGLE_APPLICATION_CREDENTIALS_JSON` | **yes** on Render | Full service-account JSON (one line). SA needs `roles/aiplatform.user` (and Vertex AI API enabled on the project). **Never commit this.** |
 
 Optional: leave `GEMINI_API_KEY` unset when Vertex is configured. AI Studio keys are only the local/dev fallback when Vertex env is not set.
@@ -41,13 +41,14 @@ Operator checklist (GCP, done outside this repo):
 
 ### Gemini — AI Studio apiKey (local / optional fallback)
 
-   - `GEMINI_API_KEY`
-   - `GEMINI_API_KEYS` (optional comma-separated backups; rotated automatically on prepaid-quota 429)
+- `GEMINI_API_KEY`
+- `GEMINI_API_KEYS` (optional comma-separated backups; rotated automatically on prepaid-quota 429)
 
 ### ClickHouse (always)
 
-   - `CLICKHOUSE_HOST` (ClickHouse Cloud hostname)
-   - `CLICKHOUSE_PASSWORD`
+- `CLICKHOUSE_HOST` (ClickHouse Cloud hostname)
+- `CLICKHOUSE_PASSWORD`
+
 4. Deploy. Health check: `GET /api/v1/health`
 5. Seed ClickHouse Cloud once (from your laptop):
 

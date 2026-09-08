@@ -6,7 +6,7 @@
 | ----------------- | ---------------------------------------------------------- |
 | **Hosted URL**    | https://catalog-greenlight.onrender.com                    |
 | **Devpost draft** | 1155720                                                    |
-| **YouTube**       | https://youtu.be/Q_MOBA7Thc4 — live on Devpost |
+| **YouTube**       | https://youtu.be/Q_MOBA7Thc4 — live on Devpost             |
 | **Pitch line**    | “ClickHouse measures. TypeScript scores. Gemini explains.” |
 
 ---
@@ -34,7 +34,7 @@ Do **not** open with Ingest. Skip Ingest unless you have spare time.
 | --- | --------- | ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
 | 1   | 0:00–0:18 | Warm Render              | Browser already on hosted **/** (English). Health banner gone / `ready: true`. Say the programming-chief problem, then the pitch once.                                                                                             | If still waking: wait, do not record the spinner.                |
 | 2   | 0:18–1:05 | `/` stats + Greenlight   | Optional **Show catalog snapshot** (size / genres / revenue), then the **three rec-cards**. Point at Score / WoW / Genre gap. Click **Show evidence**. Name **mcp-clickhouse** and the TypeScript scorer. **Say the pitch aloud.** | —                                                                |
-| 3   | 1:05–1:50 | `/ask` under-represented | Chip _“Which genre is under-represented in our catalog?”_ → Run → live `gap_score` (genre can move) → **SQL** → **Evidence** → 6-step timeline. | If HTTP **429**: skip Ask, stay on Greenlight; splice Ask later. |
+| 3   | 1:05–1:50 | `/ask` under-represented | Chip _“Which genre is under-represented in our catalog?”_ → Run → live `gap_score` (genre can move) → **SQL** → **Evidence** → 6-step timeline.                                                                                    | If HTTP **429**: skip Ask, stay on Greenlight; splice Ask later. |
 | 3b  | optional  | Comedy ask               | Chip about comedy titles — grounded Comedy rows + honest no-runtime note (no invented `duration`).                                                                                                                                 | Skip if over time.                                               |
 | 4   | 1:50–2:25 | Architecture slide       | mcp-clickhouse + TypeScript scorer + `@google/genai`. **Not Agent Builder / ADK.** **Remove ClickHouse** line. Optional flash of `/judge`.                                                                                         | —                                                                |
 | 5   | 2:25–2:50 | CTA                      | Hosted URL + GitHub on screen ≥ 5 seconds.                                                                                                                                                                                         | —                                                                |

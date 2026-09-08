@@ -2,22 +2,22 @@ import {
   ContentIngestionUseCase,
   MediaIngestionService,
   CatalogQueryService,
-  IMcpConnector
-} from '@bas/core';
+  IMcpConnector,
+} from "@bas/core";
 import {
   ConnectorFactory,
   buildClickHouseConfig,
   GeminiClientFactory,
   McpCatalogRepository,
   McpAgentAuditAdapter,
-  describeGeminiAuthMode
-} from '@bas/infrastructure';
-import { AgentRunner } from '@bas/orchestration';
-import { ApiRuntime, HealthSnapshot } from './runtime';
+  describeGeminiAuthMode,
+} from "@bas/infrastructure";
+import { AgentRunner } from "@bas/orchestration";
+import { ApiRuntime, HealthSnapshot } from "./runtime";
 
 export async function composeRuntime(): Promise<ApiRuntime> {
   const connectorFactory = new ConnectorFactory();
-  const connector = await connectorFactory.create('clickhouse', buildClickHouseConfig());
+  const connector = await connectorFactory.create("clickhouse", buildClickHouseConfig());
   const mcp = connector as IMcpConnector;
 
   const geminiFactory = new GeminiClientFactory();
@@ -32,16 +32,16 @@ export async function composeRuntime(): Promise<ApiRuntime> {
   const agentRunner = new AgentRunner(mcp, geminiReasoning, geminiReasoning.modelName, audit);
 
   const health = (): HealthSnapshot => ({
-    status: 'ok',
-    product: 'Catalog Greenlight',
+    status: "ok",
+    product: "Catalog Greenlight",
     ready: true,
     error: null,
     timestamp: new Date().toISOString(),
     partners: {
-      clickhouse: 'connected',
-      mcp: 'mcp-clickhouse',
-      gemini: `${process.env.GEMINI_MODEL || 'gemini-flash-latest'} (${describeGeminiAuthMode()})`
-    }
+      clickhouse: "connected",
+      mcp: "mcp-clickhouse",
+      gemini: `${process.env.GEMINI_MODEL || "gemini-flash-latest"} (${describeGeminiAuthMode()})`,
+    },
   });
 
   return {
@@ -51,38 +51,38 @@ export async function composeRuntime(): Promise<ApiRuntime> {
     isReady: () => true,
     initError: () => null,
     health,
-    apiKeyRequired: Boolean(process.env.API_KEY?.trim())
+    apiKeyRequired: Boolean(process.env.API_KEY?.trim()),
   };
 }
 
 export function startingRuntime(error: string | null = null): ApiRuntime {
   const notReady = async () => {
-    throw new Error('API is still initializing');
+    throw new Error("API is still initializing");
   };
   return {
     ingestionUseCase: { execute: notReady },
     catalogQueries: {
       getCatalog: notReady,
-      getCatalogStats: notReady
+      getCatalogStats: notReady,
     },
     agentRunner: {
       run: notReady,
-      runGreenlight: notReady
+      runGreenlight: notReady,
     },
     isReady: () => false,
     initError: () => error,
     health: () => ({
-      status: error ? 'degraded' : 'starting',
-      product: 'Catalog Greenlight',
+      status: error ? "degraded" : "starting",
+      product: "Catalog Greenlight",
       ready: false,
       error,
       timestamp: new Date().toISOString(),
       partners: {
-        clickhouse: error ? 'error' : 'starting',
-        mcp: 'mcp-clickhouse',
-        gemini: `${process.env.GEMINI_MODEL || 'gemini-flash-latest'} (${describeGeminiAuthMode()})`
-      }
+        clickhouse: error ? "error" : "starting",
+        mcp: "mcp-clickhouse",
+        gemini: `${process.env.GEMINI_MODEL || "gemini-flash-latest"} (${describeGeminiAuthMode()})`,
+      },
     }),
-    apiKeyRequired: Boolean(process.env.API_KEY?.trim())
+    apiKeyRequired: Boolean(process.env.API_KEY?.trim()),
   };
 }

@@ -22,7 +22,7 @@ A streaming **programming chief** has to pick three catalog titles to push each 
 
 1. **Warm** — Open [catalog-greenlight.onrender.com](https://catalog-greenlight.onrender.com). Render free tier: wait until health shows `ready: true` (~60–90s after spin-down). `GET /api/v1/health` → `clickhouse: connected`, `mcp: mcp-clickhouse`.
 2. **`/`** — **Greenlight this week**: Decision Cockpit (measured / ranked / Gemini status), three ranked titles, cannibal exclusions above the fold, Formula Playground (preview only). Provenance names mcp-clickhouse + the TypeScript scorer. Review → confirm → export CSV/JSON (`greenlight-slate-YYYY-MM-DD.*`).
-3. **`/ask`** — Chip *“Which genre is under-represented in our catalog?”* → 6-step timeline → **SQL** + **gap_score** (revenue share minus title share) from live ClickHouse rows. The winning genre is **measured**, not hardcoded — ingest on `/ingest` changes the catalog, so the cited genre can move.
+3. **`/ask`** — Chip _“Which genre is under-represented in our catalog?”_ → 6-step timeline → **SQL** + **gap_score** (revenue share minus title share) from live ClickHouse rows. The winning genre is **measured**, not hardcoded — ingest on `/ingest` changes the catalog, so the cited genre can move.
 4. **`/judge`** — Pitch, Remove-ClickHouse wedge, hosted benchmarks, jury-evidence JSON.
 
 **Honest warm p50** (Render + ClickHouse Cloud, 2026-09-03): ~11s cached greenlight · ~37s `?refresh=1` · ~33s `/ask`. Samples: [`docs/submission/BENCHMARKS.md`](./docs/submission/BENCHMARKS.md). Judging-week keep-alive: `bash scripts/keepalive-smoke.sh` (health only — do not cron `?refresh=1`).
@@ -33,14 +33,14 @@ Gemini synthesis is optional on the critical path: if it times out (25s), errors
 
 ## What it does
 
-| Route | Job |
-| ----- | --- |
-| `/` | Weekly **catalog slate** — Decision Cockpit + Formula Playground (preview) + Review→export |
-| `/ask` | Natural-language catalog Q&A — Gemini plans SQL; MCP executes; answer cites returned rows |
-| `/catalog` | Full title table from ClickHouse |
-| `/ingest` | Add a title (Gemini enrich + MCP INSERT) — grows the **same** hosted tables |
-| `/judge` | One-screen verify packet for this track |
-| `/guia` | In-app user guide (EN/ES); `/about` redirects here |
+| Route      | Job                                                                                        |
+| ---------- | ------------------------------------------------------------------------------------------ |
+| `/`        | Weekly **catalog slate** — Decision Cockpit + Formula Playground (preview) + Review→export |
+| `/ask`     | Natural-language catalog Q&A — Gemini plans SQL; MCP executes; answer cites returned rows  |
+| `/catalog` | Full title table from ClickHouse                                                           |
+| `/ingest`  | Add a title (Gemini enrich + MCP INSERT) — grows the **same** hosted tables                |
+| `/judge`   | One-screen verify packet for this track                                                    |
+| `/guia`    | In-app user guide (EN/ES); `/about` redirects here                                         |
 
 **User:** programming chief at a small Latin/US streaming studio — not a filmmaker production agent. **Output:** three titles to push this week, with evidence.
 
@@ -52,12 +52,12 @@ Gemini synthesis is optional on the critical path: if it times out (25s), errors
 
 Without ClickHouse / `mcp-clickhouse` there are no genre-gap or revenue-share measurements, no week-over-week title momentum, no cannibalization pairs, no slate-hole `gap_score`, and nothing for the TypeScript scorer to rank. Gemini never invents the slate.
 
-| Query id | What it measures |
-| -------- | ---------------- |
-| `A_genre_inventory` | Genre mix: title counts vs 4-week revenue |
-| `B_title_momentum` | Week-over-week title revenue (`wow_pct`) |
+| Query id            | What it measures                                        |
+| ------------------- | ------------------------------------------------------- |
+| `A_genre_inventory` | Genre mix: title counts vs 4-week revenue               |
+| `B_title_momentum`  | Week-over-week title revenue (`wow_pct`)                |
 | `C_cannibalization` | Near-duplicate title pairs that split the same audience |
-| `D_slate_holes` | Genre and language holes (`gap_score`) |
+| `D_slate_holes`     | Genre and language holes (`gap_score`)                  |
 
 **Scorer** (`packages/orchestration/src/greenlight/GreenlightScorer.ts`) — not Gemini:
 
@@ -86,13 +86,13 @@ The video walks `/` (three scored picks + mcp-clickhouse) → `/ask` (grounded `
 
 ### Google Cloud AI — `@google/genai` (not Agent Builder / ADK)
 
-| File | Role |
-| ---- | ---- |
-| `packages/infrastructure/src/gemini/generateContent.ts` | `GoogleGenAI` + `models.generateContent` (AI Studio apiKey **or** Vertex `vertexai: true`) |
-| `packages/infrastructure/src/gemini/GeminiEnrichmentAdapter.ts` | Ingest enrichment |
-| `packages/infrastructure/src/gemini/GeminiReasoningAdapter.ts` | Intent, NL→SQL, greenlight memo |
-| `packages/infrastructure/src/gemini/resolveGeminiApiKey.ts` | AI Studio key resolver; Vertex mode skips apiKey |
-| `packages/infrastructure/src/gemini/resolveGeminiAuth.ts` | `GOOGLE_GENAI_USE_VERTEXAI` + project/location + inline SA JSON |
+| File                                                            | Role                                                                                       |
+| --------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| `packages/infrastructure/src/gemini/generateContent.ts`         | `GoogleGenAI` + `models.generateContent` (AI Studio apiKey **or** Vertex `vertexai: true`) |
+| `packages/infrastructure/src/gemini/GeminiEnrichmentAdapter.ts` | Ingest enrichment                                                                          |
+| `packages/infrastructure/src/gemini/GeminiReasoningAdapter.ts`  | Intent, NL→SQL, greenlight memo                                                            |
+| `packages/infrastructure/src/gemini/resolveGeminiApiKey.ts`     | AI Studio key resolver; Vertex mode skips apiKey                                           |
+| `packages/infrastructure/src/gemini/resolveGeminiAuth.ts`       | `GOOGLE_GENAI_USE_VERTEXAI` + project/location + inline SA JSON                            |
 
 Default model: `gemini-flash-latest` (`GEMINI_MODEL`). Greenlight memo timeout: **25s** (`GREENLIGHT_SYNTHESIZE_TIMEOUT_MS`).
 
@@ -100,12 +100,12 @@ Default model: `gemini-flash-latest` (`GEMINI_MODEL`). Greenlight memo timeout: 
 
 ### ClickHouse — official `mcp-clickhouse` only at runtime
 
-| File | Role |
-| ---- | ---- |
-| `packages/infrastructure/src/partners/clickhouse/McpClickHouseConnector.ts` | `uv run --with mcp-clickhouse`; stdio MCP `run_query` |
-| `packages/orchestration/src/agents/AgentRunner.ts` | Six steps: INTENT → DISCOVER → PLAN_SQL → EXECUTE → SYNTHESIZE → AUDIT |
-| `packages/orchestration/src/greenlight/GreenlightAnalyst.ts` | Four fixed SELECTs in parallel + scorer + optional memo |
-| `deployment/scripts/seed.sh` | Seed via `clickhouse-client` only — never the agent |
+| File                                                                        | Role                                                                   |
+| --------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| `packages/infrastructure/src/partners/clickhouse/McpClickHouseConnector.ts` | `uv run --with mcp-clickhouse`; stdio MCP `run_query`                  |
+| `packages/orchestration/src/agents/AgentRunner.ts`                          | Six steps: INTENT → DISCOVER → PLAN_SQL → EXECUTE → SYNTHESIZE → AUDIT |
+| `packages/orchestration/src/greenlight/GreenlightAnalyst.ts`                | Four fixed SELECTs in parallel + scorer + optional memo                |
+| `deployment/scripts/seed.sh`                                                | Seed via `clickhouse-client` only — never the agent                    |
 
 ---
 
@@ -152,13 +152,13 @@ User question
 
 ## Prerequisites
 
-| Requirement | Version / notes |
-| ----------- | --------------- |
-| Node.js | 20+ (engines: 18+) |
-| [uv](https://docs.astral.sh/uv/) | Spawns `mcp-clickhouse` via stdio (`$HOME/.local/bin` on PATH) |
-| `GEMINI_API_KEY` | Required for AI Studio path (local/dev). Optional when Vertex env is set |
-| Vertex (`GOOGLE_GENAI_USE_VERTEXAI`, `GOOGLE_CLOUD_PROJECT`, credentials) | Preferred for hosted demo — bills GCP (hackathon credits) |
-| ClickHouse | ClickHouse Cloud (Path A / hosted) **or** local Docker (Path B) |
+| Requirement                                                               | Version / notes                                                          |
+| ------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| Node.js                                                                   | 20+ (engines: 18+)                                                       |
+| [uv](https://docs.astral.sh/uv/)                                          | Spawns `mcp-clickhouse` via stdio (`$HOME/.local/bin` on PATH)           |
+| `GEMINI_API_KEY`                                                          | Required for AI Studio path (local/dev). Optional when Vertex env is set |
+| Vertex (`GOOGLE_GENAI_USE_VERTEXAI`, `GOOGLE_CLOUD_PROJECT`, credentials) | Preferred for hosted demo — bills GCP (hackathon credits)                |
+| ClickHouse                                                                | ClickHouse Cloud (Path A / hosted) **or** local Docker (Path B)          |
 
 ## Path A — ClickHouse Cloud + web UI (judges, matches hosted)
 
@@ -175,9 +175,9 @@ npm run dev
 # or: PATH="$HOME/.local/bin:$PATH" bash scripts/dev.sh
 ```
 
-| URL | Role |
-| --- | ---- |
-| http://localhost:5173 | React UI (Vite proxies `/api` → API) |
+| URL                                 | Role                                          |
+| ----------------------------------- | --------------------------------------------- |
+| http://localhost:5173               | React UI (Vite proxies `/api` → API)          |
 | http://localhost:8080/api/v1/health | API health (`ready: true` when MCP connected) |
 
 `npm run dev` loads repo-root `.env` (`loadRepoEnv` in `@bas/infrastructure`). **Do not** run `npm run demo` on this path — that script starts local Docker ClickHouse (Path B).
@@ -254,16 +254,16 @@ Hosted demo: Render + ClickHouse Cloud 8443 — [`docs/submission/DEPLOY.md`](./
 
 ## Hackathon compliance (ClickHouse track)
 
-| Requirement | Status |
-| ----------- | ------ |
-| Hosted project URL | https://catalog-greenlight.onrender.com |
-| Demo video ≤3 min, English + native CC | https://youtu.be/Q_MOBA7Thc4 (~2:43) |
-| Public repo + OSI license | MIT — [`LICENSE`](./LICENSE) (visible in GitHub About) |
-| ClickHouse at runtime via official mcp-clickhouse | `McpClickHouseConnector` → `run_query` |
-| Google Cloud AI imported and called | `@google/genai` `generateContent` — **not** Agent Builder / ADK / LangChain / OpenAI / Anthropic |
-| Multi-step agent | `AgentRunner` 6 steps + `/ask` timeline |
-| Gemini real in demo/API | `resolveGeminiApiKey()` throws; no silent fake |
-| Devpost | [catalog-greenlight](https://devpost.com/software/catalog-greenlight) — ClickHouse track |
+| Requirement                                       | Status                                                                                           |
+| ------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| Hosted project URL                                | https://catalog-greenlight.onrender.com                                                          |
+| Demo video ≤3 min, English + native CC            | https://youtu.be/Q_MOBA7Thc4 (~2:43)                                                             |
+| Public repo + OSI license                         | MIT — [`LICENSE`](./LICENSE) (visible in GitHub About)                                           |
+| ClickHouse at runtime via official mcp-clickhouse | `McpClickHouseConnector` → `run_query`                                                           |
+| Google Cloud AI imported and called               | `@google/genai` `generateContent` — **not** Agent Builder / ADK / LangChain / OpenAI / Anthropic |
+| Multi-step agent                                  | `AgentRunner` 6 steps + `/ask` timeline                                                          |
+| Gemini real in demo/API                           | `resolveGeminiApiKey()` throws; no silent fake                                                   |
+| Devpost                                           | [catalog-greenlight](https://devpost.com/software/catalog-greenlight) — ClickHouse track         |
 
 Copy-paste Devpost fields: [`docs/submission/DEVPOST.md`](./docs/submission/DEVPOST.md). Spanish walkthrough: [`docs/GUIA_DE_USO.md`](./docs/GUIA_DE_USO.md). English short guide: [`docs/USER_GUIDE.md`](./docs/USER_GUIDE.md).
 

@@ -1,4 +1,4 @@
-import { isGeminiVertexEnabled, resolveGeminiVertexConfig } from './resolveGeminiAuth';
+import { isGeminiVertexEnabled, resolveGeminiVertexConfig } from "./resolveGeminiAuth";
 
 export function parseGeminiApiKeys(raw: string | undefined | null): string[] {
   if (!raw) return [];
@@ -23,7 +23,7 @@ export function resolveGeminiApiKeys(): string[] {
     ...parseGeminiApiKeys(process.env.GEMINI_API_KEYS),
   ];
   for (const candidate of candidates) {
-    const key = typeof candidate === 'string' ? candidate.trim() : '';
+    const key = typeof candidate === "string" ? candidate.trim() : "";
     if (!key || seen.has(key)) continue;
     seen.add(key);
     keys.push(key);
@@ -38,12 +38,12 @@ export function resolveGeminiApiKeys(): string[] {
 export function resolveGeminiApiKey(): string {
   if (isGeminiVertexEnabled()) {
     resolveGeminiVertexConfig();
-    return '';
+    return "";
   }
   const key = resolveGeminiApiKeys()[0];
   if (!key) {
     throw new Error(
-      'GEMINI_API_KEY is required (AI Studio), or set GOOGLE_GENAI_USE_VERTEXAI=true with GOOGLE_CLOUD_PROJECT (+ ADC / GOOGLE_APPLICATION_CREDENTIALS_JSON) for Vertex billed to GCP.',
+      "GEMINI_API_KEY is required (AI Studio), or set GOOGLE_GENAI_USE_VERTEXAI=true with GOOGLE_CLOUD_PROJECT (+ ADC / GOOGLE_APPLICATION_CREDENTIALS_JSON) for Vertex billed to GCP.",
     );
   }
   return key;

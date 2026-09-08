@@ -15,7 +15,7 @@ export type GeminiVertexConfig = {
 export function envFlagEnabled(raw: string | undefined | null): boolean {
   if (raw == null) return false;
   const v = raw.trim().toLowerCase();
-  return v === '1' || v === 'true' || v === 'yes' || v === 'on';
+  return v === "1" || v === "true" || v === "yes" || v === "on";
 }
 
 /**
@@ -25,23 +25,27 @@ export function envFlagEnabled(raw: string | undefined | null): boolean {
 export function isGeminiVertexEnabled(): boolean {
   const enterprise = process.env.GOOGLE_GENAI_USE_ENTERPRISE;
   const vertex = process.env.GOOGLE_GENAI_USE_VERTEXAI;
-  if (enterprise !== undefined && String(enterprise).trim() !== '') {
+  if (enterprise !== undefined && String(enterprise).trim() !== "") {
     return envFlagEnabled(enterprise);
   }
   return envFlagEnabled(vertex);
 }
 
 export function resolveGeminiVertexConfig(): GeminiVertexConfig {
-  const project = (process.env.GOOGLE_CLOUD_PROJECT || process.env.GCLOUD_PROJECT || '').trim();
-  const location = (process.env.GOOGLE_CLOUD_LOCATION || process.env.GOOGLE_CLOUD_REGION || '').trim();
+  const project = (process.env.GOOGLE_CLOUD_PROJECT || process.env.GCLOUD_PROJECT || "").trim();
+  const location = (
+    process.env.GOOGLE_CLOUD_LOCATION ||
+    process.env.GOOGLE_CLOUD_REGION ||
+    ""
+  ).trim();
   if (!project) {
     throw new Error(
-      'GOOGLE_CLOUD_PROJECT is required when GOOGLE_GENAI_USE_VERTEXAI=true (or GOOGLE_GENAI_USE_ENTERPRISE=true).',
+      "GOOGLE_CLOUD_PROJECT is required when GOOGLE_GENAI_USE_VERTEXAI=true (or GOOGLE_GENAI_USE_ENTERPRISE=true).",
     );
   }
   return {
     project,
-    location: location || 'us-central1',
+    location: location || "us-central1",
   };
 }
 
@@ -57,8 +61,8 @@ export function resolveGoogleAuthCredentials(): Record<string, unknown> | undefi
   if (!inline) return undefined;
   try {
     const parsed = JSON.parse(inline) as unknown;
-    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
-      throw new Error('credentials JSON must be an object');
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      throw new Error("credentials JSON must be an object");
     }
     return parsed as Record<string, unknown>;
   } catch (error) {
@@ -72,7 +76,7 @@ export function resolveGoogleAuthCredentials(): Record<string, unknown> | undefi
 function lookLikeJsonCredentials(raw: string | undefined): string | undefined {
   if (!raw) return undefined;
   const trimmed = raw.trim();
-  if (trimmed.startsWith('{') && trimmed.endsWith('}')) return trimmed;
+  if (trimmed.startsWith("{") && trimmed.endsWith("}")) return trimmed;
   return undefined;
 }
 
@@ -83,8 +87,8 @@ export function describeGeminiAuthMode(): string {
       const { project, location } = resolveGeminiVertexConfig();
       return `vertex:${project}@${location}`;
     } catch {
-      return 'vertex:(misconfigured)';
+      return "vertex:(misconfigured)";
     }
   }
-  return 'aistudio-apiKey';
+  return "aistudio-apiKey";
 }

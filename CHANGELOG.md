@@ -8,12 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+
 - `docs/submission/JUDGING_OPS.md` — operations and contingency plan for the judging window (Sep 23 – Oct 7, 2026).
 - `.dockerignore` — keeps `.env` and `node_modules` out of the Docker build context (faster, secret-safe builds).
 - Adversarial SQL-injection regression tests for `escapeSqlLiteral` and the audit INSERT path.
 - Vertex AI Gemini auth (`GOOGLE_GENAI_USE_VERTEXAI`, `GOOGLE_CLOUD_PROJECT`, `GOOGLE_APPLICATION_CREDENTIALS_JSON`) so hosted `/ask` can bill GCP promotional credits instead of depleted AI Studio prepaid.
 
 ### Changed
+
 - `render.yaml` aligns `GEMINI_MODEL` with the code/docs default `gemini-flash-latest` (was pinned `gemini-2.0-flash`).
 - ADR-005 updated to the shipped `@google/genai` SDK, `gemini-flash-latest` alias, and model fallback chain.
 - `HOSTED_SMOKE.md` annotates the historical `gemini-2.0-flash` health evidence vs. the current alias default.
@@ -21,11 +23,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Deploy docs prefer Vertex AI on Render; AI Studio `GEMINI_API_KEY` remains the local/dev fallback when Vertex env is unset.
 
 ### Security
+
 - `escapeSqlLiteral` now escapes backslashes before doubling single quotes, closing the ClickHouse `\'` literal-termination path in audit INSERTs and catalog INSERTs (`sqlEscape.ts`, `McpAgentAuditAdapter.ts`, `McpCatalogRepository.ts`).
 
 ## [0.1.0] - 2026-08-21
 
 ### Added
+
 - Initial repository structure with Clean Architecture and DDD
 - Core domain layer (entities, value objects, ports)
 - Infrastructure layer with Google Cloud and partner adapters
@@ -36,6 +40,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - CI/CD pipelines with GitHub Actions
 
 ### Changed (since 0.1.0, via git history)
+
 - Greenlight pipeline hardened: deterministic TypeScript scorer, genre diversity, anti-filler filters, resilient Gemini fallbacks
 - `/judge` landing, `/ask` agent transparency (6-step timeline), `/ingest`, `/guia`
 - 100% unit test coverage enforced per workspace (Jest), Playwright E2E suite

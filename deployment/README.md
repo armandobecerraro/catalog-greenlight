@@ -39,6 +39,7 @@ bash scripts/deploy.sh
 ## CI/CD
 
 GitHub Actions automatically:
+
 1. Lints code on every PR
 2. Runs unit tests with 80% coverage threshold
 3. Scans for security vulnerabilities (Trivy)

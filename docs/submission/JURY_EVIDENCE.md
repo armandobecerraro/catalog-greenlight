@@ -65,7 +65,7 @@ INTENT → DISCOVER → PLAN_SQL → EXECUTE → SYNTHESIZE → AUDIT
 - **Scorer formula** (`GreenlightScorer.ts`): `opportunity = 0.4×genre_gap + 0.4×wow_momentum − 0.2×cannibalization_penalty + 0.05×language_gap`; `pickTopCandidates` enforces genre diversity (max one per genre when ≥3 genres). `language_gap` on each pick is the raw `D_slate_holes` language `gap_score` (clamped ≥ 0), not a max-normalized proxy.
 - **Ask honesty:** `/ask` under-represented chip cites **live** ClickHouse `gap_score` from returned rows — genre can move after ingest; do not treat a recorded Documentary ≈0.074 (or any single genre) as the live answer.
 - SQL guard: `packages/core/src/utils/sqlValidation.ts` — blocks DROP/ALTER/TRUNCATE etc.; allows INSERT for ingest/audit.
-- AUDIT step builds INSERT with string concat + `escapeSql()` in AgentRunner — injection risk if prompts contain quotes.
+- AUDIT INSERT is built by `packages/infrastructure/src/catalog/McpAgentAuditAdapter.ts` from an `IAgentAuditPort` call in AgentRunner. All string fields are escaped with `escapeSqlLiteral` (`packages/core/src/utils/sqlEscape.ts`), which neutralizes **both** backslash-escape and quote-doubling injection paths ClickHouse parses (`\` → `\\`, `'` → `''`). Regression tests: `architecture.test.ts` (ClickHouse literal round-trip) + `catalogAndFactory.test.ts` (hostile prompts, single-statement assert).
 - UI timeline: `packages/web/src/components/AgentTimeline.tsx`; `/ask` shows SQL + Evidence; dashboard greenlight panel shows timeline below analytics.
 
 **Greenlight API** (`packages/api/src/index.ts`):

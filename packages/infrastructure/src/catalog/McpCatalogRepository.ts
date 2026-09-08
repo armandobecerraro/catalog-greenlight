@@ -15,7 +15,7 @@ export class McpCatalogRepository implements ICatalogRepository {
 
   async insert(content: MediaContent): Promise<InsertContentResult> {
     const releaseDate = content.releaseDate.toDateOnlyString();
-    const enrichmentJson = JSON.stringify(content.enrichment?.toJSON() ?? null).replace(/'/g, "''");
+    const enrichmentJson = escapeSqlLiteral(JSON.stringify(content.enrichment?.toJSON() ?? null));
     const castArray = [...content.cast].map(c => `'${escapeSqlLiteral(c)}'`).join(', ');
 
     const query = `

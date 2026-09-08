@@ -105,6 +105,8 @@ curl -sS --max-time 120 https://catalog-greenlight.onrender.com/api/v1/health
 {"status":"ok","product":"Catalog Greenlight","ready":true,"error":null,"timestamp":"2026-09-04T04:56:50.346Z","partners":{"clickhouse":"connected","mcp":"mcp-clickhouse","gemini":"gemini-2.0-flash"}}
 ```
 
+> Evidence above is timestamped 2026-09-04, when the Render env pinned `GEMINI_MODEL=gemini-2.0-flash`. On 2026-09-06 `render.yaml` was aligned with the code/docs default `gemini-flash-latest`, so the health `partners.gemini` string reports the alias after the next Render deploy.
+
 | Check | Result |
 |-------|--------|
 | HTTP 200 | PASS |

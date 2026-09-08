@@ -1,7 +1,8 @@
 # ADR 005: mcp-clickhouse + Gemini Runtime Integration
 
 **Status:** Accepted  
-**Date:** 2026-08-26
+**Date:** 2026-08-26  
+**Last revised:** 2026-09-06 — SDK/model bullets aligned with the shipped `@google/genai` client and `gemini-flash-latest` alias
 
 ## Context
 
@@ -20,10 +21,10 @@ Catalog Greenlight (Agentic Cinema — ClickHouse track) must query ClickHouse a
 
 ### Gemini
 
-- SDK: `@google/generative-ai`
-- Enrichment: `GeminiEnrichmentAdapter.ts` — `GoogleGenerativeAI` + `generateContent`
+- SDK: `@google/genai` (official `GoogleGenAI` client — **not** `@google/generative-ai`, Agent Builder, ADK, or Vertex function-calling)
+- Enrichment: `GeminiEnrichmentAdapter.ts` — `GoogleGenAI` + `ai.generateContent`
 - Agent reasoning: `GeminiReasoningAdapter.ts` — intent, SQL, synthesis
-- Model: `gemini-2.0-flash` (env `GEMINI_MODEL`)
+- Model: `gemini-flash-latest` alias by default (env `GEMINI_MODEL`); `generateContent.ts` rotates through `gemini-2.5-flash`, `gemini-2.0-flash`, `gemini-3.5-flash-lite` fallbacks before surfacing an error
 - **No runtime fake:** `resolveGeminiApiKey()` throws if key missing
 - `FakeGeminiEnrichmentClient` — unit tests only (injected)
 
@@ -34,6 +35,6 @@ Catalog Greenlight (Agentic Cinema — ClickHouse track) must query ClickHouse a
 
 ## Consequences
 
-- Judges can grep for `callTool`, `run_query`, `GoogleGenerativeAI`, `generateContent`
+- Judges can grep for `callTool`, `run_query`, `GoogleGenAI`, `ai.generateContent`
 - Demo requires `GEMINI_API_KEY`
 - Product API and web always use real Gemini + MCP

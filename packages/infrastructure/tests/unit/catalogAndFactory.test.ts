@@ -51,6 +51,105 @@ describe('McpAgentAuditAdapter', () => {
   });
 });
 
+function parseInsertValues(sql: string): { values: string[]; trailing: string } {
+  const valuesIdx = sql.toUpperCase().indexOf('VALUES');
+  const start = sql.indexOf('(', valuesIdx) + 1;
+  const values: string[] = [];
+  let current = '';
+  let inString = false;
+  let end = start;
+  for (let i = start; i < sql.length; i += 1) {
+    const ch = sql[i];
+    if (inString) {
+      if (ch === '\\') {
+        current += sql[i + 1] ?? '';
+        i += 1;
+        continue;
+      }
+      if (ch === "'") {
+        if (sql[i + 1] === "'") {
+          current += "'";
+          i += 1;
+          continue;
+        }
+        inString = false;
+      } else {
+        current += ch;
+      }
+      continue;
+    }
+    if (ch === "'") {
+      inString = true;
+      continue;
+    }
+    if (ch === ',' || ch === ')') {
+      values.push(current.trim());
+      current = '';
+      if (ch === ')') {
+        end = i + 1;
+        break;
+      }
+      continue;
+    }
+    current += ch;
+  }
+  return { values, trailing: sql.slice(end).trim() };
+}
+
+describe('McpAgentAuditAdapter injection hardening', () => {
+  const adversarialPrompts = [
+    "show me; DROP TABLE media_catalog.agent_runs --",
+    "x\\'; ALTER TABLE media_catalog.agent_runs DELETE 1 --",
+    "\\' UNION SELECT password FROM users --",
+    "weekly slate for 'Comedy' and it's fine",
+    "title: \"O'Brien's \\'Fade\\'\" \\\\ path",
+    "comment -- this must stay inside the literal"
+  ];
+
+  it.each(adversarialPrompts)('stores a hostile prompt safely: %j', async prompt => {
+    const mcp = mockMcp();
+    mcp.runQuery.mockResolvedValue({ rows: [], metadata: { rowCount: 0, latencyMs: 1, partner: 'clickhouse' } });
+    const adapter = new McpAgentAuditAdapter(mcp);
+
+    await expect(
+      adapter.record({
+        id: 'run-1',
+        userPrompt: prompt,
+        intent: 'catalog_qa',
+        sqlExecuted: `SELECT title FROM media_catalog.media_content WHERE genre = '${prompt}'`,
+        latencyMs: 10,
+        model: 'gemini-flash-latest',
+        responseSummary: prompt.slice(0, 60)
+      })
+    ).resolves.toBeUndefined();
+
+    const sql = String(mcp.runQuery.mock.calls[0][0]);
+    const { values, trailing } = parseInsertValues(sql);
+    expect(trailing).toBe('');
+    expect(values).toHaveLength(7);
+    expect(values[1]).toBe(prompt);
+    expect(values[3]).toBe(`SELECT title FROM media_catalog.media_content WHERE genre = '${prompt}'`);
+    expect(values[6]).toBe(prompt.slice(0, 60));
+  });
+
+  it('never emits a bare single-quote terminator inside a value', async () => {
+    const mcp = mockMcp();
+    mcp.runQuery.mockResolvedValue({ rows: [], metadata: { rowCount: 0, latencyMs: 1, partner: 'clickhouse' } });
+    await new McpAgentAuditAdapter(mcp).record({
+      id: 'run-1',
+      userPrompt: "\\'; DROP TABLE media_catalog.agent_runs --",
+      intent: 'catalog_qa',
+      sqlExecuted: 'SELECT 1',
+      latencyMs: 1,
+      model: 'm',
+      responseSummary: 'ok'
+    });
+    const sql = String(mcp.runQuery.mock.calls[0][0]);
+    const { values } = parseInsertValues(sql);
+    expect(values[1]).toBe("\\'; DROP TABLE media_catalog.agent_runs --");
+  });
+});
+
 describe('parseCast', () => {
   it('parses arrays, json strings, and garbage', () => {
     expect(parseCast(['A'])).toEqual(['A']);

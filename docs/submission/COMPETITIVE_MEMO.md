@@ -1,5 +1,7 @@
 # Competitive memo — Catalog Greenlight (ClickHouse track)
 
+> **Internal team memo (español)** — working strategy notes, **not** part of the official Devpost/Render submission. Judges: see `README.md`, `JURY_EVIDENCE.md`, and the live `/judge` page for the official packet.
+
 **Audiencia:** jueces ClickHouse (Gil Raphaelli, Dustin Healy). **Hechos verificados en repo y URLs públicas (2026-09-02).**  
 **Nosotros:** [catalog-greenlight.onrender.com](https://catalog-greenlight.onrender.com) · [github.com/armandobecerraro/catalog-greenlight](https://github.com/armandobecerraro/catalog-greenlight)
 

@@ -21,6 +21,56 @@ describe('escapeSqlLiteral', () => {
   it('doubles single quotes', () => {
     expect(escapeSqlLiteral("gemini'--")).toBe("gemini''--");
   });
+
+  it('escapes backslashes before doubling quotes', () => {
+    expect(escapeSqlLiteral("x\\'; DROP TABLE t")).toBe("x\\\\''; DROP TABLE t");
+  });
+
+  function parseClickHouseLiteral(escaped: string): string {
+    const inner = `'${escaped}'`;
+    let out = '';
+    let i = 1;
+    while (i < inner.length - 1) {
+      const ch = inner[i];
+      if (ch === '\\') {
+        if (i + 1 >= inner.length - 1) throw new Error('dangling escape');
+        out += inner[i + 1];
+        i += 2;
+        continue;
+      }
+      if (ch === "'") {
+        if (inner[i + 1] === "'") {
+          out += "'";
+          i += 2;
+          continue;
+        }
+        throw new Error(`literal terminated early at index ${i}`);
+      }
+      out += ch;
+      i += 1;
+    }
+    if (inner[i] !== "'") throw new Error('literal not closed at end');
+    return out;
+  }
+
+  const adversarial: string[] = [
+    "gemini'--",
+    "x\\'; DROP TABLE t",
+    "' OR 1=1 --",
+    "\\' UNION SELECT password FROM users --",
+    "'; ALTER TABLE agent_runs DELETE 1",
+    'back\\slash\\' + "'quoted",
+    "normal 'quoted' text",
+    'single \\\\ backslash',
+    "line\nbreak and\ttab",
+    'emoji 🎬 and unicode 中文',
+    "''"
+  ];
+
+  it.each(adversarial)('survives ClickHouse literal round-trip: %j', payload => {
+    const escaped = escapeSqlLiteral(payload);
+    expect(parseClickHouseLiteral(escaped)).toBe(payload);
+  });
 });
 
 describe('runAgentStep', () => {

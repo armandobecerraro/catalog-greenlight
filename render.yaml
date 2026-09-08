@@ -12,7 +12,7 @@ services:
       - key: GEMINI_API_KEYS
         sync: false
       - key: GEMINI_MODEL
-        value: gemini-2.0-flash
+        value: gemini-flash-latest
       - key: CLICKHOUSE_HOST
         sync: false
       - key: CLICKHOUSE_PORT

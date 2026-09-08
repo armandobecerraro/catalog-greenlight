@@ -7,6 +7,11 @@ import { buildClickHouseConfig } from '../../packages/infrastructure/src/partner
 import { McpClickHouseConnector } from '../../packages/infrastructure/src/partners/clickhouse/McpClickHouseConnector';
 import { generateGeminiText } from '../../packages/infrastructure/src/gemini/generateContent';
 import { resolveGeminiApiKey, resolveGeminiApiKeys } from '../../packages/infrastructure/src/gemini/resolveGeminiApiKey';
+import {
+  describeGeminiAuthMode,
+  isGeminiVertexEnabled,
+  resolveGeminiVertexConfig,
+} from '../../packages/infrastructure/src/gemini/resolveGeminiAuth';
 
 function redact(message: string, secret: string): string {
   if (!secret) return message;
@@ -23,10 +28,44 @@ function keyShape(key: string): string {
 }
 
 async function checkGemini(): Promise<boolean> {
+  const model = process.env.GEMINI_MODEL || 'gemini-flash-latest';
+  const mode = describeGeminiAuthMode();
+
+  if (isGeminiVertexEnabled()) {
+    const { project, location } = resolveGeminiVertexConfig();
+    const hasInlineJson = Boolean(
+      process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON?.trim() ||
+        process.env.GOOGLE_APPLICATION_CREDENTIALS?.trim()?.startsWith('{'),
+    );
+    const hasCredPath = Boolean(
+      process.env.GOOGLE_APPLICATION_CREDENTIALS?.trim() &&
+        !process.env.GOOGLE_APPLICATION_CREDENTIALS.trim().startsWith('{'),
+    );
+    console.log(
+      `\n[Gemini] Vertex AI · project: ${project} · location: ${location} · model: ${model} · mode: ${mode}`,
+    );
+    console.log(
+      `[Gemini] Credentials: ${hasInlineJson ? 'inline JSON env' : hasCredPath ? 'ADC file path' : 'ADC default (gcloud / metadata)'}`,
+    );
+    try {
+      const text = await generateGeminiText('', 'Reply with exactly: OK', model);
+      console.log(`[Gemini] PASS — response: ${text.slice(0, 60)}`);
+      return true;
+    } catch (error) {
+      const raw = error instanceof Error ? error.message : String(error);
+      console.log(`[Gemini] FAIL — ${raw.slice(0, 400)}`);
+      console.log(
+        '[Gemini] Hint: enable Vertex AI API, attach the Partner Marketing credit to the GCP billing account, and set a service account with roles/aiplatform.user (Render: GOOGLE_APPLICATION_CREDENTIALS_JSON).',
+      );
+      return false;
+    }
+  }
+
   const keys = resolveGeminiApiKeys();
   const key = resolveGeminiApiKey();
-  const model = process.env.GEMINI_MODEL || 'gemini-flash-latest';
-  console.log(`\n[Gemini] ${keys.length} key(s) configured · primary shape: ${keyShape(key)} · model: ${model}`);
+  console.log(
+    `\n[Gemini] AI Studio · ${keys.length} key(s) configured · primary shape: ${keyShape(key)} · model: ${model} · mode: ${mode}`,
+  );
   try {
     const text = await generateGeminiText(key, 'Reply with exactly: OK', model);
     console.log(`[Gemini] PASS — response: ${text.slice(0, 60)}`);
@@ -35,9 +74,9 @@ async function checkGemini(): Promise<boolean> {
     const raw = error instanceof Error ? error.message : String(error);
     const msg = redactSecrets(raw, keys);
     console.log(`[Gemini] FAIL — ${msg.slice(0, 400)}`);
-    if (/billing|credit|verify|suspended|PERMISSION_DENIED|403/i.test(msg)) {
+    if (/billing|credit|verify|suspended|PERMISSION_DENIED|403|prepayment|depleted/i.test(msg)) {
       console.log(
-        '[Gemini] Hint: open https://aistudio.google.com/apikey → Billing → verify identity and add prepaid credit.'
+        '[Gemini] Hint: AI Studio prepaid is separate from GCP credits. Prefer GOOGLE_GENAI_USE_VERTEXAI=true + GOOGLE_CLOUD_PROJECT so hackathon GCP billing credits apply.',
       );
     }
     return false;

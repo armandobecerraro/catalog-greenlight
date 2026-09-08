@@ -88,12 +88,15 @@ The video walks `/` (three scored picks + mcp-clickhouse) → `/ask` (grounded `
 
 | File | Role |
 | ---- | ---- |
-| `packages/infrastructure/src/gemini/generateContent.ts` | `GoogleGenAI` + `models.generateContent` |
+| `packages/infrastructure/src/gemini/generateContent.ts` | `GoogleGenAI` + `models.generateContent` (AI Studio apiKey **or** Vertex `vertexai: true`) |
 | `packages/infrastructure/src/gemini/GeminiEnrichmentAdapter.ts` | Ingest enrichment |
 | `packages/infrastructure/src/gemini/GeminiReasoningAdapter.ts` | Intent, NL→SQL, greenlight memo |
-| `packages/infrastructure/src/gemini/resolveGeminiApiKey.ts` | Throws if `GEMINI_API_KEY` missing — no silent fake in API/demo/web |
+| `packages/infrastructure/src/gemini/resolveGeminiApiKey.ts` | AI Studio key resolver; Vertex mode skips apiKey |
+| `packages/infrastructure/src/gemini/resolveGeminiAuth.ts` | `GOOGLE_GENAI_USE_VERTEXAI` + project/location + inline SA JSON |
 
 Default model: `gemini-flash-latest` (`GEMINI_MODEL`). Greenlight memo timeout: **25s** (`GREENLIGHT_SYNTHESIZE_TIMEOUT_MS`).
+
+**Hosted billing:** Prefer Vertex AI (`GOOGLE_GENAI_USE_VERTEXAI=true`, `GOOGLE_CLOUD_PROJECT`, ADC / `GOOGLE_APPLICATION_CREDENTIALS_JSON`) so GCP promotional credits fund Gemini. AI Studio prepaid does not receive those credits — see `docs/submission/DEPLOY.md`.
 
 ### ClickHouse — official `mcp-clickhouse` only at runtime
 
@@ -153,7 +156,8 @@ User question
 | ----------- | --------------- |
 | Node.js | 20+ (engines: 18+) |
 | [uv](https://docs.astral.sh/uv/) | Spawns `mcp-clickhouse` via stdio (`$HOME/.local/bin` on PATH) |
-| `GEMINI_API_KEY` | Required for API and UI (no silent fake) |
+| `GEMINI_API_KEY` | Required for AI Studio path (local/dev). Optional when Vertex env is set |
+| Vertex (`GOOGLE_GENAI_USE_VERTEXAI`, `GOOGLE_CLOUD_PROJECT`, credentials) | Preferred for hosted demo — bills GCP (hackathon credits) |
 | ClickHouse | ClickHouse Cloud (Path A / hosted) **or** local Docker (Path B) |
 
 ## Path A — ClickHouse Cloud + web UI (judges, matches hosted)
@@ -201,6 +205,13 @@ See `.env.example`. Secrets never belong in the repo.
 **ClickHouse Cloud (Path A / Render):**
 
 ```bash
+# Preferred for hosted demo (GCP billing credits — not AI Studio prepaid):
+# GOOGLE_GENAI_USE_VERTEXAI=true
+# GOOGLE_CLOUD_PROJECT=your-gcp-project-id
+# GOOGLE_CLOUD_LOCATION=us-central1
+# GOOGLE_APPLICATION_CREDENTIALS_JSON={"type":"service_account",...}
+
+# Local/dev fallback when Vertex env is unset:
 GEMINI_API_KEY=
 # Optional backups if the primary key hits prepaid quota
 # GEMINI_API_KEYS=backup-key-1,backup-key-2

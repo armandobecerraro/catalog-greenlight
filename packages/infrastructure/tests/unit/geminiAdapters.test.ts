@@ -34,7 +34,21 @@ describe('resolveGeminiApiKey', () => {
     delete process.env.GEMINI_API_KEY;
     delete process.env.GOOGLE_API_KEY;
     delete process.env.GOOGLE_GENERATIVE_AI_API_KEY;
+    delete process.env.GEMINI_API_KEYS;
+    delete process.env.GOOGLE_GENAI_USE_VERTEXAI;
+    delete process.env.GOOGLE_GENAI_USE_ENTERPRISE;
     expect(() => resolveGeminiApiKey()).toThrow(/GEMINI_API_KEY is required/);
+  });
+
+  it('allows empty apiKey when Vertex env is configured', () => {
+    process.env = { ...original };
+    delete process.env.GEMINI_API_KEY;
+    delete process.env.GOOGLE_API_KEY;
+    delete process.env.GOOGLE_GENERATIVE_AI_API_KEY;
+    delete process.env.GEMINI_API_KEYS;
+    process.env.GOOGLE_GENAI_USE_VERTEXAI = 'true';
+    process.env.GOOGLE_CLOUD_PROJECT = 'vertex-proj';
+    expect(resolveGeminiApiKey()).toBe('');
   });
 
   it('falls back to GOOGLE_GENERATIVE_AI_API_KEY and rejects blank keys', () => {

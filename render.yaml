@@ -7,6 +7,17 @@ services:
     plan: free
     healthCheckPath: /api/v1/health
     envVars:
+      # --- Gemini: prefer Vertex (GCP billing credits) over AI Studio prepaid ---
+      - key: GOOGLE_GENAI_USE_VERTEXAI
+        sync: false
+      - key: GOOGLE_CLOUD_PROJECT
+        sync: false
+      - key: GOOGLE_CLOUD_LOCATION
+        value: us-central1
+      # Full service-account JSON (Render secret). Do not commit. Needs roles/aiplatform.user.
+      - key: GOOGLE_APPLICATION_CREDENTIALS_JSON
+        sync: false
+      # Optional local/dev fallback when Vertex vars are unset:
       - key: GEMINI_API_KEY
         sync: false
       - key: GEMINI_API_KEYS

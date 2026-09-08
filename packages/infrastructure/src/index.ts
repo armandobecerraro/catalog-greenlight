@@ -6,7 +6,15 @@ export { GeminiReasoningAdapter, parseRecommendations } from './gemini/GeminiRea
 export { GeminiClientFactory } from './gemini/GeminiClientFactory';
 export { resolveGeminiApiKey, resolveGeminiApiKeys, parseGeminiApiKeys } from './gemini/resolveGeminiApiKey';
 export {
+  isGeminiVertexEnabled,
+  resolveGeminiVertexConfig,
+  resolveGoogleAuthCredentials,
+  describeGeminiAuthMode,
+  envFlagEnabled
+} from './gemini/resolveGeminiAuth';
+export {
   generateGeminiText,
+  createVertexGoogleGenAI,
   geminiKeyPool,
   isPermanentGeminiQuotaError,
   errorText

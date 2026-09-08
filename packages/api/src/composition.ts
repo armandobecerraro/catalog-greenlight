@@ -9,7 +9,8 @@ import {
   buildClickHouseConfig,
   GeminiClientFactory,
   McpCatalogRepository,
-  McpAgentAuditAdapter
+  McpAgentAuditAdapter,
+  describeGeminiAuthMode
 } from '@bas/infrastructure';
 import { AgentRunner } from '@bas/orchestration';
 import { ApiRuntime, HealthSnapshot } from './runtime';
@@ -39,7 +40,7 @@ export async function composeRuntime(): Promise<ApiRuntime> {
     partners: {
       clickhouse: 'connected',
       mcp: 'mcp-clickhouse',
-      gemini: process.env.GEMINI_MODEL || 'gemini-flash-latest'
+      gemini: `${process.env.GEMINI_MODEL || 'gemini-flash-latest'} (${describeGeminiAuthMode()})`
     }
   });
 
@@ -79,7 +80,7 @@ export function startingRuntime(error: string | null = null): ApiRuntime {
       partners: {
         clickhouse: error ? 'error' : 'starting',
         mcp: 'mcp-clickhouse',
-        gemini: process.env.GEMINI_MODEL || 'gemini-flash-latest'
+        gemini: `${process.env.GEMINI_MODEL || 'gemini-flash-latest'} (${describeGeminiAuthMode()})`
       }
     }),
     apiKeyRequired: Boolean(process.env.API_KEY?.trim())

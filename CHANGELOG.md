@@ -11,12 +11,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `docs/submission/JUDGING_OPS.md` — operations and contingency plan for the judging window (Sep 23 – Oct 7, 2026).
 - `.dockerignore` — keeps `.env` and `node_modules` out of the Docker build context (faster, secret-safe builds).
 - Adversarial SQL-injection regression tests for `escapeSqlLiteral` and the audit INSERT path.
+- Vertex AI Gemini auth (`GOOGLE_GENAI_USE_VERTEXAI`, `GOOGLE_CLOUD_PROJECT`, `GOOGLE_APPLICATION_CREDENTIALS_JSON`) so hosted `/ask` can bill GCP promotional credits instead of depleted AI Studio prepaid.
 
 ### Changed
 - `render.yaml` aligns `GEMINI_MODEL` with the code/docs default `gemini-flash-latest` (was pinned `gemini-2.0-flash`).
 - ADR-005 updated to the shipped `@google/genai` SDK, `gemini-flash-latest` alias, and model fallback chain.
 - `HOSTED_SMOKE.md` annotates the historical `gemini-2.0-flash` health evidence vs. the current alias default.
 - `JURY_EVIDENCE.md` now describes the hardened audit INSERT escaping instead of flagging an injection risk.
+- Deploy docs prefer Vertex AI on Render; AI Studio `GEMINI_API_KEY` remains the local/dev fallback when Vertex env is unset.
 
 ### Security
 - `escapeSqlLiteral` now escapes backslashes before doubling single quotes, closing the ClickHouse `\'` literal-termination path in audit INSERTs and catalog INSERTs (`sqlEscape.ts`, `McpAgentAuditAdapter.ts`, `McpCatalogRepository.ts`).

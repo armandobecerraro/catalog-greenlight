@@ -1,5 +1,10 @@
-import { GoogleGenAI, HarmBlockThreshold, HarmCategory } from '@google/genai';
+import { GoogleGenAI, HarmBlockThreshold, HarmCategory, GoogleGenAIOptions } from '@google/genai';
 import { parseGeminiApiKeys, resolveGeminiApiKeys } from './resolveGeminiApiKey';
+import {
+  isGeminiVertexEnabled,
+  resolveGeminiVertexConfig,
+  resolveGoogleAuthCredentials,
+} from './resolveGeminiAuth';
 
 const FALLBACK_MODELS = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-3.5-flash-lite'];
 
@@ -111,19 +116,43 @@ async function generateWithModels(
   throw wrapError(lastError);
 }
 
+/** Build a Vertex-billed GoogleGenAI client (GCP project + ADC / inline SA JSON). */
+export function createVertexGoogleGenAI(): GoogleGenAI {
+  const { project, location } = resolveGeminiVertexConfig();
+  const options: GoogleGenAIOptions = {
+    vertexai: true,
+    project,
+    location,
+  };
+  const credentials = resolveGoogleAuthCredentials();
+  if (credentials) {
+    options.googleAuthOptions = { credentials };
+  }
+  return new GoogleGenAI(options);
+}
+
 export async function generateGeminiText(
   apiKey: string,
   prompt: string,
   model = defaultModel(),
 ): Promise<string> {
+  const models = [model, ...FALLBACK_MODELS.filter((m) => m !== model)];
+
+  if (isGeminiVertexEnabled()) {
+    try {
+      return await generateWithModels(createVertexGoogleGenAI(), models, prompt);
+    } catch (error) {
+      throw wrapError(error);
+    }
+  }
+
   const keys = geminiKeyPool(apiKey);
   if (keys.length === 0) {
     throw new Error(
-      'GEMINI_API_KEY is required. Set GEMINI_API_KEY (or GEMINI_API_KEYS) before calling Gemini.',
+      'GEMINI_API_KEY is required (AI Studio), or set GOOGLE_GENAI_USE_VERTEXAI=true with GOOGLE_CLOUD_PROJECT for Vertex billed to GCP.',
     );
   }
 
-  const models = [model, ...FALLBACK_MODELS.filter((m) => m !== model)];
   let lastError: unknown = new Error('Gemini request failed');
 
   for (let i = 0; i < keys.length; i++) {

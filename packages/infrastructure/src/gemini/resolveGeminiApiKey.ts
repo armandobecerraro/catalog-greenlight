@@ -1,3 +1,5 @@
+import { isGeminiVertexEnabled, resolveGeminiVertexConfig } from './resolveGeminiAuth';
+
 export function parseGeminiApiKeys(raw: string | undefined | null): string[] {
   if (!raw) return [];
   const keys: string[] = [];
@@ -29,11 +31,19 @@ export function resolveGeminiApiKeys(): string[] {
   return keys;
 }
 
+/**
+ * AI Studio apiKey for local/dev. When Vertex is enabled, returns '' (ADC / GCP billing).
+ * Still validates that Vertex project env is set so boot fails loud instead of at first call.
+ */
 export function resolveGeminiApiKey(): string {
+  if (isGeminiVertexEnabled()) {
+    resolveGeminiVertexConfig();
+    return '';
+  }
   const key = resolveGeminiApiKeys()[0];
   if (!key) {
     throw new Error(
-      'GEMINI_API_KEY is required. Set GEMINI_API_KEY (or GOOGLE_API_KEY / GOOGLE_GENERATIVE_AI_API_KEY / GEMINI_API_KEYS) before running the product or demo.',
+      'GEMINI_API_KEY is required (AI Studio), or set GOOGLE_GENAI_USE_VERTEXAI=true with GOOGLE_CLOUD_PROJECT (+ ADC / GOOGLE_APPLICATION_CREDENTIALS_JSON) for Vertex billed to GCP.',
     );
   }
   return key;

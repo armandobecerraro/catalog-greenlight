@@ -21,11 +21,14 @@ Catalog Greenlight (Agentic Cinema — ClickHouse track) must query ClickHouse a
 
 ### Gemini
 
-- SDK: `@google/genai` (official `GoogleGenAI` client — **not** `@google/generative-ai`, Agent Builder, ADK, or Vertex function-calling)
+- SDK: `@google/genai` (official `GoogleGenAI` client — **not** `@google/generative-ai`, Agent Builder, ADK, or Vertex function-calling frameworks)
+- Auth modes:
+  - **Vertex AI (hosted / GCP credits):** `GOOGLE_GENAI_USE_VERTEXAI=true` + `GOOGLE_CLOUD_PROJECT` + `GOOGLE_CLOUD_LOCATION` + ADC / `GOOGLE_APPLICATION_CREDENTIALS_JSON` → `new GoogleGenAI({ vertexai: true, project, location })`
+  - **AI Studio apiKey (local/dev fallback):** `GEMINI_API_KEY` when Vertex env is unset → `new GoogleGenAI({ apiKey })`
 - Enrichment: `GeminiEnrichmentAdapter.ts` — `GoogleGenAI` + `ai.generateContent`
 - Agent reasoning: `GeminiReasoningAdapter.ts` — intent, SQL, synthesis
 - Model: `gemini-flash-latest` alias by default (env `GEMINI_MODEL`); `generateContent.ts` rotates through `gemini-2.5-flash`, `gemini-2.0-flash`, `gemini-3.5-flash-lite` fallbacks before surfacing an error
-- **No runtime fake:** `resolveGeminiApiKey()` throws if key missing
+- **No runtime fake:** `resolveGeminiApiKey()` throws if neither Vertex nor an AI Studio key is configured
 - `FakeGeminiEnrichmentClient` — unit tests only (injected)
 
 ### Agent
@@ -35,6 +38,6 @@ Catalog Greenlight (Agentic Cinema — ClickHouse track) must query ClickHouse a
 
 ## Consequences
 
-- Judges can grep for `callTool`, `run_query`, `GoogleGenAI`, `ai.generateContent`
-- Demo requires `GEMINI_API_KEY`
+- Judges can grep for `callTool`, `run_query`, `GoogleGenAI`, `ai.generateContent`, `vertexai: true`
+- Demo prefers Vertex so GCP billing credits fund `/ask`; AI Studio key remains for local without Vertex env
 - Product API and web always use real Gemini + MCP

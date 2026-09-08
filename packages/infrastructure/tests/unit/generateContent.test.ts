@@ -27,6 +27,12 @@ describe('generateGeminiText', () => {
     'GEMINI_API_KEY',
     'GOOGLE_API_KEY',
     'GOOGLE_GENERATIVE_AI_API_KEY',
+    'GOOGLE_GENAI_USE_VERTEXAI',
+    'GOOGLE_GENAI_USE_ENTERPRISE',
+    'GOOGLE_CLOUD_PROJECT',
+    'GOOGLE_CLOUD_LOCATION',
+    'GOOGLE_APPLICATION_CREDENTIALS_JSON',
+    'GOOGLE_APPLICATION_CREDENTIALS',
   ] as const;
   const originalEnv: Record<string, string | undefined> = {};
 
@@ -184,6 +190,40 @@ describe('generateGeminiText', () => {
     await expect(generateGeminiText('  ', 'p', 'gemini-test')).rejects.toThrow(
       /GEMINI_API_KEY is required/,
     );
+  });
+
+  it('uses Vertex AI when GOOGLE_GENAI_USE_VERTEXAI is set', async () => {
+    process.env.GOOGLE_GENAI_USE_VERTEXAI = 'true';
+    process.env.GOOGLE_CLOUD_PROJECT = 'hackathon-proj';
+    process.env.GOOGLE_CLOUD_LOCATION = 'us-central1';
+    process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON = JSON.stringify({
+      type: 'service_account',
+      client_email: 'sa@hackathon-proj.iam.gserviceaccount.com',
+    });
+    generateContent.mockResolvedValue({ text: 'vertex-ok' });
+    await expect(generateGeminiText('', 'p', 'gemini-test')).resolves.toBe('vertex-ok');
+    expect(GoogleGenAI).toHaveBeenCalledWith(
+      expect.objectContaining({
+        vertexai: true,
+        project: 'hackathon-proj',
+        location: 'us-central1',
+        googleAuthOptions: {
+          credentials: expect.objectContaining({ type: 'service_account' }),
+        },
+      }),
+    );
+  });
+
+  it('Vertex mode does not require an AI Studio apiKey', async () => {
+    process.env.GOOGLE_GENAI_USE_VERTEXAI = 'true';
+    process.env.GOOGLE_CLOUD_PROJECT = 'hackathon-proj';
+    generateContent.mockResolvedValue({ text: 'adc-ok' });
+    await expect(generateGeminiText('  ', 'p', 'gemini-test')).resolves.toBe('adc-ok');
+    expect(GoogleGenAI).toHaveBeenCalledWith({
+      vertexai: true,
+      project: 'hackathon-proj',
+      location: 'us-central1',
+    });
   });
 
   it('wraps object failures with a message', async () => {

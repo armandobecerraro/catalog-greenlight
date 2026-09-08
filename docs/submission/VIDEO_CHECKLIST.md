@@ -16,7 +16,7 @@
 - [ ] **Pre-warm Render:** open https://catalog-greenlight.onrender.com and wait **60–90 seconds** for cold start before recording
 - [ ] Health check: `GET https://catalog-greenlight.onrender.com/api/v1/health` → `ready: true`
 - [ ] **Fresh greenlight:** open `https://catalog-greenlight.onrender.com/api/v1/greenlight?refresh=1` once (bypasses 10-min cache)
-- [ ] **Gemini billing:** `/ask` and `/ingest` require a funded `GEMINI_API_KEY` on Render (HTTP 429 if credits depleted or rate-limited). Greenlight still returns 3 scorer picks when synthesis fails (timeout, 429, or quota); the UI shows a designed fallback banner (not a warning) and metrics and ritual table remain visible.
+- [ ] **Gemini billing:** Prefer Vertex on Render (`GOOGLE_GENAI_USE_VERTEXAI=true` + GCP project + SA JSON) so Partner Marketing / GCP credits fund `/ask` and `/ingest`. AI Studio prepaid does not receive those credits (HTTP 429 if only a depleted AI Studio key is set). Greenlight still returns 3 scorer picks when synthesis fails (timeout, 429, or quota); the UI shows a designed fallback banner (not a warning) and metrics and ritual table remain visible.
 - [ ] Browser: **UI language English**, **1920×1080** (or 1280×720), zoom 100%, **hide bookmarks bar**
 - [ ] Close unrelated tabs; mute notifications
 - [ ] Prepare architecture slide (see § Architecture slide below)
